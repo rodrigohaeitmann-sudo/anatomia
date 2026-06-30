@@ -51,7 +51,7 @@ export const procedures: SurgicalProcedure[] = [
     specialty: "Reconstrução mamária",
     description:
       "Módulo didático para navegação pelas etapas principais da reconstrução mamária com retalho miocutâneo do músculo grande dorsal.",
-    modelPath: undefined,
+    modelPath: "models/z-anatomy/torso-mastology.glb",
     steps: [
       ["positioning", "Posicionamento da paciente em decúbito lateral", "Organização da paciente, apoios e campos para acesso simultâneo ao dorso, axila e região mamária."],
       ["skin-paddle-marking", "Marcação do fuso cutâneo no dorso", "Planejamento do fuso cutâneo conforme necessidade de pele, cicatriz prévia e arco de rotação do retalho."],
@@ -70,8 +70,10 @@ export const procedures: SurgicalProcedure[] = [
       detailedDescription: `${description} Esta etapa foi mockada para o MVP e deve ser revisada com imagens, modelos e notas cirúrgicas específicas antes do uso educacional formal.`,
       visibleStructures:
         index < 3
-          ? ["skin", "subcutaneous", "latissimus-dorsi", "breast"]
-          : ["skin", "subcutaneous", "latissimus-dorsi", "thoracodorsal-vessels", "axilla", "chest-wall", "breast"],
+          ? ["skin", "subcutaneous", "breast", "pectoralis-major", "chest-wall"]
+          : index < 6
+            ? ["skin", "subcutaneous", "latissimus-dorsi", "serratus-anterior", "chest-wall", "breast"]
+            : ["skin", "subcutaneous", "latissimus-dorsi", "serratus-anterior", "thoracodorsal-vessels", "axilla", "chest-wall", "breast", "pectoralis-major"],
       annotations: [
         {
           id: `${id}-focus`,

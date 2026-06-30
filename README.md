@@ -43,14 +43,17 @@ npm run build
 
 ## Modelos anatômicos futuros
 
-1. Revisar licença da fonte, por exemplo Z-Anatomy, antes de baixar ou converter arquivos.
-2. Organizar as estruturas no Blender.
-3. Reduzir polígonos quando necessário.
-4. Padronizar nomes de malhas.
-5. Exportar como `.glb` ou `.gltf`.
-6. Copiar para `public/models/`.
-7. Mapear as estruturas em `src/lib/modelConfig.ts`.
-8. Registrar fonte, autores, licença, modificações e data de acesso em `ATTRIBUTIONS.md`.
+O MVP agora inclui um primeiro modelo regional derivado do Z-Anatomy em `public/models/z-anatomy/torso-mastology.glb`. Ele substitui o placeholder principal do visualizador e expõe malhas reais para grande dorsal, serrátil anterior, peitorais, parede torácica, axila, mama/regiões cutâneas e vasos toracodorsais.
+
+Para regenerar o modelo:
+
+1. Baixe os FBX oficiais do Z-Anatomy para `assets/source/z-anatomy/`.
+2. Use os arquivos `MuscularSystem100.fbx`, `SkeletalSystem100.fbx`, `CardioVascular41.fbx` e `Regions_of_human_body100.fbx`.
+3. Execute `npm run build:z-anatomy`.
+4. Revise `src/data/zAnatomyTorsoManifest.json`.
+5. Confira `ATTRIBUTIONS.md` e `public/models/z-anatomy/NOTICE.txt`.
+
+Os FBX brutos ficam fora do Git por tamanho e rastreabilidade; o repositório versiona apenas o GLB processado e o manifesto.
 
 ## Deploy no GitHub Pages
 

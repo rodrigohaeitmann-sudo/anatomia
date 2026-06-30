@@ -1,0 +1,123 @@
+{
+  "modelPath": "models/z-anatomy/torso-mastology.glb",
+  "sourceRepository": "https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX",
+  "license": "CC BY-SA 4.0",
+  "generatedFrom": [
+    {
+      "fileName": "MuscularSystem100.fbx",
+      "description": "Z-Anatomy muscular system FBX"
+    },
+    {
+      "fileName": "SkeletalSystem100.fbx",
+      "description": "Z-Anatomy skeletal system FBX"
+    },
+    {
+      "fileName": "CardioVascular41.fbx",
+      "description": "Z-Anatomy cardiovascular system FBX"
+    },
+    {
+      "fileName": "Regions_of_human_body100.fbx",
+      "description": "Z-Anatomy regions of human body FBX"
+    }
+  ],
+  "structures": {
+    "skin": {
+      "meshNames": [
+        "Anterior_region_of_thoraxj",
+        "Infrascapular_regionl",
+        "Lateral_region_of_thoraxl",
+        "Pectoral_regionl",
+        "Scapular_regionl"
+      ]
+    },
+    "breast": {
+      "meshNames": [
+        "Inframammary_regionl",
+        "Mammary_regionl"
+      ]
+    },
+    "latissimus-dorsi": {
+      "meshNames": [
+        "Latissimus_dorsi_musclel"
+      ]
+    },
+    "serratus-anterior": {
+      "meshNames": [
+        "Serratus_anterior_musclel"
+      ]
+    },
+    "pectoralis-major": {
+      "meshNames": [
+        "(Abdominal_part_of_pectoralis_major_muscle)l",
+        "Clavicular_head_of_pectoralis_major_musclel",
+        "Sternocostal_head_of_pectoralis_major_musclel"
+      ]
+    },
+    "pectoralis-minor": {
+      "meshNames": [
+        "Pectoralis_minor_musclel"
+      ]
+    },
+    "chest-wall": {
+      "meshNames": [
+        "Body_of_sternum",
+        "Costal_cartilage_of_eighth_ribl",
+        "Costal_cartilage_of_fifth_ribl",
+        "Costal_cartilage_of_first_ribl",
+        "Costal_cartilage_of_fourth_ribl",
+        "Costal_cartilage_of_ninth_ribl",
+        "Costal_cartilage_of_second_ribl",
+        "Costal_cartilage_of_seventh_ribl",
+        "Costal_cartilage_of_sixth_ribl",
+        "Costal_cartilage_of_tenth_ribl",
+        "Costal_cartilage_of_third_ribl",
+        "Eighth_ribl",
+        "Eleventh_ribl",
+        "Fifth_ribl",
+        "First_ribl",
+        "Fourth_ribl",
+        "Manubrium_of_sternum",
+        "Ninth_ribl",
+        "Second_ribl",
+        "Seventh_ribl",
+        "Sixth_ribl",
+        "Tenth_ribl",
+        "Third_ribl",
+        "Twelfth_ribl",
+        "Vertebra_T1",
+        "Vertebra_T10",
+        "Vertebra_T11",
+        "Vertebra_T12",
+        "Vertebra_T2",
+        "Vertebra_T3",
+        "Vertebra_T4",
+        "Vertebra_T5",
+        "Vertebra_T6",
+        "Vertebra_T7",
+        "Vertebra_T8",
+        "Vertebra_T9"
+      ]
+    },
+    "axilla": {
+      "meshNames": [
+        "Claviclel",
+        "Deltopectoral_trianglel",
+        "Scapulal"
+      ]
+    },
+    "thoracodorsal-vessels": {
+      "meshNames": [
+        "Axillary_arteryl",
+        "Axillary_veinl",
+        "Circumflex_scapular_arteryl",
+        "Circumflex_scapular_veinl",
+        "Lateral_thoracic_arteryl",
+        "Lateral_thoracic_veinl",
+        "Subscapular_arteryl",
+        "Subscapular_veinl",
+        "Thoracodorsal_arteryl",
+        "Thoracodorsal_veinl"
+      ]
+    }
+  }
+}

@@ -1,47 +1,129 @@
 "use client";
 
-import { OrbitControls, Html } from "@react-three/drei";
+import { Suspense, useEffect, useMemo } from "react";
+import { Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import * as THREE from "three";
 import type { SurgicalStep } from "@/data/procedures";
-import { modelStructures } from "@/lib/modelConfig";
+import { modelStructures, zAnatomyTorsoModel } from "@/lib/modelConfig";
 import type { StructureVisibility, ViewMode } from "@/lib/viewerTypes";
 
-type AnatomyViewerProps = { step: SurgicalStep; visibility: StructureVisibility; clippingEnabled: boolean; viewMode: ViewMode; resetSignal: number; };
+type AnatomyViewerProps = {
+  step: SurgicalStep;
+  visibility: StructureVisibility;
+  clippingEnabled: boolean;
+  viewMode: ViewMode;
+  resetSignal: number;
+  modelPath: string;
+};
 
-function PlaceholderAnatomy({ visibility, viewMode }: Pick<AnatomyViewerProps, "visibility" | "viewMode">) {
-  const surgical = viewMode === "surgical";
-  const visible = (id: string) => visibility[id] ?? false;
+const structureById = new Map(modelStructures.map((structure) => [structure.id, structure]));
+const structureByMeshName = new Map(modelStructures.flatMap((structure) => structure.meshNames.map((meshName) => [meshName, structure.id])));
+
+function isMesh(object: THREE.Object3D): object is THREE.Mesh {
+  return (object as THREE.Mesh).isMesh === true;
+}
+
+function createStructureMaterial(structureId: string, active: boolean, viewMode: ViewMode) {
+  const structure = structureById.get(structureId);
+  const color = new THREE.Color(structure?.color ?? "#94a3b8");
+  const baseOpacity = structure?.opacity ?? 1;
+  const opacity = viewMode === "surgical" && !active ? Math.min(baseOpacity, 0.26) : baseOpacity;
+
+  return new THREE.MeshStandardMaterial({
+    color,
+    emissive: viewMode === "surgical" && active ? color.clone().multiplyScalar(0.18) : new THREE.Color("#000000"),
+    roughness: 0.68,
+    metalness: 0.02,
+    transparent: opacity < 1,
+    opacity,
+    side: THREE.DoubleSide,
+    depthWrite: opacity >= 0.45,
+  });
+}
+
+function ZAnatomyModel({ modelPath, step, visibility, viewMode }: Pick<AnatomyViewerProps, "modelPath" | "step" | "visibility" | "viewMode">) {
+  const gltf = useGLTF(modelPath);
+  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  const activeStructures = useMemo(() => new Set(step.visibleStructures), [step.visibleStructures]);
+
+  useEffect(() => {
+    const materialCache = new Map<string, THREE.MeshStandardMaterial>();
+
+    scene.traverse((object) => {
+      if (!isMesh(object)) return;
+
+      const structureId = structureByMeshName.get(object.name);
+      object.visible = Boolean(structureId && visibility[structureId]);
+      object.castShadow = true;
+      object.receiveShadow = true;
+
+      if (!structureId) return;
+
+      const materialKey = `${structureId}-${activeStructures.has(structureId)}-${viewMode}`;
+      const cachedMaterial = materialCache.get(materialKey);
+
+      if (cachedMaterial) {
+        object.material = cachedMaterial;
+        return;
+      }
+
+      const material = createStructureMaterial(structureId, activeStructures.has(structureId), viewMode);
+      materialCache.set(materialKey, material);
+      object.material = material;
+    });
+  }, [activeStructures, scene, viewMode, visibility]);
+
+  return <primitive object={scene} />;
+}
+
+function ProceduralSurgicalLayers({ visibility, viewMode }: Pick<AnatomyViewerProps, "visibility" | "viewMode">) {
+  if (!visibility["subcutaneous"]) return null;
 
   return (
-    <group rotation={[0, -0.35, 0]}>
-      {visible("chest-wall") && <mesh position={[0, -0.65, 0]} scale={[2.2, 0.18, 1.25]}><boxGeometry /><meshStandardMaterial color="#64748b" transparent opacity={0.45} /></mesh>}
-      {visible("breast") && <mesh position={[0.62, 0.1, 0.42]} scale={[0.75, 0.55, 0.45]}><sphereGeometry args={[1, 32, 32]} /><meshStandardMaterial color={surgical ? "#f472b6" : "#f9a8d4"} transparent opacity={0.78} /></mesh>}
-      {visible("latissimus-dorsi") && <mesh position={[-0.75, 0.18, -0.22]} rotation={[0.2, 0.25, -0.5]} scale={[0.42, 1.75, 0.12]}><capsuleGeometry args={[0.35, 1.3, 12, 24]} /><meshStandardMaterial color={surgical ? "#dc2626" : "#ef4444"} /></mesh>}
-      {visible("skin") && <mesh position={[-0.7, 0.28, -0.48]} rotation={[0.15, 0.15, -0.55]} scale={[0.52, 1.35, 0.04]}><boxGeometry /><meshStandardMaterial color="#f8c7b8" transparent opacity={0.5} /></mesh>}
-      {visible("subcutaneous") && <mesh position={[-0.68, 0.28, -0.39]} rotation={[0.15, 0.15, -0.55]} scale={[0.45, 1.2, 0.035]}><boxGeometry /><meshStandardMaterial color="#facc15" transparent opacity={0.42} /></mesh>}
-      {visible("thoracodorsal-vessels") && <mesh position={[-0.28, 0.45, -0.05]} rotation={[0.25, 0.4, -0.65]} scale={[0.045, 1.45, 0.045]}><capsuleGeometry args={[0.55, 1.2, 8, 16]} /><meshStandardMaterial color="#38bdf8" emissive="#075985" /></mesh>}
-      {visible("axilla") && <mesh position={[-0.08, 0.55, 0.12]} scale={[0.35, 0.35, 0.35]}><sphereGeometry args={[1, 24, 24]} /><meshStandardMaterial color="#a78bfa" transparent opacity={0.5} /></mesh>}
-      {visible("serratus-anterior") && <mesh position={[0.02, -0.15, -0.12]} rotation={[0, 0, 0.7]} scale={[0.28, 1.15, 0.08]}><capsuleGeometry args={[0.4, 1, 8, 16]} /><meshStandardMaterial color="#f97316" transparent opacity={0.8} /></mesh>}
+    <group position={[-0.18, 0.12, 0.15]} rotation={[0.08, -0.18, -0.12]}>
+      <mesh scale={[0.62, 1.05, 0.045]}>
+        <boxGeometry />
+        <meshStandardMaterial color="#facc15" transparent opacity={viewMode === "surgical" ? 0.48 : 0.32} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
 
-export function AnatomyViewer({ step, visibility, clippingEnabled, viewMode, resetSignal }: AnatomyViewerProps) {
+function LoadingModel() {
+  return (
+    <Html center className="pointer-events-none">
+      <div className="rounded-xl bg-slate-900/90 px-4 py-3 text-xs font-semibold text-white shadow-xl">Carregando Z-Anatomy...</div>
+    </Html>
+  );
+}
+
+export function AnatomyViewer({ step, visibility, clippingEnabled, viewMode, resetSignal, modelPath }: AnatomyViewerProps) {
   const activeLabels = step.visibleStructures.map((id) => modelStructures.find((structure) => structure.id === id)?.label ?? id);
 
   return (
-    <div className="viewer-shell relative min-h-[520px] overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
+    <div className="viewer-shell relative h-[620px] min-h-[520px] overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
       <Canvas key={resetSignal} camera={{ position: step.camera?.position ?? [4, 3, 6], fov: 45 }} shadows>
         <color attach="background" args={["#020617"]} />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[4, 6, 4]} intensity={1.8} castShadow />
-        <gridHelper args={[5, 10, "#334155", "#1e293b"]} position={[0, -1, 0]} />
-        <PlaceholderAnatomy visibility={visibility} viewMode={viewMode} />
-        {clippingEnabled && <mesh position={[0.15, 0, 0]} rotation={[0, 0, Math.PI / 2]}><planeGeometry args={[3.2, 2.4]} /><meshBasicMaterial color="#38bdf8" transparent opacity={0.18} /></mesh>}
-        <Html position={[-1.55, 1.45, 0]} className="pointer-events-none"><div className="rounded-xl bg-slate-900/90 px-3 py-2 text-xs text-white shadow-xl">Placeholder 3D preparado para GLB/GLTF</div></Html>
+        <ambientLight intensity={0.65} />
+        <directionalLight position={[4, 6, 4]} intensity={2} castShadow />
+        <directionalLight position={[-3, 2, -2]} intensity={0.75} />
+        <gridHelper args={[5, 10, "#334155", "#1e293b"]} position={[0, -1.4, 0]} />
+        <Suspense fallback={<LoadingModel />}>
+          <ZAnatomyModel modelPath={modelPath} step={step} visibility={visibility} viewMode={viewMode} />
+        </Suspense>
+        <ProceduralSurgicalLayers visibility={visibility} viewMode={viewMode} />
+        {clippingEnabled && (
+          <mesh position={[0.15, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <planeGeometry args={[3.2, 2.4]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.18} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+        )}
         <OrbitControls target={step.camera?.target ?? [0, 0.5, 0]} makeDefault enableDamping />
       </Canvas>
-      <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-xs text-slate-300 backdrop-blur">Estruturas da etapa: {activeLabels.join(" • ")}</div>
+      <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-xs text-slate-300 backdrop-blur">Z-Anatomy CC BY-SA 4.0 · Estruturas da etapa: {activeLabels.join(" • ")}</div>
     </div>
   );
 }
+
+useGLTF.preload(zAnatomyTorsoModel.modelPath);

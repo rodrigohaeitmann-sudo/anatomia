@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:z-anatomy": "node scripts/z-anatomy/build-torso-model.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"

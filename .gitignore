@@ -1,7 +1,9 @@
 node_modules
 .next
 out
+assets/source
 .env*.local
 .DS_Store
 npm-debug.log*
 tsconfig.tsbuildinfo
+.verification-*.png

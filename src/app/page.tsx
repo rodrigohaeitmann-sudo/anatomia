@@ -45,7 +45,7 @@ export default function Home() {
         <div className="space-y-4"><ProcedureSidebar procedures={procedures} activeProcedureId={activeProcedureId} onSelectProcedure={selectProcedure} /><StructureToggleList visibility={visibility} onToggle={toggleStructure} /></div>
         <section className="space-y-4">
           <ViewerToolbar clippingEnabled={clippingEnabled} viewMode={viewMode} onResetCamera={() => setResetSignal((value) => value + 1)} onToggleClipping={() => setClippingEnabled((value) => !value)} onToggleSkin={() => toggleStructure("skin")} onShowVessels={() => setVisibility((current) => ({ ...current, "thoracodorsal-vessels": true }))} onSetViewMode={setViewMode} />
-          <AnatomyViewer step={activeStep} visibility={visibility} clippingEnabled={clippingEnabled || Boolean(activeStep.clippingPlane?.enabled)} viewMode={viewMode} resetSignal={resetSignal} />
+          <AnatomyViewer step={activeStep} visibility={visibility} clippingEnabled={clippingEnabled || Boolean(activeStep.clippingPlane?.enabled)} viewMode={viewMode} resetSignal={resetSignal} modelPath={activeProcedure.modelPath ?? "models/z-anatomy/torso-mastology.glb"} />
         </section>
         <AnnotationPanel step={activeStep} />
       </div>
