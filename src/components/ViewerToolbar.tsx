@@ -18,7 +18,7 @@ export function ViewerToolbar({ clippingEnabled, viewMode, onResetCamera, onTogg
       <button className={buttonClass} onClick={onResetCamera}>Resetar câmera</button>
       <button className={buttonClass} onClick={onToggleClipping}>{clippingEnabled ? "Desativar corte" : "Ativar corte"}</button>
       <button className={buttonClass} onClick={onToggleSkin}>Ocultar/mostrar pele</button>
-      <button className={buttonClass} onClick={onShowVessels}>Mostrar vasos</button>
+      <button className={buttonClass} onClick={onShowVessels}>Mapa neurovascular</button>
       <button className={`${buttonClass} ${viewMode === "anatomical" ? "bg-sky-500/40" : ""}`} onClick={() => onSetViewMode("anatomical")}>Modo anatômico</button>
       <button className={`${buttonClass} ${viewMode === "surgical" ? "bg-pink-500/40" : ""}`} onClick={() => onSetViewMode("surgical")}>Modo cirúrgico</button>
     </div>

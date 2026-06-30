@@ -12,8 +12,10 @@ export function StepTimeline({ steps, activeStepIndex, onSelectStep }: StepTimel
       <div className="flex gap-3 overflow-x-auto pb-2">
         {steps.map((step, index) => (
           <button key={step.id} onClick={() => onSelectStep(index)} className={`min-w-56 rounded-2xl border p-3 text-left ${index === activeStepIndex ? "border-pink-300 bg-pink-400/10" : "border-slate-800 bg-slate-900/60"}`}>
-            <span className="text-xs font-bold text-slate-400">{step.code}</span>
-            <span className="ml-2 text-xs text-slate-500">{String(index + 1).padStart(2, "0")}</span>
+            <span className="inline-flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400">{step.code}</span>
+              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-500">#{String(index + 1).padStart(2, "0")}</span>
+            </span>
             <span className="mt-2 block text-sm font-semibold text-white">{step.title}</span>
             <span className="mt-2 block text-xs text-slate-500">{step.phase.replace("Fase ", "F")}</span>
           </button>

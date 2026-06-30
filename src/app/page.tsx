@@ -51,7 +51,26 @@ export default function Home() {
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_minmax(0,1fr)_360px]">
         <div className="space-y-4"><ProcedureSidebar procedures={procedures} activeProcedureId={activeProcedureId} onSelectProcedure={selectProcedure} /><StructureToggleList visibility={visibility} onToggle={toggleStructure} /></div>
         <section className="space-y-4">
-          <ViewerToolbar clippingEnabled={clippingEnabled} viewMode={viewMode} onResetCamera={() => setResetSignal((value) => value + 1)} onToggleClipping={() => setClippingEnabled((value) => !value)} onToggleSkin={() => toggleStructure("skin")} onShowVessels={() => setVisibility((current) => ({ ...current, "thoracodorsal-vessels": true }))} onSetViewMode={setViewMode} />
+          <ViewerToolbar
+            clippingEnabled={clippingEnabled}
+            viewMode={viewMode}
+            onResetCamera={() => setResetSignal((value) => value + 1)}
+            onToggleClipping={() => setClippingEnabled((value) => !value)}
+            onToggleSkin={() => toggleStructure("skin")}
+            onShowVessels={() =>
+              setVisibility((current) => ({
+                ...current,
+                "axillary-vessels": true,
+                "subscapular-vessels": true,
+                "thoracodorsal-vessels": true,
+                "lateral-thoracic-vessels": true,
+                "circumflex-humeral-vessels": true,
+                "thoracodorsal-nerve": true,
+                "long-thoracic-nerve": true,
+              }))
+            }
+            onSetViewMode={setViewMode}
+          />
           <AnatomyViewer step={activeStep} visibility={visibility} clippingEnabled={clippingEnabled || Boolean(activeStep.clippingPlane?.enabled)} viewMode={viewMode} resetSignal={resetSignal} modelPath={activeProcedure.modelPath ?? "models/z-anatomy/torso-mastology.glb"} />
         </section>
         <AnnotationPanel step={activeStep} />

@@ -77,15 +77,60 @@ function ZAnatomyModel({ modelPath, step, visibility, viewMode }: Pick<AnatomyVi
   return <primitive object={scene} />;
 }
 
-function ProceduralSurgicalLayers({ visibility, viewMode }: Pick<AnatomyViewerProps, "visibility" | "viewMode">) {
-  if (!visibility["subcutaneous"]) return null;
+function AnatomyTube({ color, opacity = 0.92, points, radius = 0.018 }: { color: string; opacity?: number; points: [number, number, number][]; radius?: number }) {
+  const curve = useMemo(() => new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(...point))), [points]);
 
   return (
-    <group position={[-0.18, 0.12, 0.15]} rotation={[0.08, -0.18, -0.12]}>
-      <mesh scale={[0.62, 1.05, 0.045]}>
-        <boxGeometry />
-        <meshStandardMaterial color="#facc15" transparent opacity={viewMode === "surgical" ? 0.48 : 0.32} depthWrite={false} />
-      </mesh>
+    <mesh>
+      <tubeGeometry args={[curve, 42, radius, 12, false]} />
+      <meshStandardMaterial color={color} transparent opacity={opacity} depthWrite={false} roughness={0.48} />
+    </mesh>
+  );
+}
+
+function ProceduralSurgicalLayers({ visibility, viewMode }: Pick<AnatomyViewerProps, "visibility" | "viewMode">) {
+  return (
+    <group>
+      {visibility["subcutaneous"] && (
+        <group position={[-0.18, 0.12, 0.15]} rotation={[0.08, -0.18, -0.12]}>
+          <mesh scale={[0.62, 1.05, 0.045]}>
+            <boxGeometry />
+            <meshStandardMaterial color="#facc15" transparent opacity={viewMode === "surgical" ? 0.48 : 0.32} depthWrite={false} />
+          </mesh>
+        </group>
+      )}
+      {visibility["thoracodorsal-nerve"] && (
+        <AnatomyTube
+          color="#facc15"
+          points={[
+            [0.36, 0.82, 0.34],
+            [0.47, 0.6, 0.34],
+            [0.56, 0.38, 0.3],
+            [0.52, 0.12, 0.22],
+          ]}
+          radius={0.016}
+        />
+      )}
+      {visibility["long-thoracic-nerve"] && (
+        <AnatomyTube
+          color="#fde047"
+          opacity={0.78}
+          points={[
+            [0.08, 0.78, 0.2],
+            [0.1, 0.38, 0.12],
+            [0.06, -0.08, 0.08],
+            [-0.02, -0.48, 0.04],
+          ]}
+          radius={0.012}
+        />
+      )}
+      {visibility["axillary-lymph-nodes"] && (
+        <group>
+          <OverlaySphere color="#86efac" opacity={0.72} position={[0.48, 0.48, 0.25]} scale={[0.055, 0.055, 0.055]} />
+          <OverlaySphere color="#86efac" opacity={0.72} position={[0.58, 0.32, 0.27]} scale={[0.05, 0.05, 0.05]} />
+          <OverlaySphere color="#86efac" opacity={0.72} position={[0.42, 0.22, 0.2]} scale={[0.045, 0.045, 0.045]} />
+        </group>
+      )}
     </group>
   );
 }

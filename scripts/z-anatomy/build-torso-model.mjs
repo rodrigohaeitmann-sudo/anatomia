@@ -114,6 +114,13 @@ const structureSpecs = {
       "MuscularSystem100.fbx": [new RegExp(`^Pectoralis_minor_muscle${operativeSide}$`)],
     },
   },
+  "pectoral-fascia": {
+    color: "#fef3c7",
+    opacity: 0.36,
+    files: {
+      "MuscularSystem100.fbx": [new RegExp(`^Pectoral_fascia${operativeSide}$`), new RegExp(`^Clavipectoral_fascia${operativeSide}$`)],
+    },
+  },
   "trapezius": {
     color: "#8b5cf6",
     opacity: 0.34,
@@ -130,6 +137,48 @@ const structureSpecs = {
     opacity: 0.72,
     files: {
       "MuscularSystem100.fbx": [new RegExp(`^Teres_major_muscle${operativeSide}$`)],
+    },
+  },
+  "teres-minor": {
+    color: "#fbbf24",
+    opacity: 0.58,
+    files: {
+      "MuscularSystem100.fbx": [new RegExp(`^Teres_minor_muscle${operativeSide}$`)],
+    },
+  },
+  "subscapularis": {
+    color: "#fb923c",
+    opacity: 0.52,
+    files: {
+      "MuscularSystem100.fbx": [new RegExp(`^Subscapularis_muscle${operativeSide}$`)],
+    },
+  },
+  "deltoid": {
+    color: "#c084fc",
+    opacity: 0.4,
+    files: {
+      "MuscularSystem100.fbx": [
+        new RegExp(`^Clavicular_part_of_deltoid_muscle${operativeSide}$`),
+        new RegExp(`^Acromial_part_of_deltoid_muscle${operativeSide}$`),
+        new RegExp(`^Scapular_spinal_part_of_deltoid_muscle${operativeSide}$`),
+      ],
+    },
+  },
+  "coracobrachialis-biceps": {
+    color: "#14b8a6",
+    opacity: 0.44,
+    files: {
+      "MuscularSystem100.fbx": [
+        new RegExp(`^Coracobrachialis_muscle${operativeSide}$`),
+        new RegExp(`^Short_head_of_biceps_brachii${operativeSide}$`),
+      ],
+    },
+  },
+  "infraspinatus": {
+    color: "#f97316",
+    opacity: 0.34,
+    files: {
+      "MuscularSystem100.fbx": [new RegExp(`^Infraspinatus_muscle${operativeSide}$`)],
     },
   },
   "thoracolumbar-fascia": {
@@ -171,6 +220,25 @@ const structureSpecs = {
       "Regions_of_human_body100.fbx": [new RegExp(`^Deltopectoral_triangle${operativeSide}$`)],
     },
   },
+  "axillary-vessels": {
+    color: "#0ea5e9",
+    opacity: 0.92,
+    files: {
+      "CardioVascular41.fbx": [new RegExp(`^Axillary_artery${operativeSide}$`), new RegExp(`^Axillary_vein${operativeSide}$`)],
+    },
+  },
+  "subscapular-vessels": {
+    color: "#22d3ee",
+    opacity: 0.92,
+    files: {
+      "CardioVascular41.fbx": [
+        new RegExp(`^Subscapular_artery${operativeSide}$`),
+        new RegExp(`^Subscapular_vein${operativeSide}$`),
+        new RegExp(`^Circumflex_scapular_artery${operativeSide}$`),
+        new RegExp(`^Circumflex_scapular_vein${operativeSide}$`),
+      ],
+    },
+  },
   "thoracodorsal-vessels": {
     color: "#38bdf8",
     opacity: 0.95,
@@ -178,14 +246,29 @@ const structureSpecs = {
       "CardioVascular41.fbx": [
         new RegExp(`^Thoracodorsal_artery${operativeSide}$`),
         new RegExp(`^Thoracodorsal_vein${operativeSide}$`),
-        new RegExp(`^Subscapular_artery${operativeSide}$`),
-        new RegExp(`^Subscapular_vein${operativeSide}$`),
-        new RegExp(`^Axillary_artery${operativeSide}$`),
-        new RegExp(`^Axillary_vein${operativeSide}$`),
-        new RegExp(`^Circumflex_scapular_artery${operativeSide}$`),
-        new RegExp(`^Circumflex_scapular_vein${operativeSide}$`),
+      ],
+    },
+  },
+  "lateral-thoracic-vessels": {
+    color: "#7dd3fc",
+    opacity: 0.9,
+    files: {
+      "CardioVascular41.fbx": [
         new RegExp(`^Lateral_thoracic_artery${operativeSide}$`),
         new RegExp(`^Lateral_thoracic_vein${operativeSide}$`),
+        new RegExp(`^Pectoral_branches_of_thoraco-acromial_artery${operativeSide}$`),
+      ],
+    },
+  },
+  "circumflex-humeral-vessels": {
+    color: "#60a5fa",
+    opacity: 0.9,
+    files: {
+      "CardioVascular41.fbx": [
+        new RegExp(`^Anterior_circumflex_humeral_artery${operativeSide}$`),
+        new RegExp(`^Anterior_circumflex_humeral_vein${operativeSide}$`),
+        new RegExp(`^Posterior_circumflex_humeral_artery${operativeSide}$`),
+        new RegExp(`^Posterior_circumflex_humeral_vein${operativeSide}$`),
       ],
     },
   },

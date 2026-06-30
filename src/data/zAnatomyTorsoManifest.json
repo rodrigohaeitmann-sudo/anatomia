@@ -59,6 +59,12 @@
         "Pectoralis_minor_muscler"
       ]
     },
+    "pectoral-fascia": {
+      "meshNames": [
+        "Clavipectoral_fasciar",
+        "Pectoral_fasciar"
+      ]
+    },
     "trapezius": {
       "meshNames": [
         "Ascending_part_of_trapezius_muscler",
@@ -69,6 +75,34 @@
     "teres-major": {
       "meshNames": [
         "Teres_major_muscler"
+      ]
+    },
+    "teres-minor": {
+      "meshNames": [
+        "Teres_minor_muscler"
+      ]
+    },
+    "subscapularis": {
+      "meshNames": [
+        "Subscapularis_muscler"
+      ]
+    },
+    "deltoid": {
+      "meshNames": [
+        "Acromial_part_of_deltoid_muscler",
+        "Clavicular_part_of_deltoid_muscler",
+        "Scapular_spinal_part_of_deltoid_muscler"
+      ]
+    },
+    "coracobrachialis-biceps": {
+      "meshNames": [
+        "Coracobrachialis_muscler",
+        "Short_head_of_biceps_brachiir"
+      ]
+    },
+    "infraspinatus": {
+      "meshNames": [
+        "Infraspinatus_muscler"
       ]
     },
     "thoracolumbar-fascia": {
@@ -135,18 +169,39 @@
         "Scapular"
       ]
     },
-    "thoracodorsal-vessels": {
+    "axillary-vessels": {
       "meshNames": [
         "Axillary_arteryr",
-        "Axillary_veinr",
+        "Axillary_veinr"
+      ]
+    },
+    "subscapular-vessels": {
+      "meshNames": [
         "Circumflex_scapular_arteryr",
         "Circumflex_scapular_veinr",
-        "Lateral_thoracic_arteryr",
-        "Lateral_thoracic_veinr",
         "Subscapular_arteryr",
-        "Subscapular_veinr",
+        "Subscapular_veinr"
+      ]
+    },
+    "thoracodorsal-vessels": {
+      "meshNames": [
         "Thoracodorsal_arteryr",
         "Thoracodorsal_veinr"
+      ]
+    },
+    "lateral-thoracic-vessels": {
+      "meshNames": [
+        "Lateral_thoracic_arteryr",
+        "Lateral_thoracic_veinr",
+        "Pectoral_branches_of_thoraco-acromial_arteryr"
+      ]
+    },
+    "circumflex-humeral-vessels": {
+      "meshNames": [
+        "Anterior_circumflex_humeral_arteryr",
+        "Anterior_circumflex_humeral_veinr",
+        "Posterior_circumflex_humeral_arteryr",
+        "Posterior_circumflex_humeral_veinr"
       ]
     }
   }
