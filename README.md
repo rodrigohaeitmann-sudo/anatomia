@@ -54,7 +54,7 @@ npm run build
 
 ## Deploy no GitHub Pages
 
-O deploy está configurado para GitHub Pages via GitHub Actions. O arquivo `next.config.ts` usa `output: "export"` e configura `basePath`/`assetPrefix` durante GitHub Actions para publicar o app no subcaminho do repositório.
+O deploy está configurado para GitHub Pages via GitHub Actions. O arquivo `next.config.mjs` usa `output: "export"` e configura `basePath`/`assetPrefix` durante GitHub Actions para publicar o app no subcaminho do repositório.
 
 Para acessar o app pelo link do GitHub Pages:
 
