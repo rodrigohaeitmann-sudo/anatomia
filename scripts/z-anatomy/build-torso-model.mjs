@@ -45,6 +45,9 @@ const ordinalRibNames = [
   "Twelfth",
 ];
 
+const operativeSide = "r";
+const contralateralSide = "l";
+
 const costalCartilageNames = [
   "first",
   "second",
@@ -65,10 +68,10 @@ const structureSpecs = {
     files: {
       "Regions_of_human_body100.fbx": [
         /^Anterior_region_of_thoraxj$/,
-        /^Pectoral_regionl$/,
-        /^Lateral_region_of_thoraxl$/,
-        /^Scapular_regionl$/,
-        /^Infrascapular_regionl$/,
+        new RegExp(`^Pectoral_region${operativeSide}$`),
+        new RegExp(`^Lateral_region_of_thorax${operativeSide}$`),
+        new RegExp(`^Scapular_region${operativeSide}$`),
+        new RegExp(`^Infrascapular_region${operativeSide}$`),
       ],
     },
   },
@@ -76,21 +79,21 @@ const structureSpecs = {
     color: "#f9a8d4",
     opacity: 0.5,
     files: {
-      "Regions_of_human_body100.fbx": [/^Mammary_regionl$/, /^Inframammary_regionl$/],
+      "Regions_of_human_body100.fbx": [new RegExp(`^Mammary_region${operativeSide}$`), new RegExp(`^Inframammary_region${operativeSide}$`)],
     },
   },
   "latissimus-dorsi": {
     color: "#ef4444",
     opacity: 0.95,
     files: {
-      "MuscularSystem100.fbx": [/^Latissimus_dorsi_musclel$/],
+      "MuscularSystem100.fbx": [new RegExp(`^Latissimus_dorsi_muscle${operativeSide}$`)],
     },
   },
   "serratus-anterior": {
     color: "#f97316",
     opacity: 0.88,
     files: {
-      "MuscularSystem100.fbx": [/^Serratus_anterior_musclel$/],
+      "MuscularSystem100.fbx": [new RegExp(`^Serratus_anterior_muscle${operativeSide}$`)],
     },
   },
   "pectoralis-major": {
@@ -98,9 +101,9 @@ const structureSpecs = {
     opacity: 0.82,
     files: {
       "MuscularSystem100.fbx": [
-        /^Clavicular_head_of_pectoralis_major_musclel$/,
-        /^Sternocostal_head_of_pectoralis_major_musclel$/,
-        /^\(Abdominal_part_of_pectoralis_major_muscle\)l$/,
+        new RegExp(`^Clavicular_head_of_pectoralis_major_muscle${operativeSide}$`),
+        new RegExp(`^Sternocostal_head_of_pectoralis_major_muscle${operativeSide}$`),
+        new RegExp(`^\\(Abdominal_part_of_pectoralis_major_muscle\\)${operativeSide}$`),
       ],
     },
   },
@@ -108,7 +111,43 @@ const structureSpecs = {
     color: "#f43f5e",
     opacity: 0.76,
     files: {
-      "MuscularSystem100.fbx": [/^Pectoralis_minor_musclel$/],
+      "MuscularSystem100.fbx": [new RegExp(`^Pectoralis_minor_muscle${operativeSide}$`)],
+    },
+  },
+  "trapezius": {
+    color: "#8b5cf6",
+    opacity: 0.34,
+    files: {
+      "MuscularSystem100.fbx": [
+        new RegExp(`^Ascending_part_of_trapezius_muscle${operativeSide}$`),
+        new RegExp(`^Transverse_part_of_trapezius_muscle${operativeSide}$`),
+        new RegExp(`^Descending_part_of_trapezius_muscle${operativeSide}$`),
+      ],
+    },
+  },
+  "teres-major": {
+    color: "#f59e0b",
+    opacity: 0.72,
+    files: {
+      "MuscularSystem100.fbx": [new RegExp(`^Teres_major_muscle${operativeSide}$`)],
+    },
+  },
+  "thoracolumbar-fascia": {
+    color: "#f8fafc",
+    opacity: 0.72,
+    files: {
+      "MuscularSystem100.fbx": [
+        new RegExp(`^Middle_layer_of_thoracolumbar_fascia${operativeSide}$`),
+        new RegExp(`^Anterior_layer_of_thoracolumbar_fascia${operativeSide}$`),
+        new RegExp(`^Posterior_layer_of_thoracolumbar_fascia${operativeSide}$`),
+      ],
+    },
+  },
+  "iliac-crest": {
+    color: "#e7e5e4",
+    opacity: 0.68,
+    files: {
+      "SkeletalSystem100.fbx": [/^Iliac_crest[ij]$/, /^Outer_lip_of_iliac_crest[ij]$/, /^Posterior_superior_iliac_spine[ij]$/],
     },
   },
   "chest-wall": {
@@ -116,8 +155,8 @@ const structureSpecs = {
     opacity: 0.62,
     files: {
       "SkeletalSystem100.fbx": [
-        new RegExp(`^(${ordinalRibNames.join("|")})_ribl$`),
-        new RegExp(`^Costal_cartilage_of_(${costalCartilageNames.join("|")})_ribl$`, "i"),
+        new RegExp(`^(${ordinalRibNames.join("|")})_rib${operativeSide}$`),
+        new RegExp(`^Costal_cartilage_of_(${costalCartilageNames.join("|")})_rib${operativeSide}$`, "i"),
         /^Manubrium_of_sternum$/,
         /^Body_of_sternum$/,
         /^Vertebra_T([1-9]|1[0-2])$/,
@@ -128,8 +167,8 @@ const structureSpecs = {
     color: "#a78bfa",
     opacity: 0.55,
     files: {
-      "SkeletalSystem100.fbx": [/^Scapulal$/, /^Claviclel$/],
-      "Regions_of_human_body100.fbx": [/^Deltopectoral_trianglel$/],
+      "SkeletalSystem100.fbx": [new RegExp(`^Scapula${operativeSide === "r" ? "r?" : contralateralSide}$`), new RegExp(`^Clavicle${operativeSide}$`)],
+      "Regions_of_human_body100.fbx": [new RegExp(`^Deltopectoral_triangle${operativeSide}$`)],
     },
   },
   "thoracodorsal-vessels": {
@@ -137,16 +176,16 @@ const structureSpecs = {
     opacity: 0.95,
     files: {
       "CardioVascular41.fbx": [
-        /^Thoracodorsal_arteryl$/,
-        /^Thoracodorsal_veinl$/,
-        /^Subscapular_arteryl$/,
-        /^Subscapular_veinl$/,
-        /^Axillary_arteryl$/,
-        /^Axillary_veinl$/,
-        /^Circumflex_scapular_arteryl$/,
-        /^Circumflex_scapular_veinl$/,
-        /^Lateral_thoracic_arteryl$/,
-        /^Lateral_thoracic_veinl$/,
+        new RegExp(`^Thoracodorsal_artery${operativeSide}$`),
+        new RegExp(`^Thoracodorsal_vein${operativeSide}$`),
+        new RegExp(`^Subscapular_artery${operativeSide}$`),
+        new RegExp(`^Subscapular_vein${operativeSide}$`),
+        new RegExp(`^Axillary_artery${operativeSide}$`),
+        new RegExp(`^Axillary_vein${operativeSide}$`),
+        new RegExp(`^Circumflex_scapular_artery${operativeSide}$`),
+        new RegExp(`^Circumflex_scapular_vein${operativeSide}$`),
+        new RegExp(`^Lateral_thoracic_artery${operativeSide}$`),
+        new RegExp(`^Lateral_thoracic_vein${operativeSide}$`),
       ],
     },
   },
@@ -258,6 +297,7 @@ writeFileSync(outputPath, Buffer.from(arrayBuffer));
 
 const manifest = {
   modelPath: "models/z-anatomy/torso-mastology.glb",
+  operativeSide: "right",
   sourceRepository: "https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX",
   license: "CC BY-SA 4.0",
   generatedFrom: [...parsedFiles].map((fileName) => ({

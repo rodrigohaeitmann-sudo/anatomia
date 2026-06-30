@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnatomyViewer } from "@/components/AnatomyViewer";
 import { AnnotationPanel } from "@/components/AnnotationPanel";
 import { ProcedureSidebar } from "@/components/ProcedureSidebar";
@@ -24,6 +24,13 @@ export default function Home() {
   const activeProcedure = useMemo(() => procedures.find((procedure) => procedure.id === activeProcedureId) ?? procedures[0], [activeProcedureId]);
   const activeStep = activeProcedure.steps[activeStepIndex] ?? activeProcedure.steps[0];
 
+  useEffect(() => {
+    setVisibility((current) => ({
+      ...current,
+      ...Object.fromEntries(activeStep.visibleStructures.map((id) => [id, true])),
+    }));
+  }, [activeStep.id, activeStep.visibleStructures]);
+
   function selectProcedure(id: string) {
     setActiveProcedureId(id);
     setActiveStepIndex(0);
@@ -38,7 +45,7 @@ export default function Home() {
       <header className="mx-auto mb-6 max-w-7xl rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-2xl">
         <p className="text-sm font-semibold uppercase tracking-[0.35em] text-sky-300">Atlas cirúrgico interativo</p>
         <h1 className="mt-3 text-3xl font-black text-white md:text-5xl">Anatomia Cirúrgica em Mastologia</h1>
-        <p className="mt-4 max-w-3xl text-slate-300">MVP em Next.js com visualizador 3D, navegação por procedimentos, timeline cirúrgica, painel didático e estrutura pronta para modelos anatômicos GLB/GLTF.</p>
+        <p className="mt-4 max-w-3xl text-slate-300">Roteiro interativo do retalho de grande dorsal para reconstrução mamária, com modelo anatômico feminino/right-sided, overlays de dissecção e notas práticas por etapa.</p>
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_minmax(0,1fr)_360px]">
