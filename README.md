@@ -10,6 +10,15 @@ Webapp MVP para visualização interativa de cortes anatômicos e etapas cirúrg
 - Three.js, React Three Fiber e Drei
 - Export estático preparado para GitHub Pages
 
+## Funcionalidades
+
+- Instalável como app (PWA): no Android, "Instalar app"; no iPhone, Safari → Compartilhar → "Adicionar à Tela de Início". Funciona offline após o primeiro acesso.
+- Celular: viewer em primeiro plano, navegação entre etapas, ferramentas em abas e modelo leve (704 mil triângulos, 2,9 MB).
+- Cortes transversal, sagital e coronal com tampas coloridas no 3D e vista 2D do corte (estilo TC) com identificação por toque.
+- Seleção por toque com ficha anatômica: origem, inserção, inervação, vascularização, ação, marcos e relevância cirúrgica.
+- Dissecção: profundidade por camadas, janelas de pele, estruturas rebatidas e transpostas (transformações rígidas), vista explodida e espaços cirúrgicos com paredes destacadas (axila, níveis de Berg, Rotter, plano pré-peitoral, loja subpeitoral, plano GD–serrátil, triângulos de ausculta e de Petit, espaços quadrangular e triangular). As etapas cirúrgicas abrem com a dissecção correspondente.
+- Viabilidade de movimento do membro superior: `docs/movimento-membro-superior.md`.
+
 ## Funcionalidades do MVP
 
 - Página inicial com apresentação do projeto.
