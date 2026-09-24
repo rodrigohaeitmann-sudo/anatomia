@@ -12,6 +12,8 @@ export type CutState = {
   position: number;
   flip: boolean;
   scope: CutScope;
+  /** exact model-space coordinate set by a pack view; cleared when the slider moves */
+  absolute?: number | null;
 };
 
 export type SkinWindow = "none" | "anterior" | "posterior" | "lateral";

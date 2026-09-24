@@ -5,12 +5,12 @@ import { ContactShadows, Html, OrbitControls, useProgress } from "@react-three/d
 import { Canvas, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import type { SurgicalStep } from "@/data/procedures";
+import type { PackView, ViewOrientation } from "@/data/packs";
 import { surgicalSpaces } from "@/data/surgicalSpaces";
-import { hybridTorsoModel, modelLandmarks as L, modelStructures, type Landmark } from "@/lib/modelConfig";
+import { hybridTorsoModel, modelLandmarks as L, type Landmark } from "@/lib/modelConfig";
 import { computeSection, sectionPlane, type SectionAxis, type SectionResult } from "@/lib/sectioning";
 import { hiddenByLayer, type CutState, type DissectionState, type StructureVisibility, type ViewMode } from "@/lib/viewerTypes";
-import { SelectionMarker, SpaceOverlay, SurgicalGuideOverlay } from "./viewer/Guides";
+import { PackOverlay, SelectionMarker, SpaceOverlay } from "./viewer/Guides";
 import { HybridModel, type ModelHandle, type PlaneSet } from "./viewer/HybridModel";
 import { SectionCaps } from "./viewer/SectionCaps";
 import { isMesh, resolvePoint, structureById, v3, wallColors } from "./viewer/shared";
@@ -19,7 +19,9 @@ export type SectionReport = { result: SectionResult; axis: SectionAxis; position
 export type FocusRequest = { structure: string; nonce: number } | null;
 
 type AnatomyViewerProps = {
-  step: SurgicalStep;
+  view: PackView;
+  viewKey: string;
+  caption: string;
   visibility: StructureVisibility;
   viewMode: ViewMode;
   resetSignal: number;
@@ -33,32 +35,25 @@ type AnatomyViewerProps = {
   onSection: (report: SectionReport) => void;
 };
 
-const structureLabel = new Map(modelStructures.map((structure) => [structure.id, structure.label]));
 
 /**
  * The model's anterior faces +Z and the operative (right) side lies towards -X. Each orientation turns
- * the model so the relevant region faces the step camera (which sits on the +X/+Z side), and the orbit
- * target is anchored to a real landmark of that region.
+ * the model (yaw) so the region of interest faces a camera placed on the +X/+Z side.
  */
-const orientationYaw: Record<SurgicalStep["orientation"], number> = {
-  posterior: -2.47,
-  posterolateral: 3.03,
-  "lateral-position": 3.03,
-  closure: 3.03,
-  "axillary-closeup": 2.21,
-  anterior: -0.15,
+const orientations: Record<ViewOrientation, { yaw: number; offset: Landmark }> = {
+  anterior: { yaw: -0.15, offset: [-3.6, 2.05, 4.2] },
+  anterolateral: { yaw: 0.08, offset: [-3.6, 2.05, 4.2] },
+  lateral: { yaw: 2.23, offset: [2.9, 1.7, 3.7] },
+  axillary: { yaw: 2.21, offset: [2.2, 1.7, 3.0] },
+  posterior: { yaw: -2.47, offset: [4.1, 2.2, 5.2] },
+  posterolateral: { yaw: 3.03, offset: [4.1, 2.2, 5.2] },
 };
 
-function framing(orientation: SurgicalStep["orientation"], anchor: Landmark, camera: SurgicalStep["camera"], distanceScale = 1) {
-  const rotation = new THREE.Euler(0, orientationYaw[orientation], 0);
+function framing(orientation: ViewOrientation, anchor: Landmark, distanceScale = 1) {
+  const preset = orientations[orientation];
+  const rotation = new THREE.Euler(0, preset.yaw, 0);
   const target = v3(anchor).applyEuler(rotation);
-  const preset = camera ?? { position: [4, 3, 6] as Landmark, target: [0, 0.4, 0] as Landmark };
-  const offset = v3(preset.position).sub(v3(preset.target)).multiplyScalar(distanceScale / (preset.zoom ?? 1));
-  return { rotation, target, position: target.clone().add(offset) };
-}
-
-function defaultAnchor(orientation: SurgicalStep["orientation"]): Landmark {
-  return orientation === "anterior" ? L.breastCenter : orientation === "axillary-closeup" ? L.thoracodorsalArteryOrigin : L.latissimusCenter;
+  return { rotation, target, position: target.clone().add(v3(preset.offset).multiplyScalar(distanceScale)) };
 }
 
 function StudioEnvironment() {
@@ -125,7 +120,7 @@ function modelExtent(root: THREE.Object3D) {
   return box;
 }
 
-export function AnatomyViewer({ step, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onSection }: AnatomyViewerProps) {
+export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onSection }: AnatomyViewerProps) {
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
   const [section, setSection] = useState<SectionResult | null>(null);
@@ -144,27 +139,26 @@ export function AnatomyViewer({ step, visibility, viewMode, resetSignal, modelPa
     space?.walls.forEach((wall, index) => wall.structures.forEach((id) => map.set(id, wallColors[index % wallColors.length])));
     return map;
   }, [space]);
-  const emphasised = useMemo(() => new Set(space?.contents ?? []), [space]);
-  const activeStructures = useMemo(() => new Set(step.visibleStructures), [step.visibleStructures]);
+  const emphasised = useMemo(() => new Set([...(space?.contents ?? []), ...(view.focus ?? [])]), [space, view.focus]);
+  const activeStructures = useMemo(() => new Set(view.focus ?? []), [view.focus]);
 
   // ---- camera framing ---------------------------------------------------------------------------
-  const orientation = space?.view ?? step.orientation;
+  const orientation = view.orientation;
   const focusAnchor = focus ? (handle?.snap(focus.structure, structureById.get(focus.structure)?.labelAnchor ?? L.breastCenter) ?? structureById.get(focus.structure)?.labelAnchor) : undefined;
-  const anchor = focusAnchor ?? (space ? resolvePoint(space.centre) : undefined) ?? defaultAnchor(orientation);
-  const frame = useMemo(() => framing(orientation, anchor, step.camera, focusAnchor ? 0.6 : space ? 0.8 : 1), [orientation, anchor, step.camera, focusAnchor, space]);
+  const anchor = focusAnchor ?? (view.anchor ? resolvePoint(view.anchor) : undefined) ?? (space ? resolvePoint(space.centre) : undefined) ?? L.breastCenter;
+  const frame = useMemo(() => framing(orientation, anchor, focusAnchor ? 0.55 : view.distance ?? (space ? 0.8 : 1)), [orientation, anchor, focusAnchor, view.distance, space]);
   const rotationMatrix = useMemo(() => new THREE.Matrix4().makeRotationFromEuler(frame.rotation), [frame.rotation]);
-  const cameraSignature = `${step.id}|${space?.id ?? ""}|${focus?.nonce ?? ""}|${resetSignal}`;
+  const cameraSignature = `${viewKey}|${space?.id ?? ""}|${focus?.nonce ?? ""}|${resetSignal}`;
 
   // ---- clipping planes (defined in model space, applied in world space) --------------------------
   const cutWorld = useRef(new THREE.Plane()).current;
   const skinWorld = useRef(new THREE.Plane()).current;
-  const stepWorld = useRef(new THREE.Plane()).current;
   const cutModel = useMemo(() => {
     if (!cut.axis || !extent) return null;
     const component = cut.axis === "transverse" ? "y" : cut.axis === "sagittal" ? "x" : "z";
-    const position = extent.min[component] + (extent.max[component] - extent.min[component]) * cut.position;
+    const position = cut.absolute ?? extent.min[component] + (extent.max[component] - extent.min[component]) * cut.position;
     return { plane: sectionPlane(cut.axis, position, cut.flip), position };
-  }, [cut.axis, cut.position, cut.flip, extent]);
+  }, [cut.axis, cut.position, cut.flip, cut.absolute, extent]);
   const skinModel = useMemo(() => {
     const midDepth = (L.nipple[2] + L.latissimusCenter[2]) / 2;
     if (dissection.skinWindow === "anterior") return new THREE.Plane().setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, midDepth));
@@ -172,16 +166,14 @@ export function AnatomyViewer({ step, visibility, viewMode, resetSignal, modelPa
     if (dissection.skinWindow === "lateral") return new THREE.Plane().setFromNormalAndCoplanarPoint(new THREE.Vector3(1, 0, 0), new THREE.Vector3(L.nipple[0], 0, 0));
     return null;
   }, [dissection.skinWindow]);
-  const stepModel = useMemo(() => (step.clippingPlane?.enabled && !cut.axis ? new THREE.Plane(new THREE.Vector3(...step.clippingPlane.normal).normalize(), step.clippingPlane.constant) : null), [step.clippingPlane, cut.axis]);
 
   if (cutModel) cutWorld.copy(cutModel.plane).applyMatrix4(rotationMatrix);
   if (skinModel) skinWorld.copy(skinModel).applyMatrix4(rotationMatrix);
-  if (stepModel) stepWorld.copy(stepModel).applyMatrix4(rotationMatrix);
   const planes: PlaneSet = useMemo(
-    () => ({ cut: cutModel ? cutWorld : null, cutScope: cut.scope, skin: skinModel ? skinWorld : null, step: stepModel ? stepWorld : null }),
+    () => ({ cut: cutModel ? cutWorld : null, cutScope: cut.scope, skin: skinModel ? skinWorld : null, step: null }),
     // only rebuild materials when a plane is switched on/off, not when it moves
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [Boolean(cutModel), cut.scope, Boolean(skinModel), Boolean(stepModel)],
+    [Boolean(cutModel), cut.scope, Boolean(skinModel)],
   );
 
   const handleReady = useCallback((next: ModelHandle) => {
@@ -205,13 +197,11 @@ export function AnatomyViewer({ step, visibility, viewMode, resetSignal, modelPa
     return () => window.clearTimeout(timer);
   }, [cutModel, handle, cut.axis, onSection]);
 
-  const activeLabels = step.visibleStructures.map((id) => structureLabel.get(id) ?? id);
 
   return (
     <div className="viewer-shell relative h-[58dvh] min-h-[360px] overflow-hidden rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_50%_35%,#1e293b,#020617_70%)] sm:h-[620px]">
       <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-        <span className="rounded-full border border-pink-300/20 bg-pink-500/15 px-3 py-1 text-xs font-bold text-pink-100">{step.code}</span>
-        <span className="hidden rounded-full border border-sky-300/20 bg-sky-500/15 px-3 py-1 text-xs font-semibold text-sky-100 sm:inline">{step.patientPosition}</span>
+        <span className="rounded-full border border-pink-300/20 bg-pink-500/15 px-3 py-1 text-xs font-bold text-pink-100">{caption}</span>
         {space && <span className="rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-cyan-100">{space.label}</span>}
       </div>
       <Canvas
@@ -247,18 +237,18 @@ export function AnatomyViewer({ step, visibility, viewMode, resetSignal, modelPa
             />
           </Suspense>
           <SectionCaps section={section} planeNormal={cutModel ? cutModel.plane.normal : null} selected={selected} />
-          {!space && <SurgicalGuideOverlay step={step} snap={handle?.snap ?? null} />}
+          <PackOverlay view={view} snap={handle?.snap ?? null} />
           {space && <SpaceOverlay space={space} snap={handle?.snap ?? null} />}
           {selected && <SelectionMarker structure={selected} snap={handle?.snap ?? null} />}
         </group>
         {!lowPower && <ContactShadows position={[0, L.latissimusBounds.min[1] - 0.15, 0]} opacity={0.45} scale={9} blur={2.6} far={5} />}
         <OrbitControls makeDefault enableDamping dampingFactor={0.12} />
         <CameraDirector position={frame.position} target={frame.target} signature={cameraSignature} />
-        <Invalidator deps={[cutModel, skinModel, stepModel, rotationMatrix]} />
+        <Invalidator deps={[cutModel, skinModel, rotationMatrix]} />
       </Canvas>
       <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-white/10 bg-slate-950/75 p-2 text-[11px] text-slate-300 backdrop-blur sm:p-3 sm:text-xs">
         <span className="font-semibold text-slate-100">Toque em uma estrutura para ver a ficha.</span>
-        <span className="hidden sm:inline"> · Modelo híbrido feminino · HRA/NIH · BodyParts3D/DBCLS · Z-Anatomy · {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} M triângulos · Etapa: {activeLabels.join(" • ")}</span>
+        <span className="hidden sm:inline"> · Modelo híbrido feminino · HRA/NIH · BodyParts3D/DBCLS · Z-Anatomy · {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} M triângulos</span>
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ export function CutPanel({ cut, onChange, report, selected, onSelect }: Props) {
           Sem corte
         </button>
         {axes.map((axis) => (
-          <button key={axis.id} title={axis.hint} className={`${button} ${cut.axis === axis.id ? "border-sky-300 bg-sky-500/30 text-white" : "border-white/15 bg-white/5 text-slate-200"}`} onClick={() => onChange({ ...cut, axis: axis.id })}>
+          <button key={axis.id} title={axis.hint} className={`${button} ${cut.axis === axis.id ? "border-sky-300 bg-sky-500/30 text-white" : "border-white/15 bg-white/5 text-slate-200"}`} onClick={() => onChange({ ...cut, axis: axis.id, absolute: null })}>
             {axis.label}
           </button>
         ))}
@@ -37,7 +37,7 @@ export function CutPanel({ cut, onChange, report, selected, onSelect }: Props) {
         <>
           <label className="block text-xs text-slate-300">
             Posição do plano
-            <input type="range" min={0} max={1} step={0.002} value={cut.position} onChange={(event) => onChange({ ...cut, position: Number(event.target.value) })} className="mt-2 h-8 w-full accent-sky-400" />
+            <input type="range" min={0} max={1} step={0.002} value={cut.position} onChange={(event) => onChange({ ...cut, position: Number(event.target.value), absolute: null })} className="mt-2 h-8 w-full accent-sky-400" />
           </label>
           <div className="flex flex-wrap gap-2">
             <button className={`${button} border-white/15 bg-white/5 text-slate-200`} onClick={() => onChange({ ...cut, flip: !cut.flip })}>

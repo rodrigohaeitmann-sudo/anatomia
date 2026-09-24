@@ -1,3 +1,5 @@
+import type { ViewOrientation } from "@/data/packs";
+
 /**
  * Espaços e planos de interesse cirúrgico. Cada parede é formada por estruturas reais do modelo;
  * o visualizador destaca cada parede com uma cor e rotula o ponto da estrutura mais próximo do espaço.
@@ -12,7 +14,7 @@ export type SurgicalSpace = {
   centre: string;
   walls: SpaceWall[];
   contents: string[];
-  view: "anterior" | "posterior" | "posterolateral" | "axillary-closeup";
+  view: ViewOrientation;
   /** structures hidden to open the space (e.g. the skin and the superficial muscle) */
   hide?: string[];
   pearls: string[];
@@ -31,7 +33,7 @@ export const surgicalSpaces: SurgicalSpace[] = [
       { label: "Parede lateral", structures: ["coracobrachialis-biceps", "axilla"] },
     ],
     contents: ["axillary-vessels", "brachial-plexus", "axillary-lymph-nodes", "thoracodorsal-vessels", "thoracodorsal-nerve", "long-thoracic-nerve", "intercostobrachial-nerve", "lateral-thoracic-vessels", "subscapular-vessels"],
-    view: "axillary-closeup",
+    view: "axillary",
     hide: ["skin", "breast", "breast-fat", "nipple-areola", "breast-ligaments", "deltoid", "deltoid-fascia"],
     pearls: ["Ápice: margem externa da 1ª costela, borda superior da escápula e borda posterior da clavícula", "Base: fáscia e pele axilares", "O pedículo toracodorsal desce na parede posterior; o nervo torácico longo, na medial"],
   },

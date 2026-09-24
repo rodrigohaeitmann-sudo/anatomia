@@ -24,10 +24,20 @@ export function recordFor(object: THREE.Object3D) {
 
 export type Snapper = (structureId: string, near: Landmark) => Landmark | undefined;
 
-/** A landmark name or a structure id, resolved to a model-space point. */
+const derived: Record<string, () => Landmark> = {
+  breastLateral: () => [L.breastBounds.min[0], L.breastCenter[1], L.breastCenter[2]],
+  breastMedial: () => [L.breastBounds.max[0], L.breastCenter[1], L.breastCenter[2]],
+};
+
+/** A landmark name ("key" or "key.index"), a derived landmark, or a structure id, resolved to a model-space point. */
 export function resolvePoint(key: string): Landmark | undefined {
-  const landmark = (L as unknown as Record<string, unknown>)[key];
-  if (Array.isArray(landmark) && landmark.length === 3 && typeof landmark[0] === "number") return landmark as Landmark;
+  if (derived[key]) return derived[key]();
+  const [name, index] = key.split(".");
+  const value = (L as unknown as Record<string, unknown>)[name];
+  if (Array.isArray(value)) {
+    if (index !== undefined && Array.isArray(value[Number(index)])) return value[Number(index)] as Landmark;
+    if (value.length === 3 && typeof value[0] === "number") return value as Landmark;
+  }
   return structureById.get(key)?.labelAnchor;
 }
 
