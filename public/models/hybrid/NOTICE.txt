@@ -1,0 +1,11 @@
+torso-female-hybrid.glb — derivative work, CC BY-SA 4.0.
+
+Sources:
+- HRA / NIH Visible Human Female v1.3 (skin, mammary glands) — CC BY 4.0
+  https://github.com/hubmapconsortium/ccf-3d-reference-object-library
+- BodyParts3D 4.3 and 3.0, (c) The Database Center for Life Science (skeleton, muscles, vessels, nerves)
+  https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html
+- Z-Anatomy - The open source atlas of anatomy - CC BY-SA 4.0 (lymph nodes, fasciae, lateral pectoral nerve)
+
+Per-mesh provenance is stored in each glTF node's extras and in src/data/hybridTorsoManifest.json.
+Build process: scripts/hybrid/README.md. Access date: 2026-09-24.

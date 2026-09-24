@@ -5,8 +5,8 @@ const axillaryCamera: CameraPreset = { position: [2.4, 2.2, 3.1], target: [0.2, 
 const anteriorCamera: CameraPreset = { position: [-3.6, 2.4, 4.2], target: [0, 0.35, 0], zoom: 1 };
 const lowerBackCamera: CameraPreset = { position: [4.4, 1.6, 4.4], target: [-0.2, -0.25, 0], zoom: 1 };
 
-const posteriorBase = ["skin", "subcutaneous", "latissimus-dorsi", "chest-wall", "axilla", "breast"];
-const dorsalDissection = ["skin", "subcutaneous", "latissimus-dorsi", "serratus-anterior", "chest-wall", "axilla", "breast"];
+const posteriorBase = ["skin", "latissimus-dorsi", "chest-wall", "axilla", "breast"];
+const dorsalDissection = ["skin", "latissimus-dorsi", "serratus-anterior", "chest-wall", "axilla", "breast"];
 const axillaryNeurovascular = [
   "axillary-vessels",
   "subscapular-vessels",
@@ -99,7 +99,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     patientPosition: "Referência ortostática/posterolateral com pele íntegra.",
     orientation: "posterolateral",
     overlayPreset: "skin-marking",
-    visibleStructures: ["skin", "subcutaneous", "breast", "latissimus-dorsi", "chest-wall"],
+    visibleStructures: ["skin", "breast", "latissimus-dorsi", "chest-wall"],
     references: [
       { label: "Fuso cutâneo", detail: "Aproximadamente 20 cm x 10 cm no ponto médio.", targetStructure: "skin" },
       { label: "Linha do sutiã", detail: "Eixo longitudinal para esconder a cicatriz doadora." },
@@ -152,13 +152,13 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     comparison: { correct: "Plano oblíquo, subcutâneo espesso preservado sobre o GD.", pitfall: "Plano perpendicular/rasa, GD desnudado e retalho fino." },
     references: [
       { label: "Linha inferior do fuso", detail: "Primeiro tempo da incisão.", targetStructure: "skin" },
-      { label: "Plano oblíquo", detail: "Desce em direção ao GD preservando gordura sobre o músculo.", targetStructure: "subcutaneous" },
+      { label: "Plano oblíquo", detail: "Desce em direção ao GD preservando gordura sobre o músculo.", targetStructure: "skin" },
     ],
     practicalTips: ["Comece pela borda inferior para construir o plano de espessura do retalho.", "Observe a espessura do subcutâneo no centro do fuso."],
     attentionPoints: ["Não desnude o grande dorsal nesta fase."],
     annotations: [
       annotation("inferior-line", "Incisão inferior", "Primeira linha do fuso.", "skin", [0.25, -0.25, 0.35]),
-      annotation("oblique-plane", "Plano oblíquo", "Preserva tecido subcutâneo.", "subcutaneous", [0.1, -0.05, 0.4]),
+      annotation("oblique-plane", "Plano oblíquo", "Preserva tecido subcutâneo.", "skin", [0.1, -0.05, 0.4]),
     ],
     camera: posteriorCamera,
     clippingPlane: { enabled: true, normal: [1, 0, 0], constant: 0.12 },
@@ -301,7 +301,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     patientPosition: "Decúbito lateral esquerdo, dorso inferior direito.",
     orientation: "posterolateral",
     overlayPreset: "inferior-limit",
-    visibleStructures: ["latissimus-dorsi", "thoracolumbar-fascia", "iliac-crest", "skin", "subcutaneous"],
+    visibleStructures: ["latissimus-dorsi", "thoracolumbar-fascia", "iliac-crest", "skin"],
     references: [
       { label: "Fáscia toracolombar", detail: "Origem aponeurótica do GD.", targetStructure: "thoracolumbar-fascia" },
       { label: "Crista ilíaca", detail: "Marco ósseo inferior.", targetStructure: "iliac-crest" },
@@ -325,7 +325,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     patientPosition: "Decúbito lateral esquerdo, dorso inferior.",
     orientation: "posterolateral",
     overlayPreset: "inferior-muscle-release",
-    visibleStructures: ["latissimus-dorsi", "thoracolumbar-fascia", "iliac-crest", "subcutaneous", "skin"],
+    visibleStructures: ["latissimus-dorsi", "thoracolumbar-fascia", "iliac-crest", "skin"],
     references: [
       { label: "Fibras inferiores", detail: "Linha inicial de secção.", targetStructure: "latissimus-dorsi" },
       { label: "Face profunda", detail: "Superfície interna exposta após elevação.", targetStructure: "latissimus-dorsi" },
@@ -407,7 +407,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     patientPosition: "Decúbito lateral esquerdo, dorso/axila.",
     orientation: "posterolateral",
     overlayPreset: "islanded-flap",
-    visibleStructures: ["skin", "subcutaneous", "latissimus-dorsi", "axillary-vessels", "subscapular-vessels", "thoracodorsal-vessels", "thoracodorsal-nerve", "axilla"],
+    visibleStructures: ["skin", "latissimus-dorsi", "axillary-vessels", "subscapular-vessels", "thoracodorsal-vessels", "thoracodorsal-nerve", "axilla"],
     references: [
       { label: "Retalho de GD", detail: "Bloco muscular e cutâneo liberado.", targetStructure: "latissimus-dorsi" },
       { label: "Paleta cutânea", detail: "Fuso de pele sobre a superfície.", targetStructure: "skin" },
@@ -462,7 +462,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     patientPosition: "Decúbito lateral esquerdo, dorso direito em fechamento.",
     orientation: "closure",
     overlayPreset: "donor-closure",
-    visibleStructures: ["skin", "subcutaneous", "chest-wall", "axilla"],
+    visibleStructures: ["skin", "chest-wall", "axilla"],
     references: [
       { label: "Leito doador", detail: "Área dorsal fechada e hemostática." },
       { label: "Dreno dorsal", detail: "Tubo aspirativo no leito doador." },
@@ -729,7 +729,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     patientPosition: "Decúbito dorsal, visão anterior.",
     orientation: "anterior",
     overlayPreset: "deepithelialization",
-    visibleStructures: ["skin", "subcutaneous", "breast", "latissimus-dorsi"],
+    visibleStructures: ["skin", "breast-fat", "breast", "latissimus-dorsi"],
     references: [
       { label: "Área desepitelizada", detail: "Derme rósea preservada." },
       { label: "Ilha de pele preservada", detail: "Porção necessária para CAP ou falha cutânea." },

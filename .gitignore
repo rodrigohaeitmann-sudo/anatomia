@@ -7,3 +7,5 @@ assets/source
 npm-debug.log*
 tsconfig.tsbuildinfo
 .verification-*.png
+assets/build
+__pycache__

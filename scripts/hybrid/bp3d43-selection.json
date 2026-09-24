@@ -1,0 +1,1912 @@
+[
+ {
+  "file": "meshes/FJ1452M_BP22276_FMA13337_Left external oblique.obj",
+  "fj": "FJ1452M",
+  "fma": "FMA13337",
+  "name": "Left external oblique",
+  "structure": "external-oblique",
+  "category": "muscle",
+  "faces": 111826,
+  "bytes": 8250238
+ },
+ {
+  "file": "meshes/FJ1451M_BP23614_FMA9756_External intercostal muscle.obj",
+  "fj": "FJ1451M",
+  "fma": "FMA9756",
+  "name": "External intercostal muscle",
+  "structure": "intercostal-muscles",
+  "category": "muscle",
+  "faces": 98928,
+  "bytes": 9040184
+ },
+ {
+  "file": "meshes/FJ1451_BP23614_FMA9756_External intercostal muscle.obj",
+  "fj": "FJ1451",
+  "fma": "FMA9756",
+  "name": "External intercostal muscle",
+  "structure": "intercostal-muscles",
+  "category": "muscle",
+  "faces": 98928,
+  "bytes": 9118668
+ },
+ {
+  "file": "meshes/FJ1455M_BP23744_FMA9757_Internal intercostal muscle.obj",
+  "fj": "FJ1455M",
+  "fma": "FMA9757",
+  "name": "Internal intercostal muscle",
+  "structure": "intercostal-muscles",
+  "category": "muscle",
+  "faces": 89838,
+  "bytes": 7632486
+ },
+ {
+  "file": "meshes/FJ1455_BP23744_FMA9757_Internal intercostal muscle.obj",
+  "fj": "FJ1455",
+  "fma": "FMA9757",
+  "name": "Internal intercostal muscle",
+  "structure": "intercostal-muscles",
+  "category": "muscle",
+  "faces": 89838,
+  "bytes": 7706151
+ },
+ {
+  "file": "meshes/FJ1454M_BP23737_FMA9758_Innermost intercostal muscle.obj",
+  "fj": "FJ1454M",
+  "fma": "FMA9758",
+  "name": "Innermost intercostal muscle",
+  "structure": "intercostal-muscles",
+  "category": "muscle",
+  "faces": 87218,
+  "bytes": 7642544
+ },
+ {
+  "file": "meshes/FJ1454_BP23737_FMA9758_Innermost intercostal muscle.obj",
+  "fj": "FJ1454",
+  "fma": "FMA9758",
+  "name": "Innermost intercostal muscle",
+  "structure": "intercostal-muscles",
+  "category": "muscle",
+  "faces": 87218,
+  "bytes": 7720149
+ },
+ {
+  "file": "meshes/FJ1459M_BP21658_FMA13399_Left serratus anterior.obj",
+  "fj": "FJ1459M",
+  "fma": "FMA13399",
+  "name": "Left serratus anterior",
+  "structure": "serratus-anterior",
+  "category": "muscle",
+  "faces": 49212,
+  "bytes": 3571535
+ },
+ {
+  "file": "meshes/FJ1994_BP21293_FMA70839_Set of anterior intercostal veins.obj",
+  "fj": "FJ1994",
+  "fma": "FMA70839",
+  "name": "Set of anterior intercostal veins",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 38814,
+  "bytes": 2663419
+ },
+ {
+  "file": "meshes/FJ1961_BP22637_FMA63822_Set of posterior intercostal arteries.obj",
+  "fj": "FJ1961",
+  "fma": "FMA63822",
+  "name": "Set of posterior intercostal arteries",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 37964,
+  "bytes": 2589071
+ },
+ {
+  "file": "meshes/FJ1985_BP21293_FMA70839_Set of anterior intercostal veins.obj",
+  "fj": "FJ1985",
+  "fma": "FMA70839",
+  "name": "Set of anterior intercostal veins",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 37874,
+  "bytes": 2575584
+ },
+ {
+  "file": "meshes/FJ1975_BP22637_FMA63822_Set of posterior intercostal arteries.obj",
+  "fj": "FJ1975",
+  "fma": "FMA63822",
+  "name": "Set of posterior intercostal arteries",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 35050,
+  "bytes": 2381718
+ },
+ {
+  "file": "meshes/FJ3279_BP23279_FMA13396_Left scapula.obj",
+  "fj": "FJ3279",
+  "fma": "FMA13396",
+  "name": "Left scapula",
+  "structure": "scapula-clavicle",
+  "category": "bone",
+  "faces": 28106,
+  "bytes": 1865374
+ },
+ {
+  "file": "meshes/FJ3384_BP23090_FMA13395_Right scapula.obj",
+  "fj": "FJ3384",
+  "fma": "FMA13395",
+  "name": "Right scapula",
+  "structure": "scapula-clavicle",
+  "category": "bone",
+  "faces": 26172,
+  "bytes": 1743404
+ },
+ {
+  "file": "meshes/FJ2220_BP22733_FMA13326_Left cephalic vein.obj",
+  "fj": "FJ2220",
+  "fma": "FMA13326",
+  "name": "Left cephalic vein",
+  "structure": "brachial-vessels",
+  "category": "vessel",
+  "faces": 22874,
+  "bytes": 1497564
+ },
+ {
+  "file": "meshes/FJ2218_BP21683_FMA22910_Left basilic vein.obj",
+  "fj": "FJ2218",
+  "fma": "FMA22910",
+  "name": "Left basilic vein",
+  "structure": "brachial-vessels",
+  "category": "vessel",
+  "faces": 18338,
+  "bytes": 1181387
+ },
+ {
+  "file": "meshes/FJ1541M_BP23485_FMA13406_Left serratus posterior inferior.obj",
+  "fj": "FJ1541M",
+  "fma": "FMA13406",
+  "name": "Left serratus posterior inferior",
+  "structure": "serratus-posterior",
+  "category": "muscle",
+  "faces": 13164,
+  "bytes": 968811
+ },
+ {
+  "file": "meshes/FJ3636_BP23563_FMA14735_Lumbar artery.obj",
+  "fj": "FJ3636",
+  "fma": "FMA14735",
+  "name": "Lumbar artery",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 12498,
+  "bytes": 810967
+ },
+ {
+  "file": "meshes/FJ3632_BP23563_FMA14735_Lumbar artery.obj",
+  "fj": "FJ3632",
+  "fma": "FMA14735",
+  "name": "Lumbar artery",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 12058,
+  "bytes": 781407
+ },
+ {
+  "file": "meshes/FJ1520M_BP21517_FMA33583_Ascending part of left trapezius.obj",
+  "fj": "FJ1520M",
+  "fma": "FMA33583",
+  "name": "Ascending part of left trapezius",
+  "structure": "trapezius",
+  "category": "muscle",
+  "faces": 10530,
+  "bytes": 806714
+ },
+ {
+  "file": "meshes/FJ3233_BP22298_FMA8202_Left sixth rib.obj",
+  "fj": "FJ3233",
+  "fma": "FMA8202",
+  "name": "Left sixth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 10264,
+  "bytes": 656948
+ },
+ {
+  "file": "meshes/FJ3344_BP22272_FMA8175_Right sixth rib.obj",
+  "fj": "FJ3344",
+  "fma": "FMA8175",
+  "name": "Right sixth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 10246,
+  "bytes": 661483
+ },
+ {
+  "file": "meshes/FJ3234_BP22332_FMA8256_Left seventh rib.obj",
+  "fj": "FJ3234",
+  "fma": "FMA8256",
+  "name": "Left seventh rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 10032,
+  "bytes": 642046
+ },
+ {
+  "file": "meshes/FJ3346_BP22330_FMA8229_Right seventh rib.obj",
+  "fj": "FJ3346",
+  "fma": "FMA8229",
+  "name": "Right seventh rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 10032,
+  "bytes": 647068
+ },
+ {
+  "file": "meshes/FJ3232_BP22285_FMA8093_Left fifth rib.obj",
+  "fj": "FJ3232",
+  "fma": "FMA8093",
+  "name": "Left fifth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 9710,
+  "bytes": 622026
+ },
+ {
+  "file": "meshes/FJ3342_BP22307_FMA8066_Right fifth rib.obj",
+  "fj": "FJ3342",
+  "fma": "FMA8066",
+  "name": "Right fifth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 9710,
+  "bytes": 626812
+ },
+ {
+  "file": "meshes/FJ1456M_BP23831_FMA13376_Left pectoralis minor.obj",
+  "fj": "FJ1456M",
+  "fma": "FMA13376",
+  "name": "Left pectoralis minor",
+  "structure": "pectoralis-minor",
+  "category": "muscle",
+  "faces": 9468,
+  "bytes": 711985
+ },
+ {
+  "file": "meshes/FJ1456_BP23886_FMA13375_Right pectoralis minor.obj",
+  "fj": "FJ1456",
+  "fma": "FMA13375",
+  "name": "Right pectoralis minor",
+  "structure": "contralateral-pectoral",
+  "category": "muscle",
+  "faces": 9468,
+  "bytes": 719116
+ },
+ {
+  "file": "meshes/FJ1542M_BP23455_FMA13404_Left serratus posterior superior.obj",
+  "fj": "FJ1542M",
+  "fma": "FMA13404",
+  "name": "Left serratus posterior superior",
+  "structure": "serratus-posterior",
+  "category": "muscle",
+  "faces": 9066,
+  "bytes": 678943
+ },
+ {
+  "file": "meshes/FJ3635_BP19660_FMA15370_Lumbar vein.obj",
+  "fj": "FJ3635",
+  "fma": "FMA15370",
+  "name": "Lumbar vein",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 8920,
+  "bytes": 581136
+ },
+ {
+  "file": "meshes/FJ3231_BP22488_FMA8148_Left fourth rib.obj",
+  "fj": "FJ3231",
+  "fma": "FMA8148",
+  "name": "Left fourth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 8850,
+  "bytes": 564170
+ },
+ {
+  "file": "meshes/FJ3631_BP19660_FMA15370_Lumbar vein.obj",
+  "fj": "FJ3631",
+  "fma": "FMA15370",
+  "name": "Lumbar vein",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 8834,
+  "bytes": 571222
+ },
+ {
+  "file": "meshes/FJ3340_BP22336_FMA7957_Right fourth rib.obj",
+  "fj": "FJ3340",
+  "fma": "FMA7957",
+  "name": "Right fourth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 8832,
+  "bytes": 567074
+ },
+ {
+  "file": "meshes/FJ3235_BP23684_FMA8310_Left eighth rib.obj",
+  "fj": "FJ3235",
+  "fma": "FMA8310",
+  "name": "Left eighth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 8336,
+  "bytes": 532419
+ },
+ {
+  "file": "meshes/FJ3347_BP23993_FMA8283_Right eighth rib.obj",
+  "fj": "FJ3347",
+  "fma": "FMA8283",
+  "name": "Right eighth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 8336,
+  "bytes": 535420
+ },
+ {
+  "file": "meshes/FJ3236_BP22343_FMA8391_Left ninth rib.obj",
+  "fj": "FJ3236",
+  "fma": "FMA8391",
+  "name": "Left ninth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 7576,
+  "bytes": 481426
+ },
+ {
+  "file": "meshes/FJ3348_BP23888_FMA8364_Right ninth rib.obj",
+  "fj": "FJ3348",
+  "fma": "FMA8364",
+  "name": "Right ninth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 7576,
+  "bytes": 484835
+ },
+ {
+  "file": "meshes/FJ3230_BP22294_FMA8039_Left third rib.obj",
+  "fj": "FJ3230",
+  "fma": "FMA8039",
+  "name": "Left third rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 7254,
+  "bytes": 459671
+ },
+ {
+  "file": "meshes/FJ3338_BP22334_FMA7909_Right third rib.obj",
+  "fj": "FJ3338",
+  "fma": "FMA7909",
+  "name": "Right third rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 7254,
+  "bytes": 463164
+ },
+ {
+  "file": "meshes/FJ1536M_BP21670_FMA13382_Left rhomboid major.obj",
+  "fj": "FJ1536M",
+  "fma": "FMA13382",
+  "name": "Left rhomboid major",
+  "structure": "rhomboids",
+  "category": "muscle",
+  "faces": 7202,
+  "bytes": 544095
+ },
+ {
+  "file": "meshes/FJ1464M_BP24065_FMA79980_Sternocostal part of left pectoralis major.obj",
+  "fj": "FJ1464M",
+  "fma": "FMA79980",
+  "name": "Sternocostal part of left pectoralis major",
+  "structure": "pectoralis-major",
+  "category": "muscle",
+  "faces": 7114,
+  "bytes": 550997
+ },
+ {
+  "file": "meshes/FJ1464_BP23276_FMA79979_Sternocostal part of right pectoralis major.obj",
+  "fj": "FJ1464",
+  "fma": "FMA79979",
+  "name": "Sternocostal part of right pectoralis major",
+  "structure": "contralateral-pectoral",
+  "category": "muscle",
+  "faces": 7114,
+  "bytes": 556430
+ },
+ {
+  "file": "meshes/FJ1521M_BP21478_FMA33587_Descending part of left trapezius.obj",
+  "fj": "FJ1521M",
+  "fma": "FMA33587",
+  "name": "Descending part of left trapezius",
+  "structure": "trapezius",
+  "category": "muscle",
+  "faces": 7108,
+  "bytes": 532329
+ },
+ {
+  "file": "meshes/FJ3225_BP23877_FMA8472_Left tenth rib.obj",
+  "fj": "FJ3225",
+  "fma": "FMA8472",
+  "name": "Left tenth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 6826,
+  "bytes": 431812
+ },
+ {
+  "file": "meshes/FJ3330_BP22326_FMA8445_Right tenth rib.obj",
+  "fj": "FJ3330",
+  "fma": "FMA8445",
+  "name": "Right tenth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 6820,
+  "bytes": 434445
+ },
+ {
+  "file": "meshes/FJ3229_BP22527_FMA8012_Left second rib.obj",
+  "fj": "FJ3229",
+  "fma": "FMA8012",
+  "name": "Left second rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 5594,
+  "bytes": 354866
+ },
+ {
+  "file": "meshes/FJ3336_BP22251_FMA7882_Right second rib.obj",
+  "fj": "FJ3336",
+  "fma": "FMA7882",
+  "name": "Right second rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 5594,
+  "bytes": 357986
+ },
+ {
+  "file": "meshes/FJ3226_BP22277_FMA8532_Left eleventh rib.obj",
+  "fj": "FJ3226",
+  "fma": "FMA8532",
+  "name": "Left eleventh rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 4866,
+  "bytes": 303913
+ },
+ {
+  "file": "meshes/FJ3331_BP22303_FMA8531_Right eleventh rib.obj",
+  "fj": "FJ3331",
+  "fma": "FMA8531",
+  "name": "Right eleventh rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 4866,
+  "bytes": 306359
+ },
+ {
+  "file": "meshes/FJ1532M_BP23798_FMA32541_Left levator scapulae.obj",
+  "fj": "FJ1532M",
+  "fma": "FMA32541",
+  "name": "Left levator scapulae",
+  "structure": "levator-scapulae",
+  "category": "muscle",
+  "faces": 4718,
+  "bytes": 352646
+ },
+ {
+  "file": "meshes/FJ3178_BP22232_FMA7487_Body of sternum.obj",
+  "fj": "FJ3178",
+  "fma": "FMA7487",
+  "name": "Body of sternum",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 4646,
+  "bytes": 373931
+ },
+ {
+  "file": "meshes/FJ2232_BP22079_FMA10552_Left dorsal scapular artery.obj",
+  "fj": "FJ2232",
+  "fma": "FMA10552",
+  "name": "Left dorsal scapular artery",
+  "structure": "scapular-cervical-vessels",
+  "category": "vessel",
+  "faces": 4532,
+  "bytes": 286141
+ },
+ {
+  "file": "meshes/FJ4240_BP29806_FMA37071_Left radial nerve.obj",
+  "fj": "FJ4240",
+  "fma": "FMA37071",
+  "name": "Left radial nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 4474,
+  "bytes": 281192
+ },
+ {
+  "file": "meshes/FJ1554M_BP23256_FMA33585_Transverse part of left trapezius.obj",
+  "fj": "FJ1554M",
+  "fma": "FMA33585",
+  "name": "Transverse part of left trapezius",
+  "structure": "trapezius",
+  "category": "muscle",
+  "faces": 4460,
+  "bytes": 348129
+ },
+ {
+  "file": "meshes/FJ4258_BP29812_FMA37321_Left ulnar nerve.obj",
+  "fj": "FJ4258",
+  "fma": "FMA37321",
+  "name": "Left ulnar nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 4406,
+  "bytes": 276297
+ },
+ {
+  "file": "meshes/FJ4224_BP29809_FMA37068_Left median nerve.obj",
+  "fj": "FJ4224",
+  "fma": "FMA37068",
+  "name": "Left median nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 4372,
+  "bytes": 275660
+ },
+ {
+  "file": "meshes/FJ3262_BP24066_FMA23131_Left humerus.obj",
+  "fj": "FJ3262",
+  "fma": "FMA23131",
+  "name": "Left humerus",
+  "structure": "humerus",
+  "category": "bone",
+  "faces": 3844,
+  "bytes": 247065
+ },
+ {
+  "file": "meshes/FJ1972_BP23462_FMA76304_Trunk of left internal thoracic artery.obj",
+  "fj": "FJ1972",
+  "fma": "FMA76304",
+  "name": "Trunk of left internal thoracic artery",
+  "structure": "internal-thoracic-vessels",
+  "category": "vessel",
+  "faces": 3642,
+  "bytes": 224198
+ },
+ {
+  "file": "meshes/FJ2233_BP21262_FMA71212_Left lateral thoracic vein.obj",
+  "fj": "FJ2233",
+  "fma": "FMA71212",
+  "name": "Left lateral thoracic vein",
+  "structure": "lateral-thoracic-vessels",
+  "category": "vessel",
+  "faces": 3640,
+  "bytes": 224377
+ },
+ {
+  "file": "meshes/FJ2219_BP22410_FMA22692_Left brachial artery.obj",
+  "fj": "FJ2219",
+  "fma": "FMA22692",
+  "name": "Left brachial artery",
+  "structure": "brachial-vessels",
+  "category": "vessel",
+  "faces": 3470,
+  "bytes": 213003
+ },
+ {
+  "file": "meshes/FJ2361_BP20917_FMA23063_Pectoral branch of right thoraco-acromial artery.obj",
+  "fj": "FJ2361",
+  "fma": "FMA23063",
+  "name": "Pectoral branch of right thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 3400,
+  "bytes": 209885
+ },
+ {
+  "file": "meshes/FJ2330_BP21961_FMA23064_Pectoral branch of left thoraco-acromial artery.obj",
+  "fj": "FJ2330",
+  "fma": "FMA23064",
+  "name": "Pectoral branch of left thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 3376,
+  "bytes": 206796
+ },
+ {
+  "file": "meshes/FJ3228_BP22221_FMA7987_Left first rib.obj",
+  "fj": "FJ3228",
+  "fma": "FMA7987",
+  "name": "Left first rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 3276,
+  "bytes": 200486
+ },
+ {
+  "file": "meshes/FJ3334_BP22293_FMA7857_Right first rib.obj",
+  "fj": "FJ3334",
+  "fma": "FMA7857",
+  "name": "Right first rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 3276,
+  "bytes": 201982
+ },
+ {
+  "file": "meshes/FJ2212_BP23968_FMA22683_Left anterior circumflex humeral artery.obj",
+  "fj": "FJ2212",
+  "fma": "FMA22683",
+  "name": "Left anterior circumflex humeral artery",
+  "structure": "circumflex-humeral-vessels",
+  "category": "vessel",
+  "faces": 3272,
+  "bytes": 202025
+ },
+ {
+  "file": "meshes/FJ4225_BP29815_FMA37066_Left musculocutaneous nerve.obj",
+  "fj": "FJ4225",
+  "fma": "FMA37066",
+  "name": "Left musculocutaneous nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 3264,
+  "bytes": 209111
+ },
+ {
+  "file": "meshes/FJ1988_BP21147_FMA4786_Left musculophrenic vein.obj",
+  "fj": "FJ1988",
+  "fma": "FMA4786",
+  "name": "Left musculophrenic vein",
+  "structure": "internal-thoracic-vessels",
+  "category": "vessel",
+  "faces": 3236,
+  "bytes": 197722
+ },
+ {
+  "file": "meshes/FJ3159_BP23671_FMA13073_Second lumbar vertebra.obj",
+  "fj": "FJ3159",
+  "fma": "FMA13073",
+  "name": "Second lumbar vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 3214,
+  "bytes": 213652
+ },
+ {
+  "file": "meshes/FJ2213_BP21245_FMA77955_Left anterior circumflex humeral vein.obj",
+  "fj": "FJ2213",
+  "fma": "FMA77955",
+  "name": "Left anterior circumflex humeral vein",
+  "structure": "circumflex-humeral-vessels",
+  "category": "vessel",
+  "faces": 3040,
+  "bytes": 186863
+ },
+ {
+  "file": "meshes/FJ3157_BP23647_FMA13072_First lumbar vertebra.obj",
+  "fj": "FJ3157",
+  "fma": "FMA13072",
+  "name": "First lumbar vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2972,
+  "bytes": 193434
+ },
+ {
+  "file": "meshes/FJ3530_BP21100_FMA4785_Left superior epigastric vein.obj",
+  "fj": "FJ3530",
+  "fma": "FMA4785",
+  "name": "Left superior epigastric vein",
+  "structure": "internal-thoracic-vessels",
+  "category": "vessel",
+  "faces": 2938,
+  "bytes": 186146
+ },
+ {
+  "file": "meshes/FJ2313_BP21287_FMA22936_Left medial brachial vein.obj",
+  "fj": "FJ2313",
+  "fma": "FMA22936",
+  "name": "Left medial brachial vein",
+  "structure": "brachial-vessels",
+  "category": "vessel",
+  "faces": 2852,
+  "bytes": 174678
+ },
+ {
+  "file": "meshes/FJ3227_BP22319_FMA8534_Left twelfth rib.obj",
+  "fj": "FJ3227",
+  "fma": "FMA8534",
+  "name": "Left twelfth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 2818,
+  "bytes": 170630
+ },
+ {
+  "file": "meshes/FJ3332_BP22528_FMA8533_Right twelfth rib.obj",
+  "fj": "FJ3332",
+  "fma": "FMA8533",
+  "name": "Right twelfth rib",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 2818,
+  "bytes": 172027
+ },
+ {
+  "file": "meshes/FJ3154_BP23555_FMA10037_Tenth thoracic vertebra.obj",
+  "fj": "FJ3154",
+  "fma": "FMA10037",
+  "name": "Tenth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2790,
+  "bytes": 181310
+ },
+ {
+  "file": "meshes/FJ3156_BP23373_FMA10081_Twelfth thoracic vertebra.obj",
+  "fj": "FJ3156",
+  "fma": "FMA10081",
+  "name": "Twelfth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2772,
+  "bytes": 181289
+ },
+ {
+  "file": "meshes/FJ1974_BP20590_FMA4112_Left second posterior intercostal artery.obj",
+  "fj": "FJ1974",
+  "fma": "FMA4112",
+  "name": "Left second posterior intercostal artery",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 2724,
+  "bytes": 164491
+ },
+ {
+  "file": "meshes/FJ3155_BP23648_FMA10059_Eleventh thoracic vertebra.obj",
+  "fj": "FJ3155",
+  "fma": "FMA10059",
+  "name": "Eleventh thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2674,
+  "bytes": 177706
+ },
+ {
+  "file": "meshes/FJ1477M_BP23168_FMA37698_Lateral head of left triceps brachii.obj",
+  "fj": "FJ1477M",
+  "fma": "FMA37698",
+  "name": "Lateral head of left triceps brachii",
+  "structure": "triceps",
+  "category": "muscle",
+  "faces": 2606,
+  "bytes": 180087
+ },
+ {
+  "file": "meshes/FJ3175_BP23429_FMA10014_Ninth thoracic vertebra.obj",
+  "fj": "FJ3175",
+  "fma": "FMA10014",
+  "name": "Ninth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2586,
+  "bytes": 165754
+ },
+ {
+  "file": "meshes/FJ3173_BP23615_FMA9968_Seventh thoracic vertebra.obj",
+  "fj": "FJ3173",
+  "fma": "FMA9968",
+  "name": "Seventh thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2574,
+  "bytes": 167251
+ },
+ {
+  "file": "meshes/FJ1979_BP21491_FMA4077_Left musculophrenic artery.obj",
+  "fj": "FJ1979",
+  "fma": "FMA4077",
+  "name": "Left musculophrenic artery",
+  "structure": "internal-thoracic-vessels",
+  "category": "vessel",
+  "faces": 2564,
+  "bytes": 154152
+ },
+ {
+  "file": "meshes/FJ3290_BP22794_FMA7486_Manubrium.obj",
+  "fj": "FJ3290",
+  "fma": "FMA7486",
+  "name": "Manubrium",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 2546,
+  "bytes": 164391
+ },
+ {
+  "file": "meshes/FJ2225_BP21677_FMA22697_Left deep brachial artery.obj",
+  "fj": "FJ2225",
+  "fma": "FMA22697",
+  "name": "Left deep brachial artery",
+  "structure": "brachial-vessels",
+  "category": "vessel",
+  "faces": 2506,
+  "bytes": 150223
+ },
+ {
+  "file": "meshes/FJ3345_BP21381_FMA8248_Right seventh costal cartilage.obj",
+  "fj": "FJ3345",
+  "fma": "FMA8248",
+  "name": "Right seventh costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 2450,
+  "bytes": 167200
+ },
+ {
+  "file": "meshes/FJ3174_BP23727_FMA9991_Eighth thoracic vertebra.obj",
+  "fj": "FJ3174",
+  "fma": "FMA9991",
+  "name": "Eighth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2424,
+  "bytes": 157078
+ },
+ {
+  "file": "meshes/FJ1976_BP22491_FMA22676_Left lateral thoracic artery.obj",
+  "fj": "FJ1976",
+  "fma": "FMA22676",
+  "name": "Left lateral thoracic artery",
+  "structure": "lateral-thoracic-vessels",
+  "category": "vessel",
+  "faces": 2350,
+  "bytes": 142788
+ },
+ {
+  "file": "meshes/FJ3288_BP23152_FMA16587_Left hip bone.obj",
+  "fj": "FJ3288",
+  "fma": "FMA16587",
+  "name": "Left hip bone",
+  "structure": "iliac-crest",
+  "category": "bone",
+  "faces": 2332,
+  "bytes": 144601
+ },
+ {
+  "file": "meshes/FJ3255_BP22753_FMA8275_Left seventh costal cartilage.obj",
+  "fj": "FJ3255",
+  "fma": "FMA8275",
+  "name": "Left seventh costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 2314,
+  "bytes": 150515
+ },
+ {
+  "file": "meshes/FJ4223_BP29528_FMA65295_Left medial pectoral nerve.obj",
+  "fj": "FJ4223",
+  "fma": "FMA65295",
+  "name": "Left medial pectoral nerve",
+  "structure": "pectoral-nerves",
+  "category": "nerve",
+  "faces": 2300,
+  "bytes": 182549
+ },
+ {
+  "file": "meshes/FJ3169_BP23466_FMA9922_Fifth thoracic vertebra.obj",
+  "fj": "FJ3169",
+  "fma": "FMA9922",
+  "name": "Fifth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2280,
+  "bytes": 147550
+ },
+ {
+  "file": "meshes/FJ1971_BP22013_FMA4083_Left superior epigastric artery.obj",
+  "fj": "FJ1971",
+  "fma": "FMA4083",
+  "name": "Left superior epigastric artery",
+  "structure": "internal-thoracic-vessels",
+  "category": "vessel",
+  "faces": 2270,
+  "bytes": 137160
+ },
+ {
+  "file": "meshes/FJ3668M_BP21439_FMA8302_Right eighth costal cartilage.obj",
+  "fj": "FJ3668M",
+  "fma": "FMA8302",
+  "name": "Right eighth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 2265,
+  "bytes": 197192
+ },
+ {
+  "file": "meshes/FJ3668_BP22462_FMA8329_Left eighth costal cartilage.obj",
+  "fj": "FJ3668",
+  "fma": "FMA8329",
+  "name": "Left eighth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 2265,
+  "bytes": 631833
+ },
+ {
+  "file": "meshes/FJ3171_BP24088_FMA9945_Sixth thoracic vertebra.obj",
+  "fj": "FJ3171",
+  "fma": "FMA9945",
+  "name": "Sixth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2248,
+  "bytes": 148727
+ },
+ {
+  "file": "meshes/FJ1468M_BP23060_FMA34681_Clavicular part of left deltoid.obj",
+  "fj": "FJ1468M",
+  "fma": "FMA34681",
+  "name": "Clavicular part of left deltoid",
+  "structure": "deltoid",
+  "category": "muscle",
+  "faces": 2206,
+  "bytes": 221642
+ },
+ {
+  "file": "meshes/FJ1537M_BP22066_FMA13384_Left rhomboid minor.obj",
+  "fj": "FJ1537M",
+  "fma": "FMA13384",
+  "name": "Left rhomboid minor",
+  "structure": "rhomboids",
+  "category": "muscle",
+  "faces": 2206,
+  "bytes": 155955
+ },
+ {
+  "file": "meshes/FJ2217_BP21099_FMA13331_Left axillary vein.obj",
+  "fj": "FJ2217",
+  "fma": "FMA13331",
+  "name": "Left axillary vein",
+  "structure": "axillary-vessels",
+  "category": "vessel",
+  "faces": 2110,
+  "bytes": 126472
+ },
+ {
+  "file": "meshes/FJ2253_BP21627_FMA66322_Left thoracodorsal artery.obj",
+  "fj": "FJ2253",
+  "fma": "FMA66322",
+  "name": "Left thoracodorsal artery",
+  "structure": "thoracodorsal-vessels",
+  "category": "vessel",
+  "faces": 2104,
+  "bytes": 127065
+ },
+ {
+  "file": "meshes/FJ1504M_BP20341_FMA13415_Left subscapularis.obj",
+  "fj": "FJ1504M",
+  "fma": "FMA13415",
+  "name": "Left subscapularis",
+  "structure": "subscapularis",
+  "category": "muscle",
+  "faces": 2092,
+  "bytes": 227740
+ },
+ {
+  "file": "meshes/FJ4256_BP29546_FMA65292_Left thoracodorsal nerve.obj",
+  "fj": "FJ4256",
+  "fma": "FMA65292",
+  "name": "Left thoracodorsal nerve",
+  "structure": "thoracodorsal-nerve",
+  "category": "nerve",
+  "faces": 2068,
+  "bytes": 149894
+ },
+ {
+  "file": "meshes/FJ3166_BP23564_FMA9248_Fourth thoracic vertebra.obj",
+  "fj": "FJ3166",
+  "fma": "FMA9248",
+  "name": "Fourth thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2066,
+  "bytes": 133514
+ },
+ {
+  "file": "meshes/FJ3163_BP23513_FMA9209_Third thoracic vertebra.obj",
+  "fj": "FJ3163",
+  "fma": "FMA9209",
+  "name": "Third thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 2038,
+  "bytes": 130173
+ },
+ {
+  "file": "meshes/FJ2250_BP21212_FMA50860_Left suprascapular vein.obj",
+  "fj": "FJ2250",
+  "fma": "FMA50860",
+  "name": "Left suprascapular vein",
+  "structure": "scapular-cervical-vessels",
+  "category": "vessel",
+  "faces": 1974,
+  "bytes": 116316
+ },
+ {
+  "file": "meshes/FJ3160_BP23621_FMA9187_Second thoracic vertebra.obj",
+  "fj": "FJ3160",
+  "fma": "FMA9187",
+  "name": "Second thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 1938,
+  "bytes": 126209
+ },
+ {
+  "file": "meshes/FJ2251_BP21984_FMA10681_Left suprascapular artery.obj",
+  "fj": "FJ2251",
+  "fma": "FMA10681",
+  "name": "Left suprascapular artery",
+  "structure": "scapular-cervical-vessels",
+  "category": "vessel",
+  "faces": 1928,
+  "bytes": 119087
+ },
+ {
+  "file": "meshes/FJ4264_BP29324_FMA24105_Trunk of left fifth cervical nerve.obj",
+  "fj": "FJ4264",
+  "fma": "FMA24105",
+  "name": "Trunk of left fifth cervical nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 1926,
+  "bytes": 115363
+ },
+ {
+  "file": "meshes/FJ1513M_BP23094_FMA34685_Spinal part of left deltoid.obj",
+  "fj": "FJ1513M",
+  "fma": "FMA34685",
+  "name": "Spinal part of left deltoid",
+  "structure": "deltoid",
+  "category": "muscle",
+  "faces": 1900,
+  "bytes": 156368
+ },
+ {
+  "file": "meshes/FJ1512M_BP23332_FMA37685_Short head of left biceps brachii.obj",
+  "fj": "FJ1512M",
+  "fma": "FMA37685",
+  "name": "Short head of left biceps brachii",
+  "structure": "coracobrachialis-biceps",
+  "category": "muscle",
+  "faces": 1856,
+  "bytes": 159419
+ },
+ {
+  "file": "meshes/FJ1447M_BP23261_FMA34691_Clavicular part of left pectoralis major.obj",
+  "fj": "FJ1447M",
+  "fma": "FMA34691",
+  "name": "Clavicular part of left pectoralis major",
+  "structure": "pectoralis-major",
+  "category": "muscle",
+  "faces": 1846,
+  "bytes": 139794
+ },
+ {
+  "file": "meshes/FJ1447_BP23304_FMA34690_Clavicular part of right pectoralis major.obj",
+  "fj": "FJ1447",
+  "fma": "FMA34690",
+  "name": "Clavicular part of right pectoralis major",
+  "structure": "contralateral-pectoral",
+  "category": "muscle",
+  "faces": 1846,
+  "bytes": 141116
+ },
+ {
+  "file": "meshes/FJ2216_BP22518_FMA22656_Left axillary artery.obj",
+  "fj": "FJ2216",
+  "fma": "FMA22656",
+  "name": "Left axillary artery",
+  "structure": "axillary-vessels",
+  "category": "vessel",
+  "faces": 1800,
+  "bytes": 105519
+ },
+ {
+  "file": "meshes/FJ4275_BP29196_FMA45241_Medial cord of left brachial nerve plexus.obj",
+  "fj": "FJ4275",
+  "fma": "FMA45241",
+  "name": "Medial cord of left brachial nerve plexus",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 1708,
+  "bytes": 103364
+ },
+ {
+  "file": "meshes/FJ3158_BP23701_FMA9165_First thoracic vertebra.obj",
+  "fj": "FJ3158",
+  "fma": "FMA9165",
+  "name": "First thoracic vertebra",
+  "structure": "spine",
+  "category": "bone",
+  "faces": 1700,
+  "bytes": 113811
+ },
+ {
+  "file": "meshes/FJ4244_BP29533_FMA65416_Left supraclavicular nerve.obj",
+  "fj": "FJ4244",
+  "fma": "FMA65416",
+  "name": "Left supraclavicular nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 1698,
+  "bytes": 151705
+ },
+ {
+  "file": "meshes/FJ2254_BP21230_FMA71215_Left thoracodorsal vein.obj",
+  "fj": "FJ2254",
+  "fma": "FMA71215",
+  "name": "Left thoracodorsal vein",
+  "structure": "thoracodorsal-vessels",
+  "category": "vessel",
+  "faces": 1688,
+  "bytes": 98996
+ },
+ {
+  "file": "meshes/FJ3669M_BP21430_FMA8383_Right ninth costal cartilage.obj",
+  "fj": "FJ3669M",
+  "fma": "FMA8383",
+  "name": "Right ninth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1678,
+  "bytes": 148930
+ },
+ {
+  "file": "meshes/FJ3669_BP22484_FMA8410_Left ninth costal cartilage.obj",
+  "fj": "FJ3669",
+  "fma": "FMA8410",
+  "name": "Left ninth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1678,
+  "bytes": 468303
+ },
+ {
+  "file": "meshes/FJ1460M_BP22690_FMA13411_Left subclavius.obj",
+  "fj": "FJ1460M",
+  "fma": "FMA13411",
+  "name": "Left subclavius",
+  "structure": "subclavius",
+  "category": "muscle",
+  "faces": 1640,
+  "bytes": 116462
+ },
+ {
+  "file": "meshes/FJ1479M_BP23325_FMA37700_Long head of left triceps brachii.obj",
+  "fj": "FJ1479M",
+  "fma": "FMA37700",
+  "name": "Long head of left triceps brachii",
+  "structure": "triceps",
+  "category": "muscle",
+  "faces": 1588,
+  "bytes": 112104
+ },
+ {
+  "file": "meshes/FJ4185_BP29040_FMA65908_Left second intercostobrachial nerve.obj",
+  "fj": "FJ4185",
+  "fma": "FMA65908",
+  "name": "Left second intercostobrachial nerve",
+  "structure": "intercostobrachial-nerve",
+  "category": "nerve",
+  "faces": 1568,
+  "bytes": 128467
+ },
+ {
+  "file": "meshes/FJ4222_BP29235_FMA79667_Trunk of left long thoracic nerve.obj",
+  "fj": "FJ4222",
+  "fma": "FMA79667",
+  "name": "Trunk of left long thoracic nerve",
+  "structure": "long-thoracic-nerve",
+  "category": "nerve",
+  "faces": 1560,
+  "bytes": 99937
+ },
+ {
+  "file": "meshes/FJ3343_BP22071_FMA8194_Right sixth costal cartilage.obj",
+  "fj": "FJ3343",
+  "fma": "FMA8194",
+  "name": "Right sixth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1546,
+  "bytes": 103141
+ },
+ {
+  "file": "meshes/FJ1973_BP19878_FMA66243_Left first posterior intercostal artery.obj",
+  "fj": "FJ1973",
+  "fma": "FMA66243",
+  "name": "Left first posterior intercostal artery",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 1538,
+  "bytes": 90175
+ },
+ {
+  "file": "meshes/FJ1446M_BP23068_FMA45875_Abdominal part of left pectoralis major.obj",
+  "fj": "FJ1446M",
+  "fma": "FMA45875",
+  "name": "Abdominal part of left pectoralis major",
+  "structure": "pectoralis-major",
+  "category": "muscle",
+  "faces": 1536,
+  "bytes": 103613
+ },
+ {
+  "file": "meshes/FJ1446_BP23178_FMA45874_Abdominal part of right pectoralis major.obj",
+  "fj": "FJ1446",
+  "fma": "FMA45874",
+  "name": "Abdominal part of right pectoralis major",
+  "structure": "contralateral-pectoral",
+  "category": "muscle",
+  "faces": 1536,
+  "bytes": 104638
+ },
+ {
+  "file": "meshes/FJ3254_BP21377_FMA8221_Left sixth costal cartilage.obj",
+  "fj": "FJ3254",
+  "fma": "FMA8221",
+  "name": "Left sixth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1498,
+  "bytes": 91328
+ },
+ {
+  "file": "meshes/FJ1478M_BP23144_FMA37687_Long head of left biceps brachii.obj",
+  "fj": "FJ1478M",
+  "fma": "FMA37687",
+  "name": "Long head of left biceps brachii",
+  "structure": "coracobrachialis-biceps",
+  "category": "muscle",
+  "faces": 1426,
+  "bytes": 102896
+ },
+ {
+  "file": "meshes/FJ3667M_BP21440_FMA8464_Right tenth costal cartilage.obj",
+  "fj": "FJ3667M",
+  "fma": "FMA8464",
+  "name": "Right tenth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1400,
+  "bytes": 118859
+ },
+ {
+  "file": "meshes/FJ3667_BP22463_FMA8491_Left tenth costal cartilage.obj",
+  "fj": "FJ3667",
+  "fma": "FMA8491",
+  "name": "Left tenth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1400,
+  "bytes": 390450
+ },
+ {
+  "file": "meshes/FJ1977_BP21684_FMA4654_Left subcostal artery.obj",
+  "fj": "FJ1977",
+  "fma": "FMA4654",
+  "name": "Left subcostal artery",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 1334,
+  "bytes": 80240
+ },
+ {
+  "file": "meshes/FJ1467M_BP23036_FMA34683_Acromial part of left deltoid.obj",
+  "fj": "FJ1467M",
+  "fma": "FMA34683",
+  "name": "Acromial part of left deltoid",
+  "structure": "deltoid",
+  "category": "muscle",
+  "faces": 1300,
+  "bytes": 91505
+ },
+ {
+  "file": "meshes/FJ4197_BP29803_FMA6752_Lateral cutaneous branch of left first intercostal nerve.obj",
+  "fj": "FJ4197",
+  "fma": "FMA6752",
+  "name": "Lateral cutaneous branch of left first intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 1188,
+  "bytes": 79619
+ },
+ {
+  "file": "meshes/FJ3237_BP23283_FMA13323_Left clavicle.obj",
+  "fj": "FJ3237",
+  "fma": "FMA13323",
+  "name": "Left clavicle",
+  "structure": "scapula-clavicle",
+  "category": "bone",
+  "faces": 1176,
+  "bytes": 69345
+ },
+ {
+  "file": "meshes/FJ3341_BP21376_FMA8070_Right fifth costal cartilage.obj",
+  "fj": "FJ3341",
+  "fma": "FMA8070",
+  "name": "Right fifth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1168,
+  "bytes": 72810
+ },
+ {
+  "file": "meshes/FJ3362_BP23174_FMA13322_Right clavicle.obj",
+  "fj": "FJ3362",
+  "fma": "FMA13322",
+  "name": "Right clavicle",
+  "structure": "scapula-clavicle",
+  "category": "bone",
+  "faces": 1146,
+  "bytes": 67957
+ },
+ {
+  "file": "meshes/FJ4178_BP29343_FMA85334_Trunk of left second intercostal nerve.obj",
+  "fj": "FJ4178",
+  "fma": "FMA85334",
+  "name": "Trunk of left second intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 1132,
+  "bytes": 71345
+ },
+ {
+  "file": "meshes/FJ4280_BP29303_FMA45243_Posterior cord of left brachial nerve plexus.obj",
+  "fj": "FJ4280",
+  "fma": "FMA45243",
+  "name": "Posterior cord of left brachial nerve plexus",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 1130,
+  "bytes": 65939
+ },
+ {
+  "file": "meshes/FJ4265_BP29315_FMA7011_Trunk of left sixth cervical nerve.obj",
+  "fj": "FJ4265",
+  "fma": "FMA7011",
+  "name": "Trunk of left sixth cervical nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 1106,
+  "bytes": 68404
+ },
+ {
+  "file": "meshes/FJ3251_BP21380_FMA8112_Left fifth costal cartilage.obj",
+  "fj": "FJ3251",
+  "fma": "FMA8112",
+  "name": "Left fifth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 1086,
+  "bytes": 66165
+ },
+ {
+  "file": "meshes/FJ1507M_BP22652_FMA32552_Left teres major.obj",
+  "fj": "FJ1507M",
+  "fma": "FMA32552",
+  "name": "Left teres major",
+  "structure": "teres-major",
+  "category": "muscle",
+  "faces": 1042,
+  "bytes": 92144
+ },
+ {
+  "file": "meshes/FJ2263_BP20789_FMA23068_Acromial branch of right thoraco-acromial artery.obj",
+  "fj": "FJ2263",
+  "fma": "FMA23068",
+  "name": "Acromial branch of right thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 996,
+  "bytes": 58763
+ },
+ {
+  "file": "meshes/FJ1987_BP23531_FMA4951_Left subcostal vein.obj",
+  "fj": "FJ1987",
+  "fma": "FMA4951",
+  "name": "Left subcostal vein",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 978,
+  "bytes": 58763
+ },
+ {
+  "file": "meshes/FJ2211_BP22078_FMA23069_Acromial branch of left thoraco-acromial artery.obj",
+  "fj": "FJ2211",
+  "fma": "FMA23069",
+  "name": "Acromial branch of left thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 974,
+  "bytes": 56860
+ },
+ {
+  "file": "meshes/FJ2239_BP23894_FMA22687_Left posterior circumflex humeral artery.obj",
+  "fj": "FJ2239",
+  "fma": "FMA22687",
+  "name": "Left posterior circumflex humeral artery",
+  "structure": "circumflex-humeral-vessels",
+  "category": "vessel",
+  "faces": 974,
+  "bytes": 56734
+ },
+ {
+  "file": "meshes/FJ4267_BP29406_FMA7015_Trunk of left eighth cervical nerve.obj",
+  "fj": "FJ4267",
+  "fma": "FMA7015",
+  "name": "Trunk of left eighth cervical nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 970,
+  "bytes": 60680
+ },
+ {
+  "file": "meshes/FJ4266_BP29366_FMA7013_Trunk of left seventh cervical nerve.obj",
+  "fj": "FJ4266",
+  "fma": "FMA7013",
+  "name": "Trunk of left seventh cervical nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 956,
+  "bytes": 58244
+ },
+ {
+  "file": "meshes/FJ2222_BP21266_FMA77950_Left circumflex scapular vein.obj",
+  "fj": "FJ2222",
+  "fma": "FMA77950",
+  "name": "Left circumflex scapular vein",
+  "structure": "subscapular-vessels",
+  "category": "vessel",
+  "faces": 950,
+  "bytes": 56130
+ },
+ {
+  "file": "meshes/FJ3153_BP22299_FMA7488_Xiphoid process.obj",
+  "fj": "FJ3153",
+  "fma": "FMA7488",
+  "name": "Xiphoid process",
+  "structure": "chest-wall",
+  "category": "bone",
+  "faces": 922,
+  "bytes": 55901
+ },
+ {
+  "file": "meshes/FJ4242_BP29426_FMA65306_Left superior subscapular nerve.obj",
+  "fj": "FJ4242",
+  "fma": "FMA65306",
+  "name": "Left superior subscapular nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 916,
+  "bytes": 69024
+ },
+ {
+  "file": "meshes/FJ1506M_BP20454_FMA32545_Left supraspinatus.obj",
+  "fj": "FJ1506M",
+  "fma": "FMA32545",
+  "name": "Left supraspinatus",
+  "structure": "supraspinatus",
+  "category": "muscle",
+  "faces": 878,
+  "bytes": 74704
+ },
+ {
+  "file": "meshes/FJ1500M_BP20405_FMA32548_Left infraspinatus.obj",
+  "fj": "FJ1500M",
+  "fma": "FMA32548",
+  "name": "Left infraspinatus",
+  "structure": "infraspinatus",
+  "category": "muscle",
+  "faces": 866,
+  "bytes": 68675
+ },
+ {
+  "file": "meshes/FJ1480M_BP23335_FMA37696_Medial head of left triceps brachii.obj",
+  "fj": "FJ1480M",
+  "fma": "FMA37696",
+  "name": "Medial head of left triceps brachii",
+  "structure": "triceps",
+  "category": "muscle",
+  "faces": 832,
+  "bytes": 60220
+ },
+ {
+  "file": "meshes/FJ4213_BP29795_FMA6115_Anterior cutaneous branch of left second intercostal nerve.obj",
+  "fj": "FJ4213",
+  "fma": "FMA6115",
+  "name": "Anterior cutaneous branch of left second intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 824,
+  "bytes": 60927
+ },
+ {
+  "file": "meshes/FJ2282_BP22469_FMA23072_Deltoid branch of right thoraco-acromial artery.obj",
+  "fj": "FJ2282",
+  "fma": "FMA23072",
+  "name": "Deltoid branch of right thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 812,
+  "bytes": 47651
+ },
+ {
+  "file": "meshes/FJ2246_BP23899_FMA66551_Trunk of left subscapular artery.obj",
+  "fj": "FJ2246",
+  "fma": "FMA66551",
+  "name": "Trunk of left subscapular artery",
+  "structure": "subscapular-vessels",
+  "category": "vessel",
+  "faces": 790,
+  "bytes": 47095
+ },
+ {
+  "file": "meshes/FJ2230_BP22038_FMA23073_Deltoid branch of left thoraco-acromial artery.obj",
+  "fj": "FJ2230",
+  "fma": "FMA23073",
+  "name": "Deltoid branch of left thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 788,
+  "bytes": 45877
+ },
+ {
+  "file": "meshes/FJ1986_BP22289_FMA4797_Left superior intercostal vein.obj",
+  "fj": "FJ1986",
+  "fma": "FMA4797",
+  "name": "Left superior intercostal vein",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 786,
+  "bytes": 45633
+ },
+ {
+  "file": "meshes/FJ4209_BP29800_FMA8922_Anterior cutaneous branch of left first intercostal nerve.obj",
+  "fj": "FJ4209",
+  "fma": "FMA8922",
+  "name": "Anterior cutaneous branch of left first intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 776,
+  "bytes": 57098
+ },
+ {
+  "file": "meshes/FJ4174_BP29305_FMA85332_Trunk of left first intercostal nerve.obj",
+  "fj": "FJ4174",
+  "fma": "FMA85332",
+  "name": "Trunk of left first intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 774,
+  "bytes": 50342
+ },
+ {
+  "file": "meshes/FJ2221_BP23895_FMA23181_Left circumflex scapular artery.obj",
+  "fj": "FJ2221",
+  "fma": "FMA23181",
+  "name": "Left circumflex scapular artery",
+  "structure": "subscapular-vessels",
+  "category": "vessel",
+  "faces": 762,
+  "bytes": 44524
+ },
+ {
+  "file": "meshes/FJ3339_BP21410_FMA7976_Right fourth costal cartilage.obj",
+  "fj": "FJ3339",
+  "fma": "FMA7976",
+  "name": "Right fourth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 694,
+  "bytes": 43261
+ },
+ {
+  "file": "meshes/FJ2240_BP23894_FMA22687_Left posterior circumflex humeral artery.obj",
+  "fj": "FJ2240",
+  "fma": "FMA22687",
+  "name": "Left posterior circumflex humeral artery",
+  "structure": "circumflex-humeral-vessels",
+  "category": "vessel",
+  "faces": 688,
+  "bytes": 41041
+ },
+ {
+  "file": "meshes/FJ3333_BP21366_FMA7875_Right first costal cartilage.obj",
+  "fj": "FJ3333",
+  "fma": "FMA7875",
+  "name": "Right first costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 676,
+  "bytes": 45235
+ },
+ {
+  "file": "meshes/FJ3248_BP22751_FMA8167_Left fourth costal cartilage.obj",
+  "fj": "FJ3248",
+  "fma": "FMA8167",
+  "name": "Left fourth costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 658,
+  "bytes": 40361
+ },
+ {
+  "file": "meshes/FJ3335_BP21383_FMA7886_Right second costal cartilage.obj",
+  "fj": "FJ3335",
+  "fma": "FMA7886",
+  "name": "Right second costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 658,
+  "bytes": 41651
+ },
+ {
+  "file": "meshes/FJ4171_BP29488_FMA37074_Left axillary nerve.obj",
+  "fj": "FJ4171",
+  "fma": "FMA37074",
+  "name": "Left axillary nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 654,
+  "bytes": 46757
+ },
+ {
+  "file": "meshes/FJ3337_BP21360_FMA7913_Right third costal cartilage.obj",
+  "fj": "FJ3337",
+  "fma": "FMA7913",
+  "name": "Right third costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 652,
+  "bytes": 41763
+ },
+ {
+  "file": "meshes/FJ2256_BP22080_FMA10683_Left superficial cervical artery.obj",
+  "fj": "FJ2256",
+  "fma": "FMA10683",
+  "name": "Left superficial cervical artery",
+  "structure": "scapular-cervical-vessels",
+  "category": "vessel",
+  "faces": 646,
+  "bytes": 43298
+ },
+ {
+  "file": "meshes/FJ3479_BP23654_FMA69319_Trunk of left subclavian artery.obj",
+  "fj": "FJ3479",
+  "fma": "FMA69319",
+  "name": "Trunk of left subclavian artery",
+  "structure": "subclavian-vessels",
+  "category": "vessel",
+  "faces": 646,
+  "bytes": 39608
+ },
+ {
+  "file": "meshes/FJ3239_BP21373_FMA8005_Left first costal cartilage.obj",
+  "fj": "FJ3239",
+  "fma": "FMA8005",
+  "name": "Left first costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 642,
+  "bytes": 42423
+ },
+ {
+  "file": "meshes/FJ4159_BP29800_FMA8922_Anterior cutaneous branch of left first intercostal nerve.obj",
+  "fj": "FJ4159",
+  "fma": "FMA8922",
+  "name": "Anterior cutaneous branch of left first intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 620,
+  "bytes": 46261
+ },
+ {
+  "file": "meshes/FJ3245_BP22750_FMA8058_Left third costal cartilage.obj",
+  "fj": "FJ3245",
+  "fma": "FMA8058",
+  "name": "Left third costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 604,
+  "bytes": 36238
+ },
+ {
+  "file": "meshes/FJ3242_BP22752_FMA8031_Left second costal cartilage.obj",
+  "fj": "FJ3242",
+  "fma": "FMA8031",
+  "name": "Left second costal cartilage",
+  "structure": "costal-cartilages",
+  "category": "bone",
+  "faces": 588,
+  "bytes": 35836
+ },
+ {
+  "file": "meshes/FJ4172_BP29806_FMA37071_Left radial nerve.obj",
+  "fj": "FJ4172",
+  "fma": "FMA37071",
+  "name": "Left radial nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 576,
+  "bytes": 35574
+ },
+ {
+  "file": "meshes/FJ2247_BP21260_FMA23115_Left subscapular vein.obj",
+  "fj": "FJ2247",
+  "fma": "FMA23115",
+  "name": "Left subscapular vein",
+  "structure": "subscapular-vessels",
+  "category": "vessel",
+  "faces": 520,
+  "bytes": 29864
+ },
+ {
+  "file": "meshes/FJ1508M_BP20604_FMA32554_Left teres minor.obj",
+  "fj": "FJ1508M",
+  "fma": "FMA32554",
+  "name": "Left teres minor",
+  "structure": "teres-minor",
+  "category": "muscle",
+  "faces": 506,
+  "bytes": 37318
+ },
+ {
+  "file": "meshes/FJ4241_BP29108_FMA79671_Trunk of left subclavian nerve.obj",
+  "fj": "FJ4241",
+  "fma": "FMA79671",
+  "name": "Trunk of left subclavian nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 488,
+  "bytes": 38077
+ },
+ {
+  "file": "meshes/FJ2304_BP22447_FMA66563_Trunk of right thoraco-acromial artery.obj",
+  "fj": "FJ2304",
+  "fma": "FMA66563",
+  "name": "Trunk of right thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 472,
+  "bytes": 27311
+ },
+ {
+  "file": "meshes/FJ2252_BP23786_FMA66564_Trunk of left thoraco-acromial artery.obj",
+  "fj": "FJ2252",
+  "fma": "FMA66564",
+  "name": "Trunk of left thoraco-acromial artery",
+  "structure": "thoracoacromial-vessels",
+  "category": "vessel",
+  "faces": 468,
+  "bytes": 26832
+ },
+ {
+  "file": "meshes/FJ4163_BP29795_FMA6115_Anterior cutaneous branch of left second intercostal nerve.obj",
+  "fj": "FJ4163",
+  "fma": "FMA6115",
+  "name": "Anterior cutaneous branch of left second intercostal nerve",
+  "structure": "intercostal-nerves",
+  "category": "nerve",
+  "faces": 446,
+  "bytes": 33421
+ },
+ {
+  "file": "meshes/FJ1488M_BP22531_FMA37666_Left coracobrachialis.obj",
+  "fj": "FJ1488M",
+  "fma": "FMA37666",
+  "name": "Left coracobrachialis",
+  "structure": "coracobrachialis-biceps",
+  "category": "muscle",
+  "faces": 444,
+  "bytes": 38822
+ },
+ {
+  "file": "meshes/FJ3486_BP20970_FMA4763_Left subclavian vein.obj",
+  "fj": "FJ3486",
+  "fma": "FMA4763",
+  "name": "Left subclavian vein",
+  "structure": "subclavian-vessels",
+  "category": "vessel",
+  "faces": 434,
+  "bytes": 27757
+ },
+ {
+  "file": "meshes/FJ4290_BP29296_FMA65362_Superior trunk of left brachial nerve plexus.obj",
+  "fj": "FJ4290",
+  "fma": "FMA65362",
+  "name": "Superior trunk of left brachial nerve plexus",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 428,
+  "bytes": 26889
+ },
+ {
+  "file": "meshes/FJ2257_BP20754_FMA81009_Trunk of left transverse cervical artery.obj",
+  "fj": "FJ2257",
+  "fma": "FMA81009",
+  "name": "Trunk of left transverse cervical artery",
+  "structure": "scapular-cervical-vessels",
+  "category": "vessel",
+  "faces": 366,
+  "bytes": 21690
+ },
+ {
+  "file": "meshes/FJ4243_BP29488_FMA37074_Left axillary nerve.obj",
+  "fj": "FJ4243",
+  "fma": "FMA37074",
+  "name": "Left axillary nerve",
+  "structure": "arm-nerves",
+  "category": "nerve",
+  "faces": 360,
+  "bytes": 27986
+ },
+ {
+  "file": "meshes/FJ4276_BP29380_FMA65366_Middle trunk of left brachial nerve plexus.obj",
+  "fj": "FJ4276",
+  "fma": "FMA65366",
+  "name": "Middle trunk of left brachial nerve plexus",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 350,
+  "bytes": 22974
+ },
+ {
+  "file": "meshes/FJ4274_BP29122_FMA45239_Lateral cord of left brachial nerve plexus.obj",
+  "fj": "FJ4274",
+  "fma": "FMA45239",
+  "name": "Lateral cord of left brachial nerve plexus",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 348,
+  "bytes": 21771
+ },
+ {
+  "file": "meshes/FJ4245_BP29808_FMA7023_Trunk of left first thoracic nerve.obj",
+  "fj": "FJ4245",
+  "fma": "FMA7023",
+  "name": "Trunk of left first thoracic nerve",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 344,
+  "bytes": 24327
+ },
+ {
+  "file": "meshes/FJ4273_BP29300_FMA65364_Inferior trunk of left brachial nerve plexus.obj",
+  "fj": "FJ4273",
+  "fma": "FMA65364",
+  "name": "Inferior trunk of left brachial nerve plexus",
+  "structure": "brachial-plexus",
+  "category": "nerve",
+  "faces": 330,
+  "bytes": 24250
+ },
+ {
+  "file": "meshes/FJ1970_BP21007_FMA4088_Left superior intercostal artery.obj",
+  "fj": "FJ1970",
+  "fma": "FMA4088",
+  "name": "Left superior intercostal artery",
+  "structure": "intercostal-vessels",
+  "category": "vessel",
+  "faces": 206,
+  "bytes": 11393
+ }
+]

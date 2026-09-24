@@ -1,0 +1,3411 @@
+{
+  "modelPath": "models/hybrid/torso-female-hybrid.glb",
+  "operativeSide": "right (source left side, globally reflected)",
+  "sources": {
+    "HRA": "https://github.com/hubmapconsortium/ccf-3d-reference-object-library (VH_Female v1.3 skin, mammary glands)",
+    "BodyParts3D 4.3": "https://github.com/olivercase/body_parts_3d_api (DBCLS Anatomography 4.3 meshes)",
+    "BodyParts3D 3.0": "https://github.com/Kevin-Mattheus-Moerman/BodyParts3D (FMA13359 left latissimus dorsi)",
+    "Z-Anatomy": "https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX"
+  },
+  "licenses": {
+    "HRA": "CC BY 4.0",
+    "BodyParts3D 4.3": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+    "BodyParts3D 3.0": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+    "Z-Anatomy": "CC BY-SA 4.0"
+  },
+  "registration": {
+    "zAnatomyToBodyParts3D": {
+      "method": "trimmed similarity ICP on left serratus anterior + latissimus dorsi",
+      "rmsMm": 2.0,
+      "medianMm": 2.14,
+      "p95Mm": 4.35,
+      "scale": 9.3303
+    },
+    "hraToBodyParts3D": {
+      "method": "rigid ICP, true scale, torso skin (T10-C7 band)",
+      "rmsMm": 7.06
+    },
+    "deepAnatomyOutsideSkinPct": 0.06,
+    "deepAnatomyMaxOutsideMm": 8.45,
+    "breastConformation": {
+      "left": {
+        "minDepthRatio": 0.358,
+        "maxPosteriorAdvanceMm": 24.7,
+        "columnsCompressedPct": 61.3,
+        "chestWallPointsInsideFatBefore": 5675,
+        "chestWallPointsInsideFatAfter": 451
+      },
+      "right": {
+        "minDepthRatio": 0.354,
+        "maxPosteriorAdvanceMm": 27.6,
+        "columnsCompressedPct": 64.0,
+        "chestWallPointsInsideFatBefore": 5880,
+        "chestWallPointsInsideFatAfter": 325
+      }
+    }
+  },
+  "totalTriangles": 2011302,
+  "landmarks": {
+    "frame": "viewer (old Z-Anatomy torso frame); operative side presented as right",
+    "nipple": [
+      -0.516,
+      -0.0791,
+      0.9017
+    ],
+    "breastCenter": [
+      -0.4249,
+      0.013,
+      0.6202
+    ],
+    "breastBounds": {
+      "min": [
+        -0.7426,
+        -0.4424,
+        0.0343
+      ],
+      "max": [
+        0.1459,
+        0.771,
+        0.889
+      ]
+    },
+    "inframammaryFold": [
+      -0.3827,
+      -0.4424,
+      0.5792
+    ],
+    "latissimusCenter": [
+      -0.2737,
+      -0.4837,
+      -0.7333
+    ],
+    "latissimusBounds": {
+      "min": [
+        -0.9461,
+        -2.083,
+        -1.0654
+      ],
+      "max": [
+        0.3272,
+        0.6839,
+        -0.4109
+      ]
+    },
+    "latissimusAnteriorBorder": [
+      [
+        -0.8893,
+        0.6839,
+        -0.4383
+      ],
+      [
+        -0.6573,
+        -0.4054,
+        -0.4493
+      ]
+    ],
+    "latissimusInferior": [
+      0.2647,
+      -2.083,
+      -0.7851
+    ],
+    "scapulaInferiorAngle": [
+      -0.3368,
+      -0.0333,
+      -0.9056
+    ],
+    "trapeziusInferiorBorder": [
+      0.3206,
+      -0.9335,
+      -0.724
+    ],
+    "iliacCrestTop": [
+      -0.4242,
+      -1.598,
+      -0.5051
+    ],
+    "thoracodorsalArteryOrigin": [
+      -0.6074,
+      0.6462,
+      -0.3486
+    ],
+    "thoracodorsalArteryDistal": [
+      -0.6583,
+      0.0884,
+      -0.5099
+    ],
+    "thoracodorsalNerveDistal": [
+      -0.4405,
+      -0.8328,
+      -0.5999
+    ],
+    "axillaryArteryCenter": [
+      -0.5433,
+      0.8185,
+      -0.3243
+    ],
+    "skinPaddleCenter": [
+      -0.6733,
+      -0.3836,
+      -0.8814
+    ],
+    "unitsPerMm": 0.006953
+  },
+  "structures": {
+    "skin": {
+      "label": "Pele (HRA feminino)",
+      "group": "Superfície",
+      "visible": true,
+      "labelAnchor": [
+        0.339,
+        -0.4646,
+        -0.9106
+      ],
+      "meshNames": [
+        "hra_VH_F_skin"
+      ]
+    },
+    "breast": {
+      "label": "Glândula mamária: lobos, ductos e seios",
+      "group": "Mama",
+      "visible": true,
+      "labelAnchor": [
+        -0.4461,
+        -0.0598,
+        0.711
+      ],
+      "meshNames": [
+        "hra_VH_F_main_lactiferous_sinuses_L",
+        "hra_VH_F_main_lactiferous_ducts_L",
+        "hra_VH_F_mammary_lobes_L"
+      ]
+    },
+    "breast-fat": {
+      "label": "Tecido adiposo mamário",
+      "group": "Mama",
+      "visible": true,
+      "labelAnchor": [
+        -0.4115,
+        0.0075,
+        0.6481
+      ],
+      "meshNames": [
+        "hra_VH_F_fat_L"
+      ]
+    },
+    "breast-ligaments": {
+      "label": "Ligamentos suspensores (Cooper)",
+      "group": "Mama",
+      "visible": false,
+      "labelAnchor": [
+        -0.5227,
+        -0.0189,
+        0.8221
+      ],
+      "meshNames": [
+        "hra_VH_F_suspensory_ligaments_L"
+      ]
+    },
+    "nipple-areola": {
+      "label": "Mamilo, aréola e tubérculos",
+      "group": "Mama",
+      "visible": true,
+      "labelAnchor": [
+        -0.517,
+        -0.0667,
+        0.8978
+      ],
+      "meshNames": [
+        "hra_VH_F_areola_L",
+        "hra_VH_F_nipple_L",
+        "hra_VH_F_areolar_tubercles_L"
+      ]
+    },
+    "contralateral-breast": {
+      "label": "Mama contralateral",
+      "group": "Mama",
+      "visible": true,
+      "labelAnchor": [
+        0.956,
+        -0.0406,
+        0.7846
+      ],
+      "meshNames": [
+        "hra_VH_F_suspensory_ligaments_R",
+        "hra_VH_F_mammary_lobes_R",
+        "hra_VH_F_main_lactiferous_ducts_R",
+        "hra_VH_F_main_lactiferous_sinuses_R",
+        "hra_VH_F_areola_R",
+        "hra_VH_F_nipple_R",
+        "hra_VH_F_areolar_tubercles_R",
+        "hra_VH_F_fat_R"
+      ]
+    },
+    "latissimus-dorsi": {
+      "label": "Músculo grande dorsal",
+      "group": "Músculos",
+      "visible": true,
+      "labelAnchor": [
+        -0.2942,
+        -0.4886,
+        -0.8289
+      ],
+      "meshNames": [
+        "bp30_FMA13359"
+      ]
+    },
+    "serratus-anterior": {
+      "label": "Serrátil anterior",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.571,
+        0.2917,
+        -0.4836
+      ],
+      "meshNames": [
+        "bp43_FJ1459M"
+      ]
+    },
+    "pectoralis-major": {
+      "label": "Peitoral maior",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.3705,
+        0.4094,
+        0.1574
+      ],
+      "meshNames": [
+        "bp43_FJ1464M",
+        "bp43_FJ1447M",
+        "bp43_FJ1446M"
+      ]
+    },
+    "pectoralis-minor": {
+      "label": "Peitoral menor",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.4523,
+        0.4701,
+        -0.0169
+      ],
+      "meshNames": [
+        "bp43_FJ1456M"
+      ]
+    },
+    "subclavius": {
+      "label": "Subclávio",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.2015,
+        0.9715,
+        -0.1729
+      ],
+      "meshNames": [
+        "bp43_FJ1460M"
+      ]
+    },
+    "trapezius": {
+      "label": "Trapézio",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.025,
+        0.9328,
+        -0.9477
+      ],
+      "meshNames": [
+        "bp43_FJ1520M",
+        "bp43_FJ1521M",
+        "bp43_FJ1554M"
+      ]
+    },
+    "rhomboids": {
+      "label": "Romboides",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        0.1036,
+        0.7539,
+        -0.8818
+      ],
+      "meshNames": [
+        "bp43_FJ1536M",
+        "bp43_FJ1537M"
+      ]
+    },
+    "levator-scapulae": {
+      "label": "Levantador da escápula",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.0036,
+        1.3365,
+        -0.5911
+      ],
+      "meshNames": [
+        "bp43_FJ1532M"
+      ]
+    },
+    "teres-major": {
+      "label": "Redondo maior",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.6299,
+        0.4086,
+        -0.644
+      ],
+      "meshNames": [
+        "bp43_FJ1507M"
+      ]
+    },
+    "teres-minor": {
+      "label": "Redondo menor",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.6281,
+        0.601,
+        -0.665
+      ],
+      "meshNames": [
+        "bp43_FJ1508M"
+      ]
+    },
+    "subscapularis": {
+      "label": "Subescapular",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.3873,
+        0.5829,
+        -0.6987
+      ],
+      "meshNames": [
+        "bp43_FJ1504M"
+      ]
+    },
+    "infraspinatus": {
+      "label": "Infraespinhal",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.6229,
+        0.7273,
+        -0.6878
+      ],
+      "meshNames": [
+        "bp43_FJ1500M"
+      ]
+    },
+    "supraspinatus": {
+      "label": "Supraespinhal",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.6527,
+        0.9317,
+        -0.5857
+      ],
+      "meshNames": [
+        "bp43_FJ1506M"
+      ]
+    },
+    "deltoid": {
+      "label": "Deltoide",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.962,
+        0.8327,
+        -0.6391
+      ],
+      "meshNames": [
+        "bp43_FJ1468M",
+        "bp43_FJ1513M",
+        "bp43_FJ1467M"
+      ]
+    },
+    "coracobrachialis-biceps": {
+      "label": "Coracobraquial e bíceps",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.9945,
+        -0.0053,
+        -0.3449
+      ],
+      "meshNames": [
+        "bp43_FJ1512M",
+        "bp43_FJ1478M",
+        "bp43_FJ1488M"
+      ]
+    },
+    "triceps": {
+      "label": "Tríceps braquial",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -1.0497,
+        -0.257,
+        -0.6399
+      ],
+      "meshNames": [
+        "bp43_FJ1477M",
+        "bp43_FJ1479M",
+        "bp43_FJ1480M"
+      ]
+    },
+    "external-oblique": {
+      "label": "Oblíquo externo",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.2423,
+        -1.2324,
+        0.3718
+      ],
+      "meshNames": [
+        "bp43_FJ1452M"
+      ]
+    },
+    "serratus-posterior": {
+      "label": "Serráteis posteriores",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        -0.1413,
+        -0.5325,
+        -0.8842
+      ],
+      "meshNames": [
+        "bp43_FJ1541M",
+        "bp43_FJ1542M"
+      ]
+    },
+    "intercostal-muscles": {
+      "label": "Músculos intercostais",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        0.109,
+        -0.1281,
+        -0.7244
+      ],
+      "meshNames": [
+        "bp43_FJ1451M",
+        "bp43_FJ1451",
+        "bp43_FJ1455M",
+        "bp43_FJ1455",
+        "bp43_FJ1454M",
+        "bp43_FJ1454"
+      ]
+    },
+    "contralateral-pectoral": {
+      "label": "Peitorais contralaterais",
+      "group": "Músculos",
+      "visible": false,
+      "labelAnchor": [
+        0.9489,
+        0.4509,
+        0.1469
+      ],
+      "meshNames": [
+        "bp43_FJ1456",
+        "bp43_FJ1464",
+        "bp43_FJ1447",
+        "bp43_FJ1446"
+      ]
+    },
+    "pectoral-fascia": {
+      "label": "Fáscias peitoral e clavipeitoral",
+      "group": "Fáscias",
+      "visible": false,
+      "labelAnchor": [
+        -0.3487,
+        0.501,
+        0.0939
+      ],
+      "meshNames": [
+        "za_Pectoral_fascial",
+        "za_Clavipectoral_fascial"
+      ]
+    },
+    "thoracolumbar-fascia": {
+      "label": "Fáscia toracolombar",
+      "group": "Fáscias",
+      "visible": false,
+      "labelAnchor": [
+        0.0065,
+        -1.4076,
+        -0.6658
+      ],
+      "meshNames": [
+        "za_Anterior_layer_of_thoracolumbar_fascial",
+        "za_Middle_layer_of_thoracolumbar_fascial",
+        "za_Posterior_layer_of_thoracolumbar_fascial"
+      ]
+    },
+    "deltoid-fascia": {
+      "label": "Fáscia deltoidea",
+      "group": "Fáscias",
+      "visible": false,
+      "labelAnchor": [
+        -0.9587,
+        0.6778,
+        -0.5442
+      ],
+      "meshNames": [
+        "za_Deltoid_fascial"
+      ]
+    },
+    "axillary-vessels": {
+      "label": "Artéria e veia axilares",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.5948,
+        0.8541,
+        -0.3061
+      ],
+      "meshNames": [
+        "bp43_FJ2217",
+        "bp43_FJ2216"
+      ]
+    },
+    "subclavian-vessels": {
+      "label": "Artéria e veia subclávias",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.1067,
+        1.0548,
+        -0.2025
+      ],
+      "meshNames": [
+        "bp43_FJ3479",
+        "bp43_FJ3486"
+      ]
+    },
+    "thoracoacromial-vessels": {
+      "label": "Artéria toracoacromial e ramos",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        0.938,
+        0.8551,
+        -0.1559
+      ],
+      "meshNames": [
+        "bp43_FJ2361",
+        "bp43_FJ2330",
+        "bp43_FJ2263",
+        "bp43_FJ2211",
+        "bp43_FJ2282",
+        "bp43_FJ2230",
+        "bp43_FJ2304",
+        "bp43_FJ2252"
+      ]
+    },
+    "lateral-thoracic-vessels": {
+      "label": "Vasos torácicos laterais",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.5697,
+        0.2422,
+        -0.0323
+      ],
+      "meshNames": [
+        "bp43_FJ2233",
+        "bp43_FJ1976"
+      ]
+    },
+    "subscapular-vessels": {
+      "label": "Vasos subescapulares e circunflexos da escápula",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.6717,
+        0.727,
+        -0.3836
+      ],
+      "meshNames": [
+        "bp43_FJ2222",
+        "bp43_FJ2246",
+        "bp43_FJ2221",
+        "bp43_FJ2247"
+      ]
+    },
+    "thoracodorsal-vessels": {
+      "label": "Vasos toracodorsais (pedículo)",
+      "group": "Vasos",
+      "visible": true,
+      "labelAnchor": [
+        -0.6109,
+        0.4819,
+        -0.4106
+      ],
+      "meshNames": [
+        "bp43_FJ2253",
+        "bp43_FJ2254"
+      ]
+    },
+    "circumflex-humeral-vessels": {
+      "label": "Vasos circunflexos do úmero",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.9024,
+        0.7124,
+        -0.3311
+      ],
+      "meshNames": [
+        "bp43_FJ2212",
+        "bp43_FJ2213",
+        "bp43_FJ2239",
+        "bp43_FJ2240"
+      ]
+    },
+    "brachial-vessels": {
+      "label": "Vasos braquiais, cefálica e basílica",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -1.0225,
+        -0.5703,
+        -0.3145
+      ],
+      "meshNames": [
+        "bp43_FJ2220",
+        "bp43_FJ2218",
+        "bp43_FJ2219",
+        "bp43_FJ2313",
+        "bp43_FJ2225"
+      ]
+    },
+    "internal-thoracic-vessels": {
+      "label": "Vasos torácicos internos",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.124,
+        -0.5962,
+        0.4248
+      ],
+      "meshNames": [
+        "bp43_FJ1972",
+        "bp43_FJ1988",
+        "bp43_FJ3530",
+        "bp43_FJ1979",
+        "bp43_FJ1971"
+      ]
+    },
+    "intercostal-vessels": {
+      "label": "Vasos intercostais",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        0.2674,
+        -0.1913,
+        -0.3509
+      ],
+      "meshNames": [
+        "bp43_FJ1994",
+        "bp43_FJ1961",
+        "bp43_FJ1985",
+        "bp43_FJ1975",
+        "bp43_FJ3636",
+        "bp43_FJ3632",
+        "bp43_FJ3635",
+        "bp43_FJ3631",
+        "bp43_FJ1974",
+        "bp43_FJ1973",
+        "bp43_FJ1977",
+        "bp43_FJ1987",
+        "bp43_FJ1986",
+        "bp43_FJ1970"
+      ]
+    },
+    "scapular-cervical-vessels": {
+      "label": "Vasos supraescapulares e cervicais transversos",
+      "group": "Vasos",
+      "visible": false,
+      "labelAnchor": [
+        -0.2868,
+        0.937,
+        -0.6876
+      ],
+      "meshNames": [
+        "bp43_FJ2232",
+        "bp43_FJ2250",
+        "bp43_FJ2251",
+        "bp43_FJ2256",
+        "bp43_FJ2257"
+      ]
+    },
+    "thoracodorsal-nerve": {
+      "label": "Nervo toracodorsal",
+      "group": "Nervos",
+      "visible": true,
+      "labelAnchor": [
+        -0.4962,
+        -0.2324,
+        -0.7168
+      ],
+      "meshNames": [
+        "bp43_FJ4256"
+      ]
+    },
+    "long-thoracic-nerve": {
+      "label": "Nervo torácico longo",
+      "group": "Nervos",
+      "visible": false,
+      "labelAnchor": [
+        -0.2966,
+        0.7079,
+        -0.0308
+      ],
+      "meshNames": [
+        "bp43_FJ4222"
+      ]
+    },
+    "pectoral-nerves": {
+      "label": "Nervos peitorais medial e lateral",
+      "group": "Nervos",
+      "visible": false,
+      "labelAnchor": [
+        -0.4379,
+        0.3662,
+        0.0689
+      ],
+      "meshNames": [
+        "bp43_FJ4223",
+        "za_Lateral_pectoral_nervel"
+      ]
+    },
+    "intercostobrachial-nerve": {
+      "label": "Nervo intercostobraquial",
+      "group": "Nervos",
+      "visible": false,
+      "labelAnchor": [
+        -0.8038,
+        0.5266,
+        -0.4095
+      ],
+      "meshNames": [
+        "bp43_FJ4185"
+      ]
+    },
+    "intercostal-nerves": {
+      "label": "Nervos intercostais",
+      "group": "Nervos",
+      "visible": false,
+      "labelAnchor": [
+        -0.0237,
+        0.7866,
+        0.0382
+      ],
+      "meshNames": [
+        "bp43_FJ4197",
+        "bp43_FJ4178",
+        "bp43_FJ4213",
+        "bp43_FJ4209",
+        "bp43_FJ4174",
+        "bp43_FJ4159",
+        "bp43_FJ4163"
+      ]
+    },
+    "brachial-plexus": {
+      "label": "Plexo braquial (troncos, fascículos, ramos)",
+      "group": "Nervos",
+      "visible": false,
+      "labelAnchor": [
+        -0.0516,
+        1.2074,
+        -0.4001
+      ],
+      "meshNames": [
+        "bp43_FJ4264",
+        "bp43_FJ4275",
+        "bp43_FJ4244",
+        "bp43_FJ4280",
+        "bp43_FJ4265",
+        "bp43_FJ4267",
+        "bp43_FJ4266",
+        "bp43_FJ4242",
+        "bp43_FJ4241",
+        "bp43_FJ4290",
+        "bp43_FJ4276",
+        "bp43_FJ4274",
+        "bp43_FJ4245",
+        "bp43_FJ4273"
+      ]
+    },
+    "arm-nerves": {
+      "label": "Nervos axilar, radial, mediano, ulnar e musculocutâneo",
+      "group": "Nervos",
+      "visible": false,
+      "labelAnchor": [
+        -0.9861,
+        -0.5492,
+        -0.3535
+      ],
+      "meshNames": [
+        "bp43_FJ4240",
+        "bp43_FJ4258",
+        "bp43_FJ4224",
+        "bp43_FJ4225",
+        "bp43_FJ4171",
+        "bp43_FJ4172",
+        "bp43_FJ4243"
+      ]
+    },
+    "axillary-lymph-nodes": {
+      "label": "Linfonodos axilares e paraesternais",
+      "group": "Linfáticos",
+      "visible": false,
+      "labelAnchor": [
+        -0.4794,
+        0.5385,
+        -0.0665
+      ],
+      "meshNames": [
+        "za_Anterior_axillary_nodesl",
+        "za_Posterior_axillary_nodesl",
+        "za_Lateral_axillary_nodesl",
+        "za_Central_axillary_nodesl",
+        "za_Apical_axillary_nodesl",
+        "za_Interpectoral_nodesl",
+        "za_Parasternal_nodesl"
+      ]
+    },
+    "chest-wall": {
+      "label": "Costelas, esterno e vértebras",
+      "group": "Esqueleto",
+      "visible": true,
+      "labelAnchor": [
+        0.3034,
+        0.1023,
+        -0.4369
+      ],
+      "meshNames": [
+        "bp43_FJ3233",
+        "bp43_FJ3344",
+        "bp43_FJ3234",
+        "bp43_FJ3346",
+        "bp43_FJ3232",
+        "bp43_FJ3342",
+        "bp43_FJ3231",
+        "bp43_FJ3340",
+        "bp43_FJ3235",
+        "bp43_FJ3347",
+        "bp43_FJ3236",
+        "bp43_FJ3348",
+        "bp43_FJ3230",
+        "bp43_FJ3338",
+        "bp43_FJ3225",
+        "bp43_FJ3330",
+        "bp43_FJ3229",
+        "bp43_FJ3336",
+        "bp43_FJ3226",
+        "bp43_FJ3331",
+        "bp43_FJ3178",
+        "bp43_FJ3228",
+        "bp43_FJ3334",
+        "bp43_FJ3159",
+        "bp43_FJ3157",
+        "bp43_FJ3227",
+        "bp43_FJ3332",
+        "bp43_FJ3154",
+        "bp43_FJ3156",
+        "bp43_FJ3155",
+        "bp43_FJ3175",
+        "bp43_FJ3173",
+        "bp43_FJ3290",
+        "bp43_FJ3174",
+        "bp43_FJ3169",
+        "bp43_FJ3171",
+        "bp43_FJ3166",
+        "bp43_FJ3163",
+        "bp43_FJ3160",
+        "bp43_FJ3158",
+        "bp43_FJ3153"
+      ]
+    },
+    "costal-cartilages": {
+      "label": "Cartilagens costais",
+      "group": "Esqueleto",
+      "visible": true,
+      "labelAnchor": [
+        0.4003,
+        -0.2268,
+        0.52
+      ],
+      "meshNames": [
+        "bp43_FJ3345",
+        "bp43_FJ3255",
+        "bp43_FJ3668M",
+        "bp43_FJ3668",
+        "bp43_FJ3669M",
+        "bp43_FJ3669",
+        "bp43_FJ3343",
+        "bp43_FJ3254",
+        "bp43_FJ3667M",
+        "bp43_FJ3667",
+        "bp43_FJ3341",
+        "bp43_FJ3251",
+        "bp43_FJ3339",
+        "bp43_FJ3333",
+        "bp43_FJ3248",
+        "bp43_FJ3335",
+        "bp43_FJ3337",
+        "bp43_FJ3239",
+        "bp43_FJ3245",
+        "bp43_FJ3242"
+      ]
+    },
+    "axilla": {
+      "label": "Escápula, clavícula e úmero",
+      "group": "Esqueleto",
+      "visible": true,
+      "labelAnchor": [
+        -0.0863,
+        0.8042,
+        -0.8451
+      ],
+      "meshNames": [
+        "bp43_FJ3279",
+        "bp43_FJ3384",
+        "bp43_FJ3262",
+        "bp43_FJ3237",
+        "bp43_FJ3362"
+      ]
+    },
+    "iliac-crest": {
+      "label": "Osso do quadril (crista ilíaca)",
+      "group": "Esqueleto",
+      "visible": false,
+      "labelAnchor": [
+        -0.1447,
+        -2.3397,
+        -0.3784
+      ],
+      "meshNames": [
+        "bp43_FJ3288"
+      ]
+    }
+  },
+  "meshes": [
+    {
+      "name": "bp43_FJ1452M",
+      "structure": "external-oblique",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left external oblique",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13337",
+      "sourceId": "FJ1452M",
+      "triangles": 111826
+    },
+    {
+      "name": "bp43_FJ1451M",
+      "structure": "intercostal-muscles",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "External intercostal muscle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9756",
+      "sourceId": "FJ1451M",
+      "triangles": 29678
+    },
+    {
+      "name": "bp43_FJ1451",
+      "structure": "intercostal-muscles",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "External intercostal muscle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9756",
+      "sourceId": "FJ1451",
+      "triangles": 29678
+    },
+    {
+      "name": "bp43_FJ1455M",
+      "structure": "intercostal-muscles",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Internal intercostal muscle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9757",
+      "sourceId": "FJ1455M",
+      "triangles": 26950
+    },
+    {
+      "name": "bp43_FJ1455",
+      "structure": "intercostal-muscles",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Internal intercostal muscle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9757",
+      "sourceId": "FJ1455",
+      "triangles": 26950
+    },
+    {
+      "name": "bp43_FJ1454M",
+      "structure": "intercostal-muscles",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Innermost intercostal muscle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9758",
+      "sourceId": "FJ1454M",
+      "triangles": 26164
+    },
+    {
+      "name": "bp43_FJ1454",
+      "structure": "intercostal-muscles",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Innermost intercostal muscle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9758",
+      "sourceId": "FJ1454",
+      "triangles": 26164
+    },
+    {
+      "name": "bp43_FJ1459M",
+      "structure": "serratus-anterior",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left serratus anterior",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13399",
+      "sourceId": "FJ1459M",
+      "triangles": 49212
+    },
+    {
+      "name": "bp43_FJ1994",
+      "structure": "intercostal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Set of anterior intercostal veins",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA70839",
+      "sourceId": "FJ1994",
+      "triangles": 38814
+    },
+    {
+      "name": "bp43_FJ1961",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Set of posterior intercostal arteries",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA63822",
+      "sourceId": "FJ1961",
+      "triangles": 37964
+    },
+    {
+      "name": "bp43_FJ1985",
+      "structure": "intercostal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Set of anterior intercostal veins",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA70839",
+      "sourceId": "FJ1985",
+      "triangles": 37874
+    },
+    {
+      "name": "bp43_FJ1975",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Set of posterior intercostal arteries",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA63822",
+      "sourceId": "FJ1975",
+      "triangles": 35050
+    },
+    {
+      "name": "bp43_FJ3279",
+      "structure": "axilla",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left scapula",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13396",
+      "sourceId": "FJ3279",
+      "triangles": 28106
+    },
+    {
+      "name": "bp43_FJ3384",
+      "structure": "axilla",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right scapula",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13395",
+      "sourceId": "FJ3384",
+      "triangles": 26172
+    },
+    {
+      "name": "bp43_FJ2220",
+      "structure": "brachial-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left cephalic vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13326",
+      "sourceId": "FJ2220",
+      "triangles": 22874
+    },
+    {
+      "name": "bp43_FJ2218",
+      "structure": "brachial-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left basilic vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22910",
+      "sourceId": "FJ2218",
+      "triangles": 18338
+    },
+    {
+      "name": "bp43_FJ1541M",
+      "structure": "serratus-posterior",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left serratus posterior inferior",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13406",
+      "sourceId": "FJ1541M",
+      "triangles": 13164
+    },
+    {
+      "name": "bp43_FJ3636",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lumbar artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA14735",
+      "sourceId": "FJ3636",
+      "triangles": 12498
+    },
+    {
+      "name": "bp43_FJ3632",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lumbar artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA14735",
+      "sourceId": "FJ3632",
+      "triangles": 12058
+    },
+    {
+      "name": "bp43_FJ1520M",
+      "structure": "trapezius",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Ascending part of left trapezius",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA33583",
+      "sourceId": "FJ1520M",
+      "triangles": 10530
+    },
+    {
+      "name": "bp43_FJ3233",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left sixth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8202",
+      "sourceId": "FJ3233",
+      "triangles": 10264
+    },
+    {
+      "name": "bp43_FJ3344",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right sixth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8175",
+      "sourceId": "FJ3344",
+      "triangles": 10246
+    },
+    {
+      "name": "bp43_FJ3234",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left seventh rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8256",
+      "sourceId": "FJ3234",
+      "triangles": 10032
+    },
+    {
+      "name": "bp43_FJ3346",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right seventh rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8229",
+      "sourceId": "FJ3346",
+      "triangles": 10032
+    },
+    {
+      "name": "bp43_FJ3232",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left fifth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8093",
+      "sourceId": "FJ3232",
+      "triangles": 9710
+    },
+    {
+      "name": "bp43_FJ3342",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right fifth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8066",
+      "sourceId": "FJ3342",
+      "triangles": 9710
+    },
+    {
+      "name": "bp43_FJ1456M",
+      "structure": "pectoralis-minor",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left pectoralis minor",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13376",
+      "sourceId": "FJ1456M",
+      "triangles": 9468
+    },
+    {
+      "name": "bp43_FJ1456",
+      "structure": "contralateral-pectoral",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right pectoralis minor",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13375",
+      "sourceId": "FJ1456",
+      "triangles": 9468
+    },
+    {
+      "name": "bp43_FJ1542M",
+      "structure": "serratus-posterior",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left serratus posterior superior",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13404",
+      "sourceId": "FJ1542M",
+      "triangles": 9066
+    },
+    {
+      "name": "bp43_FJ3635",
+      "structure": "intercostal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lumbar vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA15370",
+      "sourceId": "FJ3635",
+      "triangles": 8920
+    },
+    {
+      "name": "bp43_FJ3231",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left fourth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8148",
+      "sourceId": "FJ3231",
+      "triangles": 8850
+    },
+    {
+      "name": "bp43_FJ3631",
+      "structure": "intercostal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lumbar vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA15370",
+      "sourceId": "FJ3631",
+      "triangles": 8834
+    },
+    {
+      "name": "bp43_FJ3340",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right fourth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7957",
+      "sourceId": "FJ3340",
+      "triangles": 8832
+    },
+    {
+      "name": "bp43_FJ3235",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left eighth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8310",
+      "sourceId": "FJ3235",
+      "triangles": 8336
+    },
+    {
+      "name": "bp43_FJ3347",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right eighth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8283",
+      "sourceId": "FJ3347",
+      "triangles": 8336
+    },
+    {
+      "name": "bp43_FJ3236",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left ninth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8391",
+      "sourceId": "FJ3236",
+      "triangles": 7576
+    },
+    {
+      "name": "bp43_FJ3348",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right ninth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8364",
+      "sourceId": "FJ3348",
+      "triangles": 7576
+    },
+    {
+      "name": "bp43_FJ3230",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left third rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8039",
+      "sourceId": "FJ3230",
+      "triangles": 7254
+    },
+    {
+      "name": "bp43_FJ3338",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right third rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7909",
+      "sourceId": "FJ3338",
+      "triangles": 7254
+    },
+    {
+      "name": "bp43_FJ1536M",
+      "structure": "rhomboids",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left rhomboid major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13382",
+      "sourceId": "FJ1536M",
+      "triangles": 7202
+    },
+    {
+      "name": "bp43_FJ1464M",
+      "structure": "pectoralis-major",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Sternocostal part of left pectoralis major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA79980",
+      "sourceId": "FJ1464M",
+      "triangles": 7114
+    },
+    {
+      "name": "bp43_FJ1464",
+      "structure": "contralateral-pectoral",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Sternocostal part of right pectoralis major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA79979",
+      "sourceId": "FJ1464",
+      "triangles": 7114
+    },
+    {
+      "name": "bp43_FJ1521M",
+      "structure": "trapezius",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Descending part of left trapezius",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA33587",
+      "sourceId": "FJ1521M",
+      "triangles": 7108
+    },
+    {
+      "name": "bp43_FJ3225",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left tenth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8472",
+      "sourceId": "FJ3225",
+      "triangles": 6826
+    },
+    {
+      "name": "bp43_FJ3330",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right tenth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8445",
+      "sourceId": "FJ3330",
+      "triangles": 6820
+    },
+    {
+      "name": "bp43_FJ3229",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left second rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8012",
+      "sourceId": "FJ3229",
+      "triangles": 5594
+    },
+    {
+      "name": "bp43_FJ3336",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right second rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7882",
+      "sourceId": "FJ3336",
+      "triangles": 5594
+    },
+    {
+      "name": "bp43_FJ3226",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left eleventh rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8532",
+      "sourceId": "FJ3226",
+      "triangles": 4866
+    },
+    {
+      "name": "bp43_FJ3331",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right eleventh rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8531",
+      "sourceId": "FJ3331",
+      "triangles": 4866
+    },
+    {
+      "name": "bp43_FJ1532M",
+      "structure": "levator-scapulae",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left levator scapulae",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA32541",
+      "sourceId": "FJ1532M",
+      "triangles": 4718
+    },
+    {
+      "name": "bp43_FJ3178",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Body of sternum",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7487",
+      "sourceId": "FJ3178",
+      "triangles": 4646
+    },
+    {
+      "name": "bp43_FJ2232",
+      "structure": "scapular-cervical-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left dorsal scapular artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10552",
+      "sourceId": "FJ2232",
+      "triangles": 4532
+    },
+    {
+      "name": "bp43_FJ4240",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left radial nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37071",
+      "sourceId": "FJ4240",
+      "triangles": 4474
+    },
+    {
+      "name": "bp43_FJ1554M",
+      "structure": "trapezius",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Transverse part of left trapezius",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA33585",
+      "sourceId": "FJ1554M",
+      "triangles": 4460
+    },
+    {
+      "name": "bp43_FJ4258",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left ulnar nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37321",
+      "sourceId": "FJ4258",
+      "triangles": 4406
+    },
+    {
+      "name": "bp43_FJ4224",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left median nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37068",
+      "sourceId": "FJ4224",
+      "triangles": 4372
+    },
+    {
+      "name": "bp43_FJ3262",
+      "structure": "axilla",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left humerus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23131",
+      "sourceId": "FJ3262",
+      "triangles": 3844
+    },
+    {
+      "name": "bp43_FJ1972",
+      "structure": "internal-thoracic-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left internal thoracic artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA76304",
+      "sourceId": "FJ1972",
+      "triangles": 3642
+    },
+    {
+      "name": "bp43_FJ2233",
+      "structure": "lateral-thoracic-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left lateral thoracic vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA71212",
+      "sourceId": "FJ2233",
+      "triangles": 3640
+    },
+    {
+      "name": "bp43_FJ2219",
+      "structure": "brachial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left brachial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22692",
+      "sourceId": "FJ2219",
+      "triangles": 3470
+    },
+    {
+      "name": "bp43_FJ2361",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Pectoral branch of right thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23063",
+      "sourceId": "FJ2361",
+      "triangles": 3400
+    },
+    {
+      "name": "bp43_FJ2330",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Pectoral branch of left thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23064",
+      "sourceId": "FJ2330",
+      "triangles": 3376
+    },
+    {
+      "name": "bp43_FJ3228",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left first rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7987",
+      "sourceId": "FJ3228",
+      "triangles": 3276
+    },
+    {
+      "name": "bp43_FJ3334",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right first rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7857",
+      "sourceId": "FJ3334",
+      "triangles": 3276
+    },
+    {
+      "name": "bp43_FJ2212",
+      "structure": "circumflex-humeral-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left anterior circumflex humeral artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22683",
+      "sourceId": "FJ2212",
+      "triangles": 3272
+    },
+    {
+      "name": "bp43_FJ4225",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left musculocutaneous nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37066",
+      "sourceId": "FJ4225",
+      "triangles": 3264
+    },
+    {
+      "name": "bp43_FJ1988",
+      "structure": "internal-thoracic-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left musculophrenic vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4786",
+      "sourceId": "FJ1988",
+      "triangles": 3236
+    },
+    {
+      "name": "bp43_FJ3159",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Second lumbar vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13073",
+      "sourceId": "FJ3159",
+      "triangles": 3214
+    },
+    {
+      "name": "bp43_FJ2213",
+      "structure": "circumflex-humeral-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left anterior circumflex humeral vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA77955",
+      "sourceId": "FJ2213",
+      "triangles": 3040
+    },
+    {
+      "name": "bp43_FJ3157",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "First lumbar vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13072",
+      "sourceId": "FJ3157",
+      "triangles": 2972
+    },
+    {
+      "name": "bp43_FJ3530",
+      "structure": "internal-thoracic-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left superior epigastric vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4785",
+      "sourceId": "FJ3530",
+      "triangles": 2938
+    },
+    {
+      "name": "bp43_FJ2313",
+      "structure": "brachial-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left medial brachial vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22936",
+      "sourceId": "FJ2313",
+      "triangles": 2852
+    },
+    {
+      "name": "bp43_FJ3227",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left twelfth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8534",
+      "sourceId": "FJ3227",
+      "triangles": 2818
+    },
+    {
+      "name": "bp43_FJ3332",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right twelfth rib",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8533",
+      "sourceId": "FJ3332",
+      "triangles": 2818
+    },
+    {
+      "name": "bp43_FJ3154",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Tenth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10037",
+      "sourceId": "FJ3154",
+      "triangles": 2790
+    },
+    {
+      "name": "bp43_FJ3156",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Twelfth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10081",
+      "sourceId": "FJ3156",
+      "triangles": 2772
+    },
+    {
+      "name": "bp43_FJ1974",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left second posterior intercostal artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4112",
+      "sourceId": "FJ1974",
+      "triangles": 2724
+    },
+    {
+      "name": "bp43_FJ3155",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Eleventh thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10059",
+      "sourceId": "FJ3155",
+      "triangles": 2674
+    },
+    {
+      "name": "bp43_FJ1477M",
+      "structure": "triceps",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lateral head of left triceps brachii",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37698",
+      "sourceId": "FJ1477M",
+      "triangles": 2606
+    },
+    {
+      "name": "bp43_FJ3175",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Ninth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10014",
+      "sourceId": "FJ3175",
+      "triangles": 2586
+    },
+    {
+      "name": "bp43_FJ3173",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Seventh thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9968",
+      "sourceId": "FJ3173",
+      "triangles": 2574
+    },
+    {
+      "name": "bp43_FJ1979",
+      "structure": "internal-thoracic-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left musculophrenic artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4077",
+      "sourceId": "FJ1979",
+      "triangles": 2564
+    },
+    {
+      "name": "bp43_FJ3290",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Manubrium",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7486",
+      "sourceId": "FJ3290",
+      "triangles": 2546
+    },
+    {
+      "name": "bp43_FJ2225",
+      "structure": "brachial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left deep brachial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22697",
+      "sourceId": "FJ2225",
+      "triangles": 2506
+    },
+    {
+      "name": "bp43_FJ3345",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right seventh costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8248",
+      "sourceId": "FJ3345",
+      "triangles": 2450
+    },
+    {
+      "name": "bp43_FJ3174",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Eighth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9991",
+      "sourceId": "FJ3174",
+      "triangles": 2424
+    },
+    {
+      "name": "bp43_FJ1976",
+      "structure": "lateral-thoracic-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left lateral thoracic artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22676",
+      "sourceId": "FJ1976",
+      "triangles": 2350
+    },
+    {
+      "name": "bp43_FJ3288",
+      "structure": "iliac-crest",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left hip bone",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA16587",
+      "sourceId": "FJ3288",
+      "triangles": 2332
+    },
+    {
+      "name": "bp43_FJ3255",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left seventh costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8275",
+      "sourceId": "FJ3255",
+      "triangles": 2314
+    },
+    {
+      "name": "bp43_FJ4223",
+      "structure": "pectoral-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left medial pectoral nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65295",
+      "sourceId": "FJ4223",
+      "triangles": 2300
+    },
+    {
+      "name": "bp43_FJ3169",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Fifth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9922",
+      "sourceId": "FJ3169",
+      "triangles": 2280
+    },
+    {
+      "name": "bp43_FJ1971",
+      "structure": "internal-thoracic-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left superior epigastric artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4083",
+      "sourceId": "FJ1971",
+      "triangles": 2270
+    },
+    {
+      "name": "bp43_FJ3668M",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right eighth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8302",
+      "sourceId": "FJ3668M",
+      "triangles": 2265
+    },
+    {
+      "name": "bp43_FJ3668",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left eighth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8329",
+      "sourceId": "FJ3668",
+      "triangles": 2265
+    },
+    {
+      "name": "bp43_FJ3171",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Sixth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9945",
+      "sourceId": "FJ3171",
+      "triangles": 2248
+    },
+    {
+      "name": "bp43_FJ1468M",
+      "structure": "deltoid",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Clavicular part of left deltoid",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA34681",
+      "sourceId": "FJ1468M",
+      "triangles": 2206
+    },
+    {
+      "name": "bp43_FJ1537M",
+      "structure": "rhomboids",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left rhomboid minor",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13384",
+      "sourceId": "FJ1537M",
+      "triangles": 2206
+    },
+    {
+      "name": "bp43_FJ2217",
+      "structure": "axillary-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left axillary vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13331",
+      "sourceId": "FJ2217",
+      "triangles": 2110
+    },
+    {
+      "name": "bp43_FJ2253",
+      "structure": "thoracodorsal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left thoracodorsal artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA66322",
+      "sourceId": "FJ2253",
+      "triangles": 2104
+    },
+    {
+      "name": "bp43_FJ1504M",
+      "structure": "subscapularis",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left subscapularis",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13415",
+      "sourceId": "FJ1504M",
+      "triangles": 2092
+    },
+    {
+      "name": "bp43_FJ4256",
+      "structure": "thoracodorsal-nerve",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left thoracodorsal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65292",
+      "sourceId": "FJ4256",
+      "triangles": 2068
+    },
+    {
+      "name": "bp43_FJ3166",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Fourth thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9248",
+      "sourceId": "FJ3166",
+      "triangles": 2066
+    },
+    {
+      "name": "bp43_FJ3163",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Third thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9209",
+      "sourceId": "FJ3163",
+      "triangles": 2038
+    },
+    {
+      "name": "bp43_FJ2250",
+      "structure": "scapular-cervical-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left suprascapular vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA50860",
+      "sourceId": "FJ2250",
+      "triangles": 1974
+    },
+    {
+      "name": "bp43_FJ3160",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Second thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9187",
+      "sourceId": "FJ3160",
+      "triangles": 1938
+    },
+    {
+      "name": "bp43_FJ2251",
+      "structure": "scapular-cervical-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left suprascapular artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10681",
+      "sourceId": "FJ2251",
+      "triangles": 1928
+    },
+    {
+      "name": "bp43_FJ4264",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left fifth cervical nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA24105",
+      "sourceId": "FJ4264",
+      "triangles": 1926
+    },
+    {
+      "name": "bp43_FJ1513M",
+      "structure": "deltoid",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Spinal part of left deltoid",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA34685",
+      "sourceId": "FJ1513M",
+      "triangles": 1900
+    },
+    {
+      "name": "bp43_FJ1512M",
+      "structure": "coracobrachialis-biceps",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Short head of left biceps brachii",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37685",
+      "sourceId": "FJ1512M",
+      "triangles": 1856
+    },
+    {
+      "name": "bp43_FJ1447M",
+      "structure": "pectoralis-major",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Clavicular part of left pectoralis major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA34691",
+      "sourceId": "FJ1447M",
+      "triangles": 1846
+    },
+    {
+      "name": "bp43_FJ1447",
+      "structure": "contralateral-pectoral",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Clavicular part of right pectoralis major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA34690",
+      "sourceId": "FJ1447",
+      "triangles": 1846
+    },
+    {
+      "name": "bp43_FJ2216",
+      "structure": "axillary-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left axillary artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22656",
+      "sourceId": "FJ2216",
+      "triangles": 1800
+    },
+    {
+      "name": "bp43_FJ4275",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Medial cord of left brachial nerve plexus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA45241",
+      "sourceId": "FJ4275",
+      "triangles": 1708
+    },
+    {
+      "name": "bp43_FJ3158",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "First thoracic vertebra",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA9165",
+      "sourceId": "FJ3158",
+      "triangles": 1700
+    },
+    {
+      "name": "bp43_FJ4244",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left supraclavicular nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65416",
+      "sourceId": "FJ4244",
+      "triangles": 1698
+    },
+    {
+      "name": "bp43_FJ2254",
+      "structure": "thoracodorsal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left thoracodorsal vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA71215",
+      "sourceId": "FJ2254",
+      "triangles": 1688
+    },
+    {
+      "name": "bp43_FJ3669M",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right ninth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8383",
+      "sourceId": "FJ3669M",
+      "triangles": 1678
+    },
+    {
+      "name": "bp43_FJ3669",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left ninth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8410",
+      "sourceId": "FJ3669",
+      "triangles": 1678
+    },
+    {
+      "name": "bp43_FJ1460M",
+      "structure": "subclavius",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left subclavius",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13411",
+      "sourceId": "FJ1460M",
+      "triangles": 1640
+    },
+    {
+      "name": "bp43_FJ1479M",
+      "structure": "triceps",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Long head of left triceps brachii",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37700",
+      "sourceId": "FJ1479M",
+      "triangles": 1588
+    },
+    {
+      "name": "bp43_FJ4185",
+      "structure": "intercostobrachial-nerve",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left second intercostobrachial nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65908",
+      "sourceId": "FJ4185",
+      "triangles": 1568
+    },
+    {
+      "name": "bp43_FJ4222",
+      "structure": "long-thoracic-nerve",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left long thoracic nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA79667",
+      "sourceId": "FJ4222",
+      "triangles": 1560
+    },
+    {
+      "name": "bp43_FJ3343",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right sixth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8194",
+      "sourceId": "FJ3343",
+      "triangles": 1546
+    },
+    {
+      "name": "bp43_FJ1973",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left first posterior intercostal artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA66243",
+      "sourceId": "FJ1973",
+      "triangles": 1538
+    },
+    {
+      "name": "bp43_FJ1446M",
+      "structure": "pectoralis-major",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Abdominal part of left pectoralis major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA45875",
+      "sourceId": "FJ1446M",
+      "triangles": 1536
+    },
+    {
+      "name": "bp43_FJ1446",
+      "structure": "contralateral-pectoral",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Abdominal part of right pectoralis major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA45874",
+      "sourceId": "FJ1446",
+      "triangles": 1536
+    },
+    {
+      "name": "bp43_FJ3254",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left sixth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8221",
+      "sourceId": "FJ3254",
+      "triangles": 1498
+    },
+    {
+      "name": "bp43_FJ1478M",
+      "structure": "coracobrachialis-biceps",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Long head of left biceps brachii",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37687",
+      "sourceId": "FJ1478M",
+      "triangles": 1426
+    },
+    {
+      "name": "bp43_FJ3667M",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right tenth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8464",
+      "sourceId": "FJ3667M",
+      "triangles": 1400
+    },
+    {
+      "name": "bp43_FJ3667",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left tenth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8491",
+      "sourceId": "FJ3667",
+      "triangles": 1400
+    },
+    {
+      "name": "bp43_FJ1977",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left subcostal artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4654",
+      "sourceId": "FJ1977",
+      "triangles": 1334
+    },
+    {
+      "name": "bp43_FJ1467M",
+      "structure": "deltoid",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Acromial part of left deltoid",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA34683",
+      "sourceId": "FJ1467M",
+      "triangles": 1300
+    },
+    {
+      "name": "bp43_FJ4197",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lateral cutaneous branch of left first intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA6752",
+      "sourceId": "FJ4197",
+      "triangles": 1188
+    },
+    {
+      "name": "bp43_FJ3237",
+      "structure": "axilla",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left clavicle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13323",
+      "sourceId": "FJ3237",
+      "triangles": 1176
+    },
+    {
+      "name": "bp43_FJ3341",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right fifth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8070",
+      "sourceId": "FJ3341",
+      "triangles": 1168
+    },
+    {
+      "name": "bp43_FJ3362",
+      "structure": "axilla",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right clavicle",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13322",
+      "sourceId": "FJ3362",
+      "triangles": 1146
+    },
+    {
+      "name": "bp43_FJ4178",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left second intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA85334",
+      "sourceId": "FJ4178",
+      "triangles": 1132
+    },
+    {
+      "name": "bp43_FJ4280",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Posterior cord of left brachial nerve plexus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA45243",
+      "sourceId": "FJ4280",
+      "triangles": 1130
+    },
+    {
+      "name": "bp43_FJ4265",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left sixth cervical nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7011",
+      "sourceId": "FJ4265",
+      "triangles": 1106
+    },
+    {
+      "name": "bp43_FJ3251",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left fifth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8112",
+      "sourceId": "FJ3251",
+      "triangles": 1086
+    },
+    {
+      "name": "bp43_FJ1507M",
+      "structure": "teres-major",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left teres major",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA32552",
+      "sourceId": "FJ1507M",
+      "triangles": 1042
+    },
+    {
+      "name": "bp43_FJ2263",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Acromial branch of right thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23068",
+      "sourceId": "FJ2263",
+      "triangles": 996
+    },
+    {
+      "name": "bp43_FJ1987",
+      "structure": "intercostal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left subcostal vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4951",
+      "sourceId": "FJ1987",
+      "triangles": 978
+    },
+    {
+      "name": "bp43_FJ2211",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Acromial branch of left thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23069",
+      "sourceId": "FJ2211",
+      "triangles": 974
+    },
+    {
+      "name": "bp43_FJ2239",
+      "structure": "circumflex-humeral-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left posterior circumflex humeral artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22687",
+      "sourceId": "FJ2239",
+      "triangles": 974
+    },
+    {
+      "name": "bp43_FJ4267",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left eighth cervical nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7015",
+      "sourceId": "FJ4267",
+      "triangles": 970
+    },
+    {
+      "name": "bp43_FJ4266",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left seventh cervical nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7013",
+      "sourceId": "FJ4266",
+      "triangles": 956
+    },
+    {
+      "name": "bp43_FJ2222",
+      "structure": "subscapular-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left circumflex scapular vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA77950",
+      "sourceId": "FJ2222",
+      "triangles": 950
+    },
+    {
+      "name": "bp43_FJ3153",
+      "structure": "chest-wall",
+      "tissue": "bone",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Xiphoid process",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7488",
+      "sourceId": "FJ3153",
+      "triangles": 922
+    },
+    {
+      "name": "bp43_FJ4242",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left superior subscapular nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65306",
+      "sourceId": "FJ4242",
+      "triangles": 916
+    },
+    {
+      "name": "bp43_FJ1506M",
+      "structure": "supraspinatus",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left supraspinatus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA32545",
+      "sourceId": "FJ1506M",
+      "triangles": 878
+    },
+    {
+      "name": "bp43_FJ1500M",
+      "structure": "infraspinatus",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left infraspinatus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA32548",
+      "sourceId": "FJ1500M",
+      "triangles": 866
+    },
+    {
+      "name": "bp43_FJ1480M",
+      "structure": "triceps",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Medial head of left triceps brachii",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37696",
+      "sourceId": "FJ1480M",
+      "triangles": 832
+    },
+    {
+      "name": "bp43_FJ4213",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Anterior cutaneous branch of left second intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA6115",
+      "sourceId": "FJ4213",
+      "triangles": 824
+    },
+    {
+      "name": "bp43_FJ2282",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Deltoid branch of right thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23072",
+      "sourceId": "FJ2282",
+      "triangles": 812
+    },
+    {
+      "name": "bp43_FJ2246",
+      "structure": "subscapular-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left subscapular artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA66551",
+      "sourceId": "FJ2246",
+      "triangles": 790
+    },
+    {
+      "name": "bp43_FJ2230",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Deltoid branch of left thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23073",
+      "sourceId": "FJ2230",
+      "triangles": 788
+    },
+    {
+      "name": "bp43_FJ1986",
+      "structure": "intercostal-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left superior intercostal vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4797",
+      "sourceId": "FJ1986",
+      "triangles": 786
+    },
+    {
+      "name": "bp43_FJ4209",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Anterior cutaneous branch of left first intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8922",
+      "sourceId": "FJ4209",
+      "triangles": 776
+    },
+    {
+      "name": "bp43_FJ4174",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left first intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA85332",
+      "sourceId": "FJ4174",
+      "triangles": 774
+    },
+    {
+      "name": "bp43_FJ2221",
+      "structure": "subscapular-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left circumflex scapular artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23181",
+      "sourceId": "FJ2221",
+      "triangles": 762
+    },
+    {
+      "name": "bp43_FJ3339",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right fourth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7976",
+      "sourceId": "FJ3339",
+      "triangles": 694
+    },
+    {
+      "name": "bp43_FJ2240",
+      "structure": "circumflex-humeral-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left posterior circumflex humeral artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA22687",
+      "sourceId": "FJ2240",
+      "triangles": 688
+    },
+    {
+      "name": "bp43_FJ3333",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right first costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7875",
+      "sourceId": "FJ3333",
+      "triangles": 676
+    },
+    {
+      "name": "bp43_FJ3248",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left fourth costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8167",
+      "sourceId": "FJ3248",
+      "triangles": 658
+    },
+    {
+      "name": "bp43_FJ3335",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right second costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7886",
+      "sourceId": "FJ3335",
+      "triangles": 658
+    },
+    {
+      "name": "bp43_FJ4171",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left axillary nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37074",
+      "sourceId": "FJ4171",
+      "triangles": 654
+    },
+    {
+      "name": "bp43_FJ3337",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Right third costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7913",
+      "sourceId": "FJ3337",
+      "triangles": 652
+    },
+    {
+      "name": "bp43_FJ2256",
+      "structure": "scapular-cervical-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left superficial cervical artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA10683",
+      "sourceId": "FJ2256",
+      "triangles": 646
+    },
+    {
+      "name": "bp43_FJ3479",
+      "structure": "subclavian-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left subclavian artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA69319",
+      "sourceId": "FJ3479",
+      "triangles": 646
+    },
+    {
+      "name": "bp43_FJ3239",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left first costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8005",
+      "sourceId": "FJ3239",
+      "triangles": 642
+    },
+    {
+      "name": "bp43_FJ4159",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Anterior cutaneous branch of left first intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8922",
+      "sourceId": "FJ4159",
+      "triangles": 620
+    },
+    {
+      "name": "bp43_FJ3245",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left third costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8058",
+      "sourceId": "FJ3245",
+      "triangles": 604
+    },
+    {
+      "name": "bp43_FJ3242",
+      "structure": "costal-cartilages",
+      "tissue": "cartilage",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left second costal cartilage",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA8031",
+      "sourceId": "FJ3242",
+      "triangles": 588
+    },
+    {
+      "name": "bp43_FJ4172",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left radial nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37071",
+      "sourceId": "FJ4172",
+      "triangles": 576
+    },
+    {
+      "name": "bp43_FJ2247",
+      "structure": "subscapular-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left subscapular vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA23115",
+      "sourceId": "FJ2247",
+      "triangles": 520
+    },
+    {
+      "name": "bp43_FJ1508M",
+      "structure": "teres-minor",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left teres minor",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA32554",
+      "sourceId": "FJ1508M",
+      "triangles": 506
+    },
+    {
+      "name": "bp43_FJ4241",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left subclavian nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA79671",
+      "sourceId": "FJ4241",
+      "triangles": 488
+    },
+    {
+      "name": "bp43_FJ2304",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of right thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA66563",
+      "sourceId": "FJ2304",
+      "triangles": 472
+    },
+    {
+      "name": "bp43_FJ2252",
+      "structure": "thoracoacromial-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left thoraco-acromial artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA66564",
+      "sourceId": "FJ2252",
+      "triangles": 468
+    },
+    {
+      "name": "bp43_FJ4163",
+      "structure": "intercostal-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Anterior cutaneous branch of left second intercostal nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA6115",
+      "sourceId": "FJ4163",
+      "triangles": 446
+    },
+    {
+      "name": "bp43_FJ1488M",
+      "structure": "coracobrachialis-biceps",
+      "tissue": "muscle",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left coracobrachialis",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37666",
+      "sourceId": "FJ1488M",
+      "triangles": 444
+    },
+    {
+      "name": "bp43_FJ3486",
+      "structure": "subclavian-vessels",
+      "tissue": "vein",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left subclavian vein",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4763",
+      "sourceId": "FJ3486",
+      "triangles": 434
+    },
+    {
+      "name": "bp43_FJ4290",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Superior trunk of left brachial nerve plexus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65362",
+      "sourceId": "FJ4290",
+      "triangles": 428
+    },
+    {
+      "name": "bp43_FJ2257",
+      "structure": "scapular-cervical-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left transverse cervical artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA81009",
+      "sourceId": "FJ2257",
+      "triangles": 366
+    },
+    {
+      "name": "bp43_FJ4243",
+      "structure": "arm-nerves",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left axillary nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA37074",
+      "sourceId": "FJ4243",
+      "triangles": 360
+    },
+    {
+      "name": "bp43_FJ4276",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Middle trunk of left brachial nerve plexus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65366",
+      "sourceId": "FJ4276",
+      "triangles": 350
+    },
+    {
+      "name": "bp43_FJ4274",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Lateral cord of left brachial nerve plexus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA45239",
+      "sourceId": "FJ4274",
+      "triangles": 348
+    },
+    {
+      "name": "bp43_FJ4245",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Trunk of left first thoracic nerve",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA7023",
+      "sourceId": "FJ4245",
+      "triangles": 344
+    },
+    {
+      "name": "bp43_FJ4273",
+      "structure": "brachial-plexus",
+      "tissue": "nerve",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Inferior trunk of left brachial nerve plexus",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA65364",
+      "sourceId": "FJ4273",
+      "triangles": 330
+    },
+    {
+      "name": "bp43_FJ1970",
+      "structure": "intercostal-vessels",
+      "tissue": "artery",
+      "source": "BodyParts3D 4.3",
+      "sourceName": "Left superior intercostal artery",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA4088",
+      "sourceId": "FJ1970",
+      "triangles": 206
+    },
+    {
+      "name": "bp30_FMA13359",
+      "structure": "latissimus-dorsi",
+      "tissue": "muscle",
+      "source": "BodyParts3D 3.0",
+      "sourceName": "Left latissimus dorsi",
+      "license": "CC BY-SA 2.1 JP (DBCLS); official archive now lists CC BY 4.0",
+      "fma": "FMA13359",
+      "sourceId": "FMA13359",
+      "triangles": 227390
+    },
+    {
+      "name": "za_Pectoral_fascial",
+      "structure": "pectoral-fascia",
+      "tissue": "fascia",
+      "source": "Z-Anatomy",
+      "sourceName": "Pectoral fascial",
+      "license": "CC BY-SA 4.0",
+      "triangles": 2709
+    },
+    {
+      "name": "za_Clavipectoral_fascial",
+      "structure": "pectoral-fascia",
+      "tissue": "fascia",
+      "source": "Z-Anatomy",
+      "sourceName": "Clavipectoral fascial",
+      "license": "CC BY-SA 4.0",
+      "triangles": 1280
+    },
+    {
+      "name": "za_Anterior_layer_of_thoracolumbar_fascial",
+      "structure": "thoracolumbar-fascia",
+      "tissue": "fascia",
+      "source": "Z-Anatomy",
+      "sourceName": "Anterior layer of thoracolumbar fascial",
+      "license": "CC BY-SA 4.0",
+      "triangles": 176
+    },
+    {
+      "name": "za_Middle_layer_of_thoracolumbar_fascial",
+      "structure": "thoracolumbar-fascia",
+      "tissue": "fascia",
+      "source": "Z-Anatomy",
+      "sourceName": "Middle layer of thoracolumbar fascial",
+      "license": "CC BY-SA 4.0",
+      "triangles": 160
+    },
+    {
+      "name": "za_Posterior_layer_of_thoracolumbar_fascial",
+      "structure": "thoracolumbar-fascia",
+      "tissue": "fascia",
+      "source": "Z-Anatomy",
+      "sourceName": "Posterior layer of thoracolumbar fascial",
+      "license": "CC BY-SA 4.0",
+      "triangles": 313
+    },
+    {
+      "name": "za_Deltoid_fascial",
+      "structure": "deltoid-fascia",
+      "tissue": "fascia",
+      "source": "Z-Anatomy",
+      "sourceName": "Deltoid fascial",
+      "license": "CC BY-SA 4.0",
+      "triangles": 3541
+    },
+    {
+      "name": "za_Anterior_axillary_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Anterior axillary nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 1008
+    },
+    {
+      "name": "za_Posterior_axillary_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Posterior axillary nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 1008
+    },
+    {
+      "name": "za_Lateral_axillary_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Lateral axillary nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 336
+    },
+    {
+      "name": "za_Central_axillary_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Central axillary nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 336
+    },
+    {
+      "name": "za_Apical_axillary_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Apical axillary nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 336
+    },
+    {
+      "name": "za_Interpectoral_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Interpectoral nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 840
+    },
+    {
+      "name": "za_Parasternal_nodesl",
+      "structure": "axillary-lymph-nodes",
+      "tissue": "lymph-node",
+      "source": "Z-Anatomy",
+      "sourceName": "Parasternal nodesl",
+      "license": "CC BY-SA 4.0",
+      "triangles": 1344
+    },
+    {
+      "name": "za_Lateral_pectoral_nervel",
+      "structure": "pectoral-nerves",
+      "tissue": "nerve",
+      "source": "Z-Anatomy",
+      "sourceName": "Lateral pectoral nervel",
+      "license": "CC BY-SA 4.0",
+      "triangles": 7200
+    },
+    {
+      "name": "hra_VH_F_skin",
+      "structure": "skin",
+      "tissue": "skin",
+      "source": "HRA",
+      "sourceName": "VH_F_skin (trunk region)",
+      "license": "CC BY 4.0",
+      "triangles": 103267
+    },
+    {
+      "name": "hra_VH_F_suspensory_ligaments_L",
+      "structure": "breast-ligaments",
+      "tissue": "ligament",
+      "source": "HRA",
+      "sourceName": "VH_F_suspensory_ligaments_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 44278
+    },
+    {
+      "name": "hra_VH_F_main_lactiferous_sinuses_L",
+      "structure": "breast",
+      "tissue": "duct",
+      "source": "HRA",
+      "sourceName": "VH_F_main_lactiferous_sinuses_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 11456
+    },
+    {
+      "name": "hra_VH_F_main_lactiferous_ducts_L",
+      "structure": "breast",
+      "tissue": "duct",
+      "source": "HRA",
+      "sourceName": "VH_F_main_lactiferous_ducts_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 34755
+    },
+    {
+      "name": "hra_VH_F_mammary_lobes_L",
+      "structure": "breast",
+      "tissue": "gland",
+      "source": "HRA",
+      "sourceName": "VH_F_mammary_lobes_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 75784
+    },
+    {
+      "name": "hra_VH_F_areola_L",
+      "structure": "nipple-areola",
+      "tissue": "areola",
+      "source": "HRA",
+      "sourceName": "VH_F_areola_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 23785
+    },
+    {
+      "name": "hra_VH_F_nipple_L",
+      "structure": "nipple-areola",
+      "tissue": "nipple",
+      "source": "HRA",
+      "sourceName": "VH_F_nipple_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 9696
+    },
+    {
+      "name": "hra_VH_F_areolar_tubercles_L",
+      "structure": "nipple-areola",
+      "tissue": "areola",
+      "source": "HRA",
+      "sourceName": "VH_F_areolar_tubercles_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 4621
+    },
+    {
+      "name": "hra_VH_F_fat_L",
+      "structure": "breast-fat",
+      "tissue": "fat",
+      "source": "HRA",
+      "sourceName": "VH_F_fat_L",
+      "license": "CC BY 4.0",
+      "side": "left",
+      "triangles": 66416
+    },
+    {
+      "name": "hra_VH_F_suspensory_ligaments_R",
+      "structure": "contralateral-breast",
+      "tissue": "ligament",
+      "source": "HRA",
+      "sourceName": "VH_F_suspensory_ligaments_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 51682
+    },
+    {
+      "name": "hra_VH_F_mammary_lobes_R",
+      "structure": "contralateral-breast",
+      "tissue": "gland",
+      "source": "HRA",
+      "sourceName": "VH_F_mammary_lobes_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 75784
+    },
+    {
+      "name": "hra_VH_F_main_lactiferous_ducts_R",
+      "structure": "contralateral-breast",
+      "tissue": "duct",
+      "source": "HRA",
+      "sourceName": "VH_F_main_lactiferous_ducts_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 34660
+    },
+    {
+      "name": "hra_VH_F_main_lactiferous_sinuses_R",
+      "structure": "contralateral-breast",
+      "tissue": "duct",
+      "source": "HRA",
+      "sourceName": "VH_F_main_lactiferous_sinuses_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 11449
+    },
+    {
+      "name": "hra_VH_F_areola_R",
+      "structure": "contralateral-breast",
+      "tissue": "areola",
+      "source": "HRA",
+      "sourceName": "VH_F_areola_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 23785
+    },
+    {
+      "name": "hra_VH_F_nipple_R",
+      "structure": "contralateral-breast",
+      "tissue": "nipple",
+      "source": "HRA",
+      "sourceName": "VH_F_nipple_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 9696
+    },
+    {
+      "name": "hra_VH_F_areolar_tubercles_R",
+      "structure": "contralateral-breast",
+      "tissue": "areola",
+      "source": "HRA",
+      "sourceName": "VH_F_areolar_tubercles_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 4621
+    },
+    {
+      "name": "hra_VH_F_fat_R",
+      "structure": "contralateral-breast",
+      "tissue": "fat",
+      "source": "HRA",
+      "sourceName": "VH_F_fat_R",
+      "license": "CC BY 4.0",
+      "side": "right",
+      "triangles": 74728
+    }
+  ]
+}

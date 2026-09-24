@@ -8,7 +8,7 @@ import { StepTimeline } from "@/components/StepTimeline";
 import { StructureToggleList } from "@/components/StructureToggleList";
 import { ViewerToolbar } from "@/components/ViewerToolbar";
 import { procedures } from "@/data/procedures";
-import { modelStructures } from "@/lib/modelConfig";
+import { hybridTorsoModel, modelStructures } from "@/lib/modelConfig";
 import type { StructureVisibility, ViewMode } from "@/lib/viewerTypes";
 
 const defaultVisibility = Object.fromEntries(modelStructures.map((structure) => [structure.id, structure.defaultVisible])) as StructureVisibility;
@@ -45,7 +45,7 @@ export default function Home() {
       <header className="mx-auto mb-6 max-w-7xl rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-2xl">
         <p className="text-sm font-semibold uppercase tracking-[0.35em] text-sky-300">Atlas cirúrgico interativo</p>
         <h1 className="mt-3 text-3xl font-black text-white md:text-5xl">Anatomia Cirúrgica em Mastologia</h1>
-        <p className="mt-4 max-w-3xl text-slate-300">Roteiro interativo do retalho de grande dorsal para reconstrução mamária, com modelo anatômico feminino/right-sided, overlays de dissecção e notas práticas por etapa.</p>
+        <p className="mt-4 max-w-3xl text-slate-300">Roteiro interativo do retalho de grande dorsal para reconstrução mamária, com modelo anatômico feminino híbrido (pele e mama do Visible Human Female/NIH, vasos, nervos e músculos do BodyParts3D), guias de dissecção e notas práticas por etapa.</p>
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[280px_minmax(0,1fr)_360px]">
@@ -60,18 +60,12 @@ export default function Home() {
             onShowVessels={() =>
               setVisibility((current) => ({
                 ...current,
-                "axillary-vessels": true,
-                "subscapular-vessels": true,
-                "thoracodorsal-vessels": true,
-                "lateral-thoracic-vessels": true,
-                "circumflex-humeral-vessels": true,
-                "thoracodorsal-nerve": true,
-                "long-thoracic-nerve": true,
+                ...Object.fromEntries(modelStructures.filter((structure) => structure.group === "Vasos" || structure.group === "Nervos").map((structure) => [structure.id, true])),
               }))
             }
             onSetViewMode={setViewMode}
           />
-          <AnatomyViewer step={activeStep} visibility={visibility} clippingEnabled={clippingEnabled || Boolean(activeStep.clippingPlane?.enabled)} viewMode={viewMode} resetSignal={resetSignal} modelPath={activeProcedure.modelPath ?? "models/z-anatomy/torso-mastology.glb"} />
+          <AnatomyViewer step={activeStep} visibility={visibility} clippingEnabled={clippingEnabled} viewMode={viewMode} resetSignal={resetSignal} modelPath={activeProcedure.modelPath ?? hybridTorsoModel.modelPath} />
         </section>
         <AnnotationPanel step={activeStep} />
       </div>

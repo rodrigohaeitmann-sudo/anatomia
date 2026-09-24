@@ -1,58 +1,123 @@
-import zAnatomyTorsoManifest from "@/data/zAnatomyTorsoManifest.json";
+import hybridTorsoManifest from "@/data/hybridTorsoManifest.json";
+
+export type Tissue =
+  | "skin"
+  | "fat"
+  | "gland"
+  | "duct"
+  | "ligament"
+  | "nipple"
+  | "areola"
+  | "muscle"
+  | "bone"
+  | "cartilage"
+  | "fascia"
+  | "artery"
+  | "vein"
+  | "nerve"
+  | "lymph-node";
 
 export type ModelStructureConfig = {
   id: string;
   label: string;
+  group: string;
   color: string;
   defaultVisible: boolean;
   meshNames: string[];
-  opacity?: number;
-  sourceType: "z-anatomy" | "procedural";
-  futureMeshName?: string;
+  labelAnchor: [number, number, number];
+  sources: string[];
 };
 
-type ZAnatomyStructureRecord = Record<string, { meshNames: string[] }>;
+export type ModelMeshRecord = {
+  name: string;
+  structure: string;
+  tissue: Tissue;
+  source: string;
+  sourceName: string;
+  license: string;
+  triangles: number;
+  fma?: string;
+};
 
-const zAnatomyStructures = zAnatomyTorsoManifest.structures as ZAnatomyStructureRecord;
+type ManifestStructure = { label: string; group: string; visible: boolean; labelAnchor: [number, number, number]; meshNames: string[] };
 
-function zAnatomyMeshes(id: string) {
-  return zAnatomyStructures[id]?.meshNames ?? [];
+export type Landmark = [number, number, number];
+
+export type ModelLandmarks = {
+  nipple: Landmark;
+  breastCenter: Landmark;
+  breastBounds: { min: Landmark; max: Landmark };
+  inframammaryFold: Landmark;
+  latissimusCenter: Landmark;
+  latissimusBounds: { min: Landmark; max: Landmark };
+  latissimusAnteriorBorder: [Landmark, Landmark];
+  latissimusInferior: Landmark;
+  scapulaInferiorAngle: Landmark;
+  trapeziusInferiorBorder: Landmark;
+  iliacCrestTop: Landmark;
+  thoracodorsalArteryOrigin: Landmark;
+  thoracodorsalArteryDistal: Landmark;
+  thoracodorsalNerveDistal: Landmark;
+  axillaryArteryCenter: Landmark;
+  skinPaddleCenter: Landmark;
+  unitsPerMm: number;
+};
+
+/** Physically inspired base colours per tissue (linear sRGB hex). */
+export const tissueColors: Record<Tissue, string> = {
+  skin: "#e7b8a0",
+  fat: "#f1cf7c",
+  gland: "#e8879f",
+  duct: "#d8467a",
+  ligament: "#f3efe6",
+  nipple: "#8a4a3a",
+  areola: "#9b5a47",
+  muscle: "#b8453b",
+  bone: "#ece2cd",
+  cartilage: "#b9d6de",
+  fascia: "#ebe6d6",
+  artery: "#d32f2f",
+  vein: "#2a5bb8",
+  nerve: "#f5d547",
+  "lymph-node": "#7cc26b",
+};
+
+/** Default opacity per tissue; deep structures are opaque so anatomical relations read clearly. */
+export const tissueOpacity: Partial<Record<Tissue, number>> = {
+  skin: 0.28,
+  fat: 0.42,
+  fascia: 0.45,
+  ligament: 0.85,
+};
+
+export const modelMeshes = hybridTorsoManifest.meshes as ModelMeshRecord[];
+export const modelLandmarks = hybridTorsoManifest.landmarks as unknown as ModelLandmarks;
+export const hybridTorsoModel = hybridTorsoManifest;
+
+const manifestStructures = hybridTorsoManifest.structures as unknown as Record<string, ManifestStructure>;
+const meshByName = new Map(modelMeshes.map((mesh) => [mesh.name, mesh]));
+
+function dominantTissue(meshNames: string[]): Tissue {
+  const counts = new Map<Tissue, number>();
+  for (const name of meshNames) {
+    const tissue = meshByName.get(name)?.tissue;
+    if (tissue) counts.set(tissue, (counts.get(tissue) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "muscle";
 }
 
-export const modelStructures: ModelStructureConfig[] = [
-  { id: "skin", label: "Pele", color: "#f8c7b8", defaultVisible: true, meshNames: zAnatomyMeshes("skin"), opacity: 0.24, sourceType: "z-anatomy", futureMeshName: "skin" },
-  { id: "subcutaneous", label: "Tecido subcutâneo", color: "#facc15", defaultVisible: true, meshNames: [], opacity: 0.42, sourceType: "procedural", futureMeshName: "subcutaneous_tissue" },
-  { id: "latissimus-dorsi", label: "Músculo grande dorsal", color: "#ef4444", defaultVisible: true, meshNames: zAnatomyMeshes("latissimus-dorsi"), opacity: 0.96, sourceType: "z-anatomy", futureMeshName: "latissimus_dorsi" },
-  { id: "serratus-anterior", label: "Serrátil anterior", color: "#f97316", defaultVisible: false, meshNames: zAnatomyMeshes("serratus-anterior"), opacity: 0.88, sourceType: "z-anatomy", futureMeshName: "serratus_anterior" },
-  { id: "trapezius", label: "Trapézio", color: "#8b5cf6", defaultVisible: false, meshNames: zAnatomyMeshes("trapezius"), opacity: 0.34, sourceType: "z-anatomy", futureMeshName: "trapezius" },
-  { id: "teres-major", label: "Redondo maior", color: "#f59e0b", defaultVisible: false, meshNames: zAnatomyMeshes("teres-major"), opacity: 0.72, sourceType: "z-anatomy", futureMeshName: "teres_major" },
-  { id: "teres-minor", label: "Redondo menor", color: "#fbbf24", defaultVisible: false, meshNames: zAnatomyMeshes("teres-minor"), opacity: 0.58, sourceType: "z-anatomy", futureMeshName: "teres_minor" },
-  { id: "subscapularis", label: "Subescapular", color: "#fb923c", defaultVisible: false, meshNames: zAnatomyMeshes("subscapularis"), opacity: 0.52, sourceType: "z-anatomy", futureMeshName: "subscapularis" },
-  { id: "deltoid", label: "Deltóide", color: "#c084fc", defaultVisible: false, meshNames: zAnatomyMeshes("deltoid"), opacity: 0.4, sourceType: "z-anatomy", futureMeshName: "deltoid" },
-  { id: "coracobrachialis-biceps", label: "Coracobraquial + bíceps curto", color: "#14b8a6", defaultVisible: false, meshNames: zAnatomyMeshes("coracobrachialis-biceps"), opacity: 0.44, sourceType: "z-anatomy", futureMeshName: "coracobrachialis_biceps_short_head" },
-  { id: "infraspinatus", label: "Infraespinhal", color: "#f97316", defaultVisible: false, meshNames: zAnatomyMeshes("infraspinatus"), opacity: 0.34, sourceType: "z-anatomy", futureMeshName: "infraspinatus" },
-  { id: "pectoralis-major", label: "Peitoral maior", color: "#fb7185", defaultVisible: false, meshNames: zAnatomyMeshes("pectoralis-major"), opacity: 0.82, sourceType: "z-anatomy", futureMeshName: "pectoralis_major" },
-  { id: "pectoralis-minor", label: "Peitoral menor", color: "#f43f5e", defaultVisible: false, meshNames: zAnatomyMeshes("pectoralis-minor"), opacity: 0.76, sourceType: "z-anatomy", futureMeshName: "pectoralis_minor" },
-  { id: "pectoral-fascia", label: "Fáscias peitoral/clavipectoral", color: "#fef3c7", defaultVisible: false, meshNames: zAnatomyMeshes("pectoral-fascia"), opacity: 0.36, sourceType: "z-anatomy", futureMeshName: "pectoral_clavipectoral_fascia" },
-  { id: "thoracolumbar-fascia", label: "Fáscia toracolombar", color: "#f8fafc", defaultVisible: false, meshNames: zAnatomyMeshes("thoracolumbar-fascia"), opacity: 0.72, sourceType: "z-anatomy", futureMeshName: "thoracolumbar_fascia" },
-  { id: "iliac-crest", label: "Crista ilíaca", color: "#e7e5e4", defaultVisible: false, meshNames: zAnatomyMeshes("iliac-crest"), opacity: 0.68, sourceType: "z-anatomy", futureMeshName: "iliac_crest" },
-  { id: "axillary-vessels", label: "Artéria/veia axilar", color: "#0ea5e9", defaultVisible: false, meshNames: zAnatomyMeshes("axillary-vessels"), opacity: 0.92, sourceType: "z-anatomy", futureMeshName: "axillary_vessels" },
-  { id: "subscapular-vessels", label: "Vasos subescapulares/circunflexos", color: "#22d3ee", defaultVisible: false, meshNames: zAnatomyMeshes("subscapular-vessels"), opacity: 0.92, sourceType: "z-anatomy", futureMeshName: "subscapular_circumflex_scapular_vessels" },
-  { id: "thoracodorsal-vessels", label: "Vasos toracodorsais", color: "#38bdf8", defaultVisible: true, meshNames: zAnatomyMeshes("thoracodorsal-vessels"), opacity: 0.98, sourceType: "z-anatomy", futureMeshName: "thoracodorsal_vessels" },
-  { id: "lateral-thoracic-vessels", label: "Vasos torácicos laterais/peitorais", color: "#7dd3fc", defaultVisible: false, meshNames: zAnatomyMeshes("lateral-thoracic-vessels"), opacity: 0.9, sourceType: "z-anatomy", futureMeshName: "lateral_thoracic_pectoral_vessels" },
-  { id: "circumflex-humeral-vessels", label: "Vasos circunflexos umerais", color: "#60a5fa", defaultVisible: false, meshNames: zAnatomyMeshes("circumflex-humeral-vessels"), opacity: 0.9, sourceType: "z-anatomy", futureMeshName: "circumflex_humeral_vessels" },
-  { id: "thoracodorsal-nerve", label: "Nervo toracodorsal", color: "#facc15", defaultVisible: false, meshNames: [], opacity: 0.96, sourceType: "procedural", futureMeshName: "thoracodorsal_nerve" },
-  { id: "long-thoracic-nerve", label: "Nervo torácico longo", color: "#fde047", defaultVisible: false, meshNames: [], opacity: 0.86, sourceType: "procedural", futureMeshName: "long_thoracic_nerve" },
-  { id: "axillary-lymph-nodes", label: "Linfonodos axilares", color: "#86efac", defaultVisible: false, meshNames: [], opacity: 0.78, sourceType: "procedural", futureMeshName: "axillary_lymph_nodes" },
-  { id: "chest-wall", label: "Parede torácica", color: "#cbd5e1", defaultVisible: true, meshNames: zAnatomyMeshes("chest-wall"), opacity: 0.62, sourceType: "z-anatomy", futureMeshName: "chest_wall" },
-  { id: "axilla", label: "Axila", color: "#a78bfa", defaultVisible: true, meshNames: zAnatomyMeshes("axilla"), opacity: 0.55, sourceType: "z-anatomy", futureMeshName: "axilla" },
-  { id: "breast", label: "Mama", color: "#f9a8d4", defaultVisible: true, meshNames: zAnatomyMeshes("breast"), opacity: 0.5, sourceType: "z-anatomy", futureMeshName: "breast" },
-];
+export const modelStructures: ModelStructureConfig[] = Object.entries(manifestStructures).map(([id, structure]) => ({
+  id,
+  label: structure.label,
+  group: structure.group,
+  color: tissueColors[dominantTissue(structure.meshNames)],
+  defaultVisible: structure.visible,
+  meshNames: structure.meshNames,
+  labelAnchor: structure.labelAnchor,
+  sources: [...new Set(structure.meshNames.map((name) => meshByName.get(name)?.source).filter((source): source is string => Boolean(source)))],
+}));
 
-export const zAnatomyTorsoModel = zAnatomyTorsoManifest;
+export const structureGroups = [...new Set(modelStructures.map((structure) => structure.group))];
 
-export const futureModelGuidelines = {
-  acceptedFormats: [".glb", ".gltf"],
-  publicDirectory: "/models/z-anatomy",
-  attributionRequired: true,
-};
+/** Structures cut by a step's clipping plane (superficial layers opened like a dissection window). */
+export const superficialStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
