@@ -27,6 +27,15 @@ export type SurgicalStep = {
   comparison?: SurgicalComparison;
   camera?: CameraPreset;
   clippingPlane?: ClippingPlaneConfig;
+  /** optional dissection state applied when the step opens (layers, reflected structures, space) */
+  dissection?: StepDissection;
+};
+
+export type StepDissection = {
+  layer?: number;
+  skinWindow?: "none" | "anterior" | "posterior" | "lateral";
+  manipulations?: Record<string, number>;
+  space?: string;
 };
 
 export type SurgicalOverlayPreset =

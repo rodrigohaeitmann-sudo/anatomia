@@ -1,5 +1,6 @@
 const isGithubActions = process.env.GITHUB_ACTIONS === "true";
 const repositoryName = "anatomia";
+const basePath = isGithubActions ? `/${repositoryName}` : "";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -7,8 +8,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: isGithubActions ? `/${repositoryName}` : undefined,
+  basePath: basePath || undefined,
   assetPrefix: isGithubActions ? `/${repositoryName}/` : undefined,
+  // Exposed so metadata (manifest, icons) and the service worker registration respect the Pages subpath.
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
 };
 
 export default nextConfig;

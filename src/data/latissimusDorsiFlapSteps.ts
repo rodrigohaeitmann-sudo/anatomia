@@ -64,6 +64,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "Referência vascular para preservar o eixo axilar-subescapular-toracodorsal, reconhecendo artéria e veia toracodorsais, nervo toracodorsal, ramo para serrátil/território do torácico longo e vasos laterais da parede torácica antes da entrada do pedículo no hilo do grande dorsal.",
     patientPosition: "Close-up da axila direita e face profunda do grande dorsal.",
     orientation: "axillary-closeup",
+    dissection: { space: "axilla" },
     overlayPreset: "pedicle-anatomy",
     visibleStructures: pedicleView,
     references: [
@@ -221,6 +222,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "A borda lateral do trapézio deve ser preservada. O plano correto mantém trapézio íntegro e acompanha as fibras do GD em direção à axila.",
     patientPosition: "Decúbito lateral esquerdo, campo posterior aberto.",
     orientation: "posterior",
+    dissection: { space: "auscultation-triangle" },
     overlayPreset: "trapezius-plane",
     visibleStructures: [...dorsalDissection, "trapezius"],
     comparison: { correct: "Plano de clivagem entre trapézio e GD, ambos íntegros.", pitfall: "Dissecção errada invadindo/seccionando trapézio." },
@@ -247,6 +249,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "A borda livre do GD revela o plano areolar entre o músculo e a parede torácica/serrátil anterior.",
     patientPosition: "Decúbito lateral esquerdo, visão posterolateral.",
     orientation: "posterolateral",
+    dissection: { skinWindow: "posterior", space: "ld-serratus-plane" },
     overlayPreset: "free-anterior-border",
     visibleStructures: dorsalDissection,
     references: [
@@ -271,6 +274,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O redondo maior e o grande dorsal formam a prega axilar posterior. O ângulo inferior da escápula é referência para não perder o plano.",
     patientPosition: "Decúbito lateral esquerdo, axila posterior exposta.",
     orientation: "posterolateral",
+    dissection: { skinWindow: "posterior", space: "quadrangular-space" },
     overlayPreset: "superior-limit",
     visibleStructures: [...dorsalDissection, "teres-major", "teres-minor", "subscapularis", "circumflex-humeral-vessels"],
     references: [
@@ -300,6 +304,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O limite inferior de secção passa pela transição do ventre muscular para a aponeurose/fáscia toracolombar.",
     patientPosition: "Decúbito lateral esquerdo, dorso inferior direito.",
     orientation: "posterolateral",
+    dissection: { skinWindow: "posterior", space: "lumbar-triangle" },
     overlayPreset: "inferior-limit",
     visibleStructures: ["latissimus-dorsi", "thoracolumbar-fascia", "iliac-crest", "skin"],
     references: [
@@ -347,6 +352,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O plano correto separa o GD dos músculos profundos, como redondo maior, subescapular, redondo menor e infraespinhal, preservando uma face profunda lisa e sem gordura aderida.",
     patientPosition: "Decúbito lateral esquerdo, GD elevado.",
     orientation: "posterior",
+    dissection: { skinWindow: "posterior", manipulations: { "ld-flap": 0.12 }, space: "ld-serratus-plane" },
     overlayPreset: "deep-plane-clean",
     visibleStructures: [...dorsalDissection, "teres-major", "teres-minor", "subscapularis", "infraspinatus"],
     comparison: { correct: "GD elevado com face profunda limpa e plano superficial aos músculos profundos.", pitfall: "Dissecção sob a escápula com fáscia/gordura aderida ao GD." },
@@ -376,6 +382,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O pedículo toracodorsal deve ser visto entrando no hilo, com veia, artéria e nervo acompanhando o eixo vascular. O sistema subescapular fica proximal, os vasos torácicos laterais ficam mais anteriores e o nervo torácico longo serve como referência sobre o serrátil anterior.",
     patientPosition: "Decúbito lateral esquerdo, close-up axilar.",
     orientation: "axillary-closeup",
+    dissection: { skinWindow: "posterior", manipulations: { "ld-flap": 0.25 } },
     overlayPreset: "pedicle-isolation",
     visibleStructures: pedicleView,
     references: [
@@ -406,6 +413,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O retalho deve ter ilha cutânea, ventre muscular e pedículo único preservado, com leito doador hemostático ao fundo.",
     patientPosition: "Decúbito lateral esquerdo, dorso/axila.",
     orientation: "posterolateral",
+    dissection: { skinWindow: "posterior", manipulations: { "ld-flap": 0.45 } },
     overlayPreset: "islanded-flap",
     visibleStructures: ["skin", "latissimus-dorsi", "axillary-vessels", "subscapular-vessels", "thoracodorsal-vessels", "thoracodorsal-nerve", "axilla"],
     references: [
@@ -433,6 +441,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O túnel deve permitir passagem livre do retalho, sem compressão na prega axilar nem torção do pedículo toracodorsal.",
     patientPosition: "Transição dorso-axila-tórax anterior.",
     orientation: "posterolateral",
+    dissection: { skinWindow: "lateral", manipulations: { "ld-flap": 0.75 }, space: "axilla" },
     overlayPreset: "axillary-tunnel",
     visibleStructures: ["skin", "latissimus-dorsi", "axillary-vessels", "subscapular-vessels", "thoracodorsal-vessels", "thoracodorsal-nerve", "long-thoracic-nerve", "axilla", "breast", "chest-wall"],
     references: [
@@ -510,6 +519,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "A loja de mastectomia preservadora de pele está aberta; o retalho deve emergir pela axila sem palidez, congestão ou torção pedicular.",
     patientPosition: "Decúbito dorsal, visão anterior do tórax direito.",
     orientation: "anterior",
+    dissection: { skinWindow: "anterior", manipulations: { "ld-flap": 1 } },
     overlayPreset: "anterior-flap",
     visibleStructures: anteriorView,
     references: [
@@ -535,6 +545,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O envelope cutâneo preservado deve recobrir o conjunto, com o retalho preenchendo e modelando a loja anterior sem tensão no pedículo.",
     patientPosition: "Decúbito dorsal, visão anterior.",
     orientation: "anterior",
+    dissection: { skinWindow: "anterior", manipulations: { "ld-flap": 1 } },
     overlayPreset: "breast-pocket",
     visibleStructures: anteriorView,
     references: [
@@ -583,6 +594,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O músculo peitoral maior permanece íntegro ao fundo. A loja pré-peitoral é delimitada por pontos de fixação e revisada antes de sizer/implante.",
     patientPosition: "Decúbito dorsal, visão anterior.",
     orientation: "anterior",
+    dissection: { skinWindow: "anterior", manipulations: { "breast": 0.8 }, space: "prepectoral" },
     overlayPreset: "prepectoral-pocket",
     visibleStructures: ["skin", "breast", "pectoralis-major", "pectoralis-minor", "pectoral-fascia", "lateral-thoracic-vessels", "chest-wall"],
     references: [
@@ -703,6 +715,7 @@ export const latissimusDorsiFlapSteps: SurgicalStep[] = [
     detailedDescription: "O músculo do retalho cobre e modela o polo da prótese, contribuindo para contorno e segurança da reconstrução.",
     patientPosition: "Decúbito dorsal, visão anterior.",
     orientation: "anterior",
+    dissection: { skinWindow: "anterior", manipulations: { "ld-flap": 1 } },
     overlayPreset: "muscle-coverage",
     visibleStructures: ["skin", "breast", "latissimus-dorsi", "axillary-vessels", "thoracodorsal-vessels", "thoracodorsal-nerve", "pectoralis-major", "pectoralis-minor", "pectoral-fascia", "chest-wall"],
     references: [

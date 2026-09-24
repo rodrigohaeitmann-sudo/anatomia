@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "fetch:hybrid": "python3 scripts/hybrid/fetch_sources.py && node scripts/hybrid/extract_zanatomy.mjs",
     "build:hybrid": "python3 scripts/hybrid/build_hybrid_model.py && npm run pack:hybrid",
-    "pack:hybrid": "gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid.glb -cc -kn -km -ke -vp 16 -vn 10"
+    "pack:hybrid": "gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid.glb -cc -kn -km -ke -vp 16 -vn 10 && gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid-mobile.glb -cc -kn -km -ke -vp 14 -vn 8 -si 0.35"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
