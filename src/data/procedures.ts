@@ -99,7 +99,7 @@ export const procedures: SurgicalProcedure[] = [
     specialty: "Reconstrução mamária",
     description:
       "Roteiro interativo com 30 etapas do retalho miocutâneo de grande dorsal direito, incluindo marcação, colheita, pedículo, tunelização, loja pré-peitoral, implante e fechamento.",
-    modelPath: "models/z-anatomy/torso-mastology.glb",
+    modelPath: "models/hybrid/torso-female-hybrid.glb",
     steps: latissimusDorsiFlapSteps,
   },
 ];

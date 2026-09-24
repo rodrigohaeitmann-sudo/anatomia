@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:z-anatomy": "node scripts/z-anatomy/build-torso-model.mjs",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "fetch:hybrid": "python3 scripts/hybrid/fetch_sources.py && node scripts/hybrid/extract_zanatomy.mjs",
+    "build:hybrid": "python3 scripts/hybrid/build_hybrid_model.py && npm run pack:hybrid",
+    "pack:hybrid": "gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid.glb -cc -kn -km -ke -vp 16 -vn 10"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
@@ -26,6 +28,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.23",
+    "gltfpack": "^1.2.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"

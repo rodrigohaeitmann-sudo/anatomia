@@ -13,12 +13,12 @@ Webapp MVP para visualização interativa de cortes anatômicos e etapas cirúrg
 ## Funcionalidades do MVP
 
 - Página inicial com apresentação do projeto.
-- Visualizador 3D central com placeholder anatômico.
+- Visualizador 3D com modelo anatômico feminino híbrido, iluminação PBR, corte sagital real e modo cirúrgico.
 - Sidebar de procedimentos.
 - Timeline de etapas cirúrgicas.
 - Painel didático da etapa selecionada.
 - Toggles para estruturas anatômicas.
-- Botões de reset de câmera, plano de corte e alternância entre modo anatômico/cirúrgico.
+- Botões de reset de câmera, corte sagital (pelo mamilo) e alternância entre modo anatômico/cirúrgico.
 - Dados em `src/data/procedures.ts`.
 - Pastas `public/models/` e `public/placeholders/` preparadas para recursos futuros.
 
@@ -41,19 +41,26 @@ npm run typecheck
 npm run build
 ```
 
-## Modelos anatômicos futuros
+## Modelo anatômico
 
-O MVP agora inclui um primeiro modelo regional derivado do Z-Anatomy em `public/models/z-anatomy/torso-mastology.glb`. Ele substitui o placeholder principal do visualizador e expõe malhas reais para grande dorsal, serrátil anterior, peitorais, parede torácica, axila, mama/regiões cutâneas e vasos toracodorsais.
+O visualizador usa um **modelo híbrido feminino** (`public/models/hybrid/torso-female-hybrid.glb`, 8,9 MB com meshopt, 2,0 milhões de triângulos, 223 malhas). Ele combina:
 
-Para regenerar o modelo:
+- **pele e mamas do Visible Human Female (NIH/HRA)**: gordura, lobos, ductos, seios lactíferos, ligamentos de Cooper, mamilo e aréola;
+- **esqueleto, músculos, vasos e nervos reais do BodyParts3D 4.3**: pedículo toracodorsal, vasos axilares, subescapulares, torácicos laterais, toracoacromiais e intercostais; plexo braquial, nervos toracodorsal, torácico longo, peitorais e intercostobraquial;
+- **grande dorsal do BodyParts3D 3.0**;
+- **linfonodos axilares e fáscias do Z-Anatomy**.
 
-1. Baixe os FBX oficiais do Z-Anatomy para `assets/source/z-anatomy/`.
-2. Use os arquivos `MuscularSystem100.fbx`, `SkeletalSystem100.fbx`, `CardioVascular41.fbx` e `Regions_of_human_body100.fbx`.
-3. Execute `npm run build:z-anatomy`.
-4. Revise `src/data/zAnatomyTorsoManifest.json`.
-5. Confira `ATTRIBUTIONS.md` e `public/models/z-anatomy/NOTICE.txt`.
+Nenhuma estrutura anatômica é desenhada proceduralmente. Os guias cirúrgicos (ilha de pele, incisões, loja, dreno) são marcações didáticas ancoradas em marcos anatômicos calculados das malhas.
 
-Os FBX brutos ficam fora do Git por tamanho e rastreabilidade; o repositório versiona apenas o GLB processado e o manifesto.
+O processo (registro entre fontes, preservação das referências anatômicas, limitações) está em `scripts/hybrid/README.md`. As atribuições estão em `ATTRIBUTIONS.md`.
+
+Para regenerar:
+
+```bash
+pip install -r scripts/hybrid/requirements.txt
+npm run fetch:hybrid
+npm run build:hybrid
+```
 
 ## Deploy no GitHub Pages
 
