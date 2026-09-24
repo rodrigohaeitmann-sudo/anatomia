@@ -1,6 +1,6 @@
 # Anatomia Cirúrgica em Mastologia
 
-Webapp MVP para visualização interativa de cortes anatômicos e etapas cirúrgicas em mastologia.
+Atlas anatômico 3D interativo para mastologia, organizado em packs de visualização.
 
 ## Stack
 
@@ -16,24 +16,14 @@ Webapp MVP para visualização interativa de cortes anatômicos e etapas cirúrg
 - Celular: viewer em primeiro plano, navegação entre etapas, ferramentas em abas e modelo leve (704 mil triângulos, 2,9 MB).
 - Cortes transversal, sagital e coronal com tampas coloridas no 3D e vista 2D do corte (estilo TC) com identificação por toque.
 - Seleção por toque com ficha anatômica: origem, inserção, inervação, vascularização, ação, marcos e relevância cirúrgica.
-- Dissecção: profundidade por camadas, janelas de pele, estruturas rebatidas e transpostas (transformações rígidas), vista explodida e espaços cirúrgicos com paredes destacadas (axila, níveis de Berg, Rotter, plano pré-peitoral, loja subpeitoral, plano GD–serrátil, triângulos de ausculta e de Petit, espaços quadrangular e triangular). As etapas cirúrgicas abrem com a dissecção correspondente.
+- Packs de visualização por grupo (`src/data/packs.ts`), cada um com várias vistas:
+  - Mama: anatomia da mama (camadas, parênquima, cortes sagital e transversal), irrigação e inervação, drenagem linfática, planos de reconstrução.
+  - Axila: dissecção axilar (fáscia e músculos → limites sem fáscia → zona de dissecção projetada → níveis de Berg) e marcos anatômicos (nervos a preservar, eixo vascular, Rotter, corte transversal).
+  - Retalhos: grande dorsal (músculo, pedículo, plano GD–serrátil, triângulos, arco de rotação) e toracolateral (pedículos, zona doadora, corte).
+  - Parede torácica e ombro.
+  Cada vista define as estruturas, o enquadramento, rótulos e zonas ancorados em pontos reais das estruturas, e opcionalmente corte, espaço ou manipulação. Link direto: `#pack/vista`.
+- Dissecção livre: profundidade por camadas, janelas de pele, estruturas rebatidas e transpostas (transformações rígidas), vista explodida e espaços cirúrgicos com paredes destacadas.
 - Viabilidade de movimento do membro superior: `docs/movimento-membro-superior.md`.
-
-## Funcionalidades do MVP
-
-- Página inicial com apresentação do projeto.
-- Visualizador 3D com modelo anatômico feminino híbrido, iluminação PBR, corte sagital real e modo cirúrgico.
-- Sidebar de procedimentos.
-- Timeline de etapas cirúrgicas.
-- Painel didático da etapa selecionada.
-- Toggles para estruturas anatômicas.
-- Botões de reset de câmera, corte sagital (pelo mamilo) e alternância entre modo anatômico/cirúrgico.
-- Dados em `src/data/procedures.ts`.
-- Pastas `public/models/` e `public/placeholders/` preparadas para recursos futuros.
-
-## Procedimento inicial
-
-O primeiro módulo mockado é **Reconstrução mamária com retalho do grande dorsal**, com 10 etapas iniciais do posicionamento até a modelagem e fixação do retalho.
 
 ## Desenvolvimento
 
