@@ -4,6 +4,10 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      screens: {
+        // phones held sideways: compact chrome so the model keeps most of the height
+        short: { raw: "(max-height: 500px) and (orientation: landscape)" },
+      },
       colors: {
         surgical: {
           ink: "#0f172a",

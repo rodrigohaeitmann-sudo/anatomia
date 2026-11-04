@@ -1,13 +1,13 @@
 import { modelStructures, structureGroups } from "@/lib/modelConfig";
 import type { StructureVisibility } from "@/lib/viewerTypes";
 
-type StructureToggleListProps = { visibility: StructureVisibility; onToggle: (id: string) => void; };
+type StructureToggleListProps = { visibility: StructureVisibility; onToggle: (id: string) => void; embedded?: boolean };
 
-export function StructureToggleList({ visibility, onToggle }: StructureToggleListProps) {
+export function StructureToggleList({ visibility, onToggle, embedded = false }: StructureToggleListProps) {
   return (
-    <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
+    <section className={embedded ? "" : "rounded-3xl border border-slate-800 bg-slate-950/80 p-4"}>
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-sky-300">Estruturas</p>
-      <div className="mt-3 max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+      <div className={embedded ? "mt-2 space-y-3" : "mt-3 max-h-[70vh] space-y-3 overflow-y-auto pr-1"}>
         {structureGroups.map((group) => (
           <div key={group}>
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">{group}</p>

@@ -81,4 +81,4 @@ export function buildSnapper(root: THREE.Object3D): Snapper {
   };
 }
 
-export const wallColors = ["#22d3ee", "#a3e635", "#f472b6", "#facc15", "#fb923c", "#a78bfa"];
+export { wallColors } from "@/lib/annotations";

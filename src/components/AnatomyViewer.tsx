@@ -10,7 +10,9 @@ import { surgicalSpaces } from "@/data/surgicalSpaces";
 import { hybridTorsoModel, modelLandmarks as L, type Landmark } from "@/lib/modelConfig";
 import { computeSection, sectionPlane, type SectionAxis, type SectionResult } from "@/lib/sectioning";
 import { hiddenByLayer, type CutState, type DissectionState, type StructureVisibility, type ViewMode } from "@/lib/viewerTypes";
-import { PackOverlay, SelectionMarker, SpaceOverlay } from "./viewer/Guides";
+import { viewAnnotations, type LabelMode } from "@/lib/annotations";
+import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
+import { PinOverlay, PinProjector, type ProjectedPin } from "./viewer/PinOverlay";
 import { HybridModel, type ModelHandle, type PlaneSet } from "./viewer/HybridModel";
 import { SectionCaps } from "./viewer/SectionCaps";
 import { isMesh, resolvePoint, structureById, v3, wallColors } from "./viewer/shared";
@@ -32,7 +34,16 @@ type AnatomyViewerProps = {
   selected: string | null;
   focus: FocusRequest;
   onSelect: (structure: string | null) => void;
+  /** opens the structure card (pins' "Ver ficha"); defaults to onSelect */
+  onOpenDetails?: (structure: string) => void;
   onSection: (report: SectionReport) => void;
+  /** "mobile": full-bleed canvas behind floating UI; "desktop": framed card with caption and credits */
+  layout?: "desktop" | "mobile";
+  labelMode?: LabelMode;
+  activePin?: string | null;
+  onPin?: (key: string | null) => void;
+  /** screen area covered by floating UI (px), used to keep the model centred in what is visible */
+  insets?: { top: number; bottom: number; right?: number };
 };
 
 
@@ -96,6 +107,44 @@ function Invalidator({ deps }: { deps: unknown[] }) {
   return null;
 }
 
+/**
+ * Shifts the projection so the orbit target sits in the middle of the area left visible by the
+ * floating UI (top bar, bottom sheet), keeping the on-screen scale unchanged. Animated.
+ */
+function ViewInsets({ top, bottom }: { top: number; bottom: number }) {
+  const { camera, size, invalidate } = useThree();
+  const current = useRef(0);
+  useEffect(() => {
+    const perspective = camera as THREE.PerspectiveCamera & { manual?: boolean };
+    perspective.manual = true;
+    const baseFov = 40;
+    const goal = Math.max(-size.height * 0.3, Math.min(size.height * 0.45, (bottom - top) / 2));
+    const start = current.current;
+    const begin = performance.now();
+    let frame = 0;
+    const apply = (delta: number) => {
+      const fullHeight = size.height + 2 * Math.abs(delta);
+      const offsetY = delta >= 0 ? 2 * delta : 0;
+      perspective.aspect = size.width / fullHeight;
+      perspective.fov = (2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(baseFov / 2)) * (fullHeight / size.height)) * 180) / Math.PI;
+      if (delta === 0) perspective.clearViewOffset();
+      else perspective.setViewOffset(size.width, fullHeight, 0, offsetY, size.width, size.height);
+      perspective.updateProjectionMatrix();
+      invalidate();
+    };
+    const step = (now: number) => {
+      const t = Math.min(1, (now - begin) / 260);
+      const eased = 1 - Math.pow(1 - t, 3);
+      current.current = start + (goal - start) * eased;
+      apply(current.current);
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [camera, size.width, size.height, top, bottom, invalidate]);
+  return null;
+}
+
 function LoadingModel() {
   const { progress } = useProgress();
   return (
@@ -120,7 +169,8 @@ function modelExtent(root: THREE.Object3D) {
   return box;
 }
 
-export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onSection }: AnatomyViewerProps) {
+export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets }: AnatomyViewerProps) {
+  const mobile = layout === "mobile";
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
   const [section, setSection] = useState<SectionResult | null>(null);
@@ -141,6 +191,18 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
   }, [space]);
   const emphasised = useMemo(() => new Set([...(space?.contents ?? []), ...(view.focus ?? [])]), [space, view.focus]);
   const activeStructures = useMemo(() => new Set(view.focus ?? []), [view.focus]);
+  const entries = useMemo(() => new Map(viewAnnotations(view, space).map((entry) => [entry.key, entry])), [view, space]);
+  const annotations: AnnotationProps = useMemo(() => ({ entries, mode: labelMode }), [entries, labelMode]);
+  const anchors = useMemo(() => annotationAnchors(view, space, handle?.snap ?? null), [view, space, handle]);
+  const [pins, setPins] = useState<ProjectedPin[]>([]);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [shellSize, setShellSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!shellRef.current) return;
+    const observer = new ResizeObserver(([entry]) => setShellSize({ width: entry.contentRect.width, height: entry.contentRect.height }));
+    observer.observe(shellRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // ---- camera framing ---------------------------------------------------------------------------
   const orientation = view.orientation;
@@ -198,12 +260,18 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
   }, [cutModel, handle, cut.axis, onSection]);
 
 
+  const shellClass = mobile
+    ? "viewer-shell absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#1e293b,#020617_72%)]"
+    : "viewer-shell relative h-[58dvh] min-h-[360px] overflow-hidden rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_50%_35%,#1e293b,#020617_70%)] sm:h-[620px]";
+
   return (
-    <div className="viewer-shell relative h-[58dvh] min-h-[360px] overflow-hidden rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_50%_35%,#1e293b,#020617_70%)] sm:h-[620px]">
-      <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-        <span className="rounded-full border border-pink-300/20 bg-pink-500/15 px-3 py-1 text-xs font-bold text-pink-100">{caption}</span>
-        {space && <span className="rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-cyan-100">{space.label}</span>}
-      </div>
+    <div ref={shellRef} className={shellClass}>
+      {!mobile && (
+        <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
+          <span className="rounded-full border border-pink-300/20 bg-pink-500/15 px-3 py-1 text-xs font-bold text-pink-100">{caption}</span>
+          {space && <span className="rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-cyan-100">{space.label}</span>}
+        </div>
+      )}
       <Canvas
         key={resetSignal}
         frameloop="demand"
@@ -211,7 +279,11 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
         shadows={!lowPower}
         dpr={lowPower ? [1, 1.5] : [1, 2]}
         gl={{ antialias: true, localClippingEnabled: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05, powerPreference: "high-performance" }}
-        onPointerMissed={(event) => event.type === "click" && onSelect(null)}
+        onPointerMissed={(event) => {
+          if (event.type !== "click") return;
+          onSelect(null);
+          onPin?.(null);
+        }}
       >
         <StudioEnvironment />
         <hemisphereLight args={["#f8fafc", "#1e293b", 0.35]} />
@@ -237,19 +309,35 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
             />
           </Suspense>
           <SectionCaps section={section} planeNormal={cutModel ? cutModel.plane.normal : null} selected={selected} />
-          <PackOverlay view={view} snap={handle?.snap ?? null} />
-          {space && <SpaceOverlay space={space} snap={handle?.snap ?? null} />}
-          {selected && <SelectionMarker structure={selected} snap={handle?.snap ?? null} />}
+          <PackOverlay view={view} snap={handle?.snap ?? null} annotations={annotations} />
+          {space && <SpaceOverlay space={space} snap={handle?.snap ?? null} annotations={annotations} />}
+          {selected && <SelectionMarker structure={selected} snap={handle?.snap ?? null} showName={!mobile && labelMode !== "hidden"} />}
         </group>
         {!lowPower && <ContactShadows position={[0, L.latissimusBounds.min[1] - 0.15, 0]} opacity={0.45} scale={9} blur={2.6} far={5} />}
         <OrbitControls makeDefault enableDamping dampingFactor={0.12} />
         <CameraDirector position={frame.position} target={frame.target} signature={cameraSignature} />
         <Invalidator deps={[cutModel, skinModel, rotationMatrix]} />
+        {insets && <ViewInsets top={insets.top} bottom={insets.bottom} />}
+        {labelMode === "pins" && <PinProjector anchors={anchors} rotation={frame.rotation} onProject={setPins} />}
       </Canvas>
-      <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-white/10 bg-slate-950/75 p-2 text-[11px] text-slate-300 backdrop-blur sm:p-3 sm:text-xs">
-        <span className="font-semibold text-slate-100">Toque em uma estrutura para ver a ficha.</span>
-        <span className="hidden sm:inline"> · Modelo híbrido feminino · HRA/NIH · BodyParts3D/DBCLS · Z-Anatomy · {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} M triângulos</span>
-      </div>
+      {labelMode === "pins" && (
+        <PinOverlay
+          pins={pins}
+          entries={entries}
+          activePin={activePin}
+          onPin={onPin ?? (() => undefined)}
+          onOpenDetails={onOpenDetails ?? ((structure) => onSelect(structure))}
+          width={shellSize.width}
+          height={shellSize.height}
+          insets={insets ?? { top: 0, bottom: 0 }}
+        />
+      )}
+      {!mobile && (
+        <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-white/10 bg-slate-950/75 p-2 text-[11px] text-slate-300 backdrop-blur sm:p-3 sm:text-xs">
+          <span className="font-semibold text-slate-100">Toque em uma estrutura para ver a ficha.</span>
+          <span className="hidden sm:inline"> · Modelo híbrido feminino · HRA/NIH · BodyParts3D/DBCLS · Z-Anatomy · {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} M triângulos</span>
+        </div>
+      )}
     </div>
   );
 }
