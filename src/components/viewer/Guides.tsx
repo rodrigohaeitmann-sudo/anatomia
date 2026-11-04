@@ -5,17 +5,39 @@ import { Html, Line } from "@react-three/drei";
 import * as THREE from "three";
 import type { AnchoredPoint, PackView } from "@/data/packs";
 import type { SurgicalSpace } from "@/data/surgicalSpaces";
+import type { AnnotationEntry, LabelMode } from "@/lib/annotations";
 import type { Landmark } from "@/lib/modelConfig";
-import { mm, resolvePoint, structureById, v3, wallColors, type Snapper } from "./shared";
+import { mm, resolvePoint, structureById, v3, type Snapper } from "./shared";
 
-// Overlays anchored to real anatomy: labels and zone polygons whose vertices are snapped to the
-// nearest vertex of the referenced structures. No anatomical structure is drawn here.
+// Overlays anchored to real anatomy: annotation pins/labels and zone polygons whose vertices are
+// snapped to the nearest vertex of the referenced structures. No anatomical structure is drawn here.
 
+export type AnnotationProps = {
+  entries: Map<string, AnnotationEntry>;
+  mode: LabelMode;
+};
+
+/** Desktop-style name tag (used in "names" mode and for the selection on desktop). */
 export function GuideLabel({ position, children, stack = 0 }: { position: Landmark; children: React.ReactNode; stack?: number }) {
   return (
     <Html position={position} className="pointer-events-none" zIndexRange={[20, 0]}>
-      <div style={{ transform: `translate(${stack % 2 ? 12 : -12 - 8 * stack}px, ${-100 - stack * 70}%)` }} className="whitespace-nowrap rounded-xl border border-white/10 bg-slate-950/85 px-2 py-1 text-[10px] font-semibold leading-tight text-white shadow-xl backdrop-blur">{children}</div>
+      <div style={{ transform: `translate(${stack % 2 ? 12 : -12 - 8 * stack}px, ${-100 - stack * 70}%)` }} className="whitespace-nowrap rounded-xl border border-white/10 bg-slate-950/85 px-2 py-1 text-[10px] font-semibold leading-tight text-white shadow-xl backdrop-blur">
+        {children}
+      </div>
     </Html>
+  );
+}
+
+/** Name tag for one annotation ("names" mode). Pins are drawn by the DOM PinOverlay, decluttered in screen space. */
+function Annotation({ position, entry, stack, annotations }: { position: Landmark; entry: AnnotationEntry; stack: number; annotations: AnnotationProps }) {
+  if (annotations.mode !== "names") return null;
+  return (
+    <GuideLabel position={position} stack={stack}>
+      <span className="mr-1 inline-grid h-4 w-4 place-items-center rounded-full text-[9px] font-black text-slate-950" style={{ backgroundColor: entry.color }}>
+        {entry.number}
+      </span>
+      {entry.text}
+    </GuideLabel>
   );
 }
 
@@ -32,24 +54,22 @@ export function Marker({ position, color = "#f8fafc" }: { position: Landmark; co
   );
 }
 
-/** Labels each wall of the active surgical space at the wall structure's point nearest the space centre. */
-export function SpaceOverlay({ space, snap }: { space: SurgicalSpace; snap: Snapper | null }) {
+/** Marks each wall of the active surgical space at the wall structure's point nearest the space centre. */
+export function SpaceOverlay({ space, snap, annotations }: { space: SurgicalSpace; snap: Snapper | null; annotations: AnnotationProps }) {
   const centre = resolvePoint(space.centre);
   if (!centre) return null;
   return (
     <group>
       <Marker position={centre} color="#f8fafc" />
       {space.walls.map((wall, index) => {
-        const points = wall.structures.map((id) => (snap ? snap(id, centre) : structureById.get(id)?.labelAnchor)).filter((p): p is Landmark => Boolean(p));
-        if (!points.length) return null;
-        const nearest = points.sort((a, b) => v3(a).distanceTo(v3(centre)) - v3(b).distanceTo(v3(centre)))[0];
+        const entry = annotations.entries.get(`wall:${index}`);
+        const nearest = wallPoint(wall.structures, centre, snap);
+        if (!nearest || !entry) return null;
         return (
           <group key={wall.label}>
-            <GuideLine points={[centre, nearest]} color={wallColors[index % wallColors.length]} width={2} dashed />
-            <Marker position={nearest} color={wallColors[index % wallColors.length]} />
-            <GuideLabel position={nearest} stack={index}>
-              <span style={{ color: wallColors[index % wallColors.length] }}>■</span> {wall.label}
-            </GuideLabel>
+            <GuideLine points={[centre, nearest]} color={entry.color} width={2} dashed />
+            <Marker position={nearest} color={entry.color} />
+            <Annotation position={nearest} entry={entry} stack={index} annotations={annotations} />
           </group>
         );
       })}
@@ -57,16 +77,46 @@ export function SpaceOverlay({ space, snap }: { space: SurgicalSpace; snap: Snap
   );
 }
 
-export function SelectionMarker({ structure, snap }: { structure: string; snap: Snapper | null }) {
+export function SelectionMarker({ structure, snap, showName }: { structure: string; snap: Snapper | null; showName: boolean }) {
   const info = structureById.get(structure);
   if (!info) return null;
   const point = (snap ? snap(structure, info.labelAnchor) : undefined) ?? info.labelAnchor;
   return (
     <group>
       <Marker position={point} color="#fde68a" />
-      <GuideLabel position={point}>{info.label}</GuideLabel>
+      {showName && <GuideLabel position={point}>{info.label}</GuideLabel>}
     </group>
   );
+}
+
+/** Model-space anchor of every annotation key (labels, zone edges, space walls). */
+export function annotationAnchors(view: PackView, space: SurgicalSpace | null, snap: Snapper | null): Map<string, Landmark> {
+  const anchors = new Map<string, Landmark>();
+  view.labels?.forEach((label, index) => {
+    const position = resolveAnchored(label, snap);
+    if (position) anchors.set(`label:${index}`, position);
+  });
+  view.zones?.forEach((zone, zoneIndex) => {
+    const corners = zone.corners.map((corner) => resolveAnchored(corner, snap)).filter((c): c is Landmark => Boolean(c));
+    zone.edgeLabels?.forEach((_, index) => {
+      const a = corners[index];
+      const b = corners[(index + 1) % corners.length];
+      if (a && b) anchors.set(`zone:${zoneIndex}:${index}`, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]);
+    });
+  });
+  const centre = space ? resolvePoint(space.centre) : undefined;
+  if (space && centre) {
+    space.walls.forEach((wall, index) => {
+      const nearest = wallPoint(wall.structures, centre, snap);
+      if (nearest) anchors.set(`wall:${index}`, nearest);
+    });
+  }
+  return anchors;
+}
+
+function wallPoint(structures: string[], centre: Landmark, snap: Snapper | null) {
+  const points = structures.map((id) => (snap ? snap(id, centre) : structureById.get(id)?.labelAnchor)).filter((p): p is Landmark => Boolean(p));
+  return points.sort((a, b) => v3(a).distanceTo(v3(centre)) - v3(b).distanceTo(v3(centre)))[0];
 }
 
 function resolveAnchored(point: AnchoredPoint, snap: Snapper | null): Landmark | undefined {
@@ -80,7 +130,7 @@ function resolveAnchored(point: AnchoredPoint, snap: Snapper | null): Landmark |
   return [base[0] + offset[0] * mm, base[1] + offset[1] * mm, base[2] + offset[2] * mm];
 }
 
-function ZonePolygon({ corners, color, label, edgeLabels }: { corners: Landmark[]; color: string; label: string; edgeLabels?: string[] }) {
+function ZonePolygon({ corners, color, label, zoneIndex, edgeCount, annotations }: { corners: Landmark[]; color: string; label: string; zoneIndex: number; edgeCount: number; annotations: AnnotationProps }) {
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
     const flat: number[] = [];
@@ -96,36 +146,34 @@ function ZonePolygon({ corners, color, label, edgeLabels }: { corners: Landmark[
       </mesh>
       <GuideLine points={[...corners, corners[0]]} color={color} width={4} />
       {corners.map((corner, index) => <Marker key={index} position={corner} color={color} />)}
-      <GuideLabel position={centre}>{label}</GuideLabel>
-      {edgeLabels?.map((text, index) => {
+      {annotations.mode === "names" && <GuideLabel position={centre}>{label}</GuideLabel>}
+      {Array.from({ length: edgeCount }, (_, index) => {
+        const entry = annotations.entries.get(`zone:${zoneIndex}:${index}`);
         const a = corners[index];
         const b = corners[(index + 1) % corners.length];
-        if (!a || !b) return null;
-        return (
-          <GuideLabel key={text} position={[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]} stack={0}>
-            <span style={{ color }}>{text}</span>
-          </GuideLabel>
-        );
+        if (!a || !b || !entry) return null;
+        return <Annotation key={entry.key} position={[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]} entry={entry} stack={0} annotations={annotations} />;
       })}
     </group>
   );
 }
 
 /** Labels and zones of the active pack view. */
-export function PackOverlay({ view, snap }: { view: PackView; snap: Snapper | null }) {
+export function PackOverlay({ view, snap, annotations }: { view: PackView; snap: Snapper | null; annotations: AnnotationProps }) {
   return (
     <group>
-      {view.zones?.map((zone) => {
+      {view.zones?.map((zone, zoneIndex) => {
         const corners = zone.corners.map((corner) => resolveAnchored(corner, snap)).filter((c): c is Landmark => Boolean(c));
-        return corners.length >= 3 ? <ZonePolygon key={zone.label} corners={corners} color={zone.color} label={zone.label} edgeLabels={zone.edgeLabels} /> : null;
+        return corners.length >= 3 ? <ZonePolygon key={zone.label} corners={corners} color={zone.color} label={zone.label} zoneIndex={zoneIndex} edgeCount={zone.edgeLabels?.length ?? 0} annotations={annotations} /> : null;
       })}
       {view.labels?.map((label, index) => {
         const position = resolveAnchored(label, snap);
-        if (!position) return null;
+        const entry = annotations.entries.get(`label:${index}`);
+        if (!position || !entry) return null;
         return (
-          <group key={`${label.structure}-${label.text}`}>
-            <Marker position={position} color="#e2e8f0" />
-            <GuideLabel position={position} stack={index % 3}>{label.text}</GuideLabel>
+          <group key={entry.key}>
+            {annotations.mode !== "hidden" && <Marker position={position} color="#e2e8f0" />}
+            <Annotation position={position} entry={entry} stack={index % 3} annotations={annotations} />
           </group>
         );
       })}

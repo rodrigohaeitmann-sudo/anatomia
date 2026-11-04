@@ -14,3 +14,16 @@ export function useLowPower() {
   }, []);
   return lowPower;
 }
+
+/** True below the desktop breakpoint: phones and portrait tablets get the full-screen mobile shell. */
+export function useCompactLayout() {
+  const [compact, setCompact] = useState<boolean | null>(null);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1023px)");
+    const update = () => setCompact(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return compact;
+}

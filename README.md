@@ -13,7 +13,7 @@ Atlas anatômico 3D interativo para mastologia, organizado em packs de visualiza
 ## Funcionalidades
 
 - Instalável como app (PWA): no Android, "Instalar app"; no iPhone, Safari → Compartilhar → "Adicionar à Tela de Início". Funciona offline após o primeiro acesso.
-- Celular: viewer em primeiro plano, vistas do pack em abas, ferramentas em abas e modelo leve (704 mil triângulos, 2,9 MB).
+- Celular (padrão de apps de anatomia): modelo em tela cheia com barra superior compacta, trilho de ferramentas (rótulos, corte, pele, vasos, foco, centro), painel inferior arrastável em três alturas com as vistas e as abas (Vista, Ficha, Corte, Dissecar, Estruturas), biblioteca de packs com busca e modo paisagem compacto. Rótulos viram pinos numerados com linhas-guia e desobstrução automática; o texto abre ao toque e a legenda completa fica na aba Vista. A estrutura tocada aparece numa barra inferior e a ficha abre sob demanda. A câmera se recentra na área livre entre a barra e o painel. Modelo leve (704 mil triângulos, 2,9 MB).
 - Cortes transversal, sagital e coronal com tampas coloridas no 3D e vista 2D do corte (estilo TC) com identificação por toque.
 - Seleção por toque com ficha anatômica: origem, inserção, inervação, vascularização, ação, marcos e relevância cirúrgica.
 - Packs de visualização por grupo (`src/data/packs.ts`), cada um com várias vistas:

@@ -2,13 +2,23 @@
 
 import type { Pack, PackView } from "@/data/packs";
 import { surgicalSpaces } from "@/data/surgicalSpaces";
+import type { AnnotationEntry } from "@/lib/annotations";
 import { modelStructures } from "@/lib/modelConfig";
+import { AnnotationLegend } from "./AnnotationLegend";
 
 const byId = new Map(modelStructures.map((structure) => [structure.id, structure]));
 
-type Props = { groupTitle: string; pack: Pack; view: PackView; viewIndex: number; selected: string | null; onSelect: (structure: string) => void };
+type Props = {
+  groupTitle: string;
+  pack: Pack;
+  view: PackView;
+  viewIndex: number;
+  selected: string | null;
+  onSelect: (structure: string) => void;
+  legend?: { entries: AnnotationEntry[]; activePin: string | null; onPick: (entry: AnnotationEntry) => void };
+};
 
-export function PackInfoPanel({ groupTitle, pack, view, viewIndex, selected, onSelect }: Props) {
+export function PackInfoPanel({ groupTitle, pack, view, viewIndex, selected, onSelect, legend }: Props) {
   const space = surgicalSpaces.find((item) => item.id === view.space);
   const shown = [...new Set([...view.structures, ...(space ? [...space.walls.flatMap((wall) => wall.structures), ...space.contents] : [])])].filter((id) => !space?.hide?.includes(id));
   return (
@@ -23,6 +33,7 @@ export function PackInfoPanel({ groupTitle, pack, view, viewIndex, selected, onS
         <h3 className="text-base font-bold text-white">{view.title}</h3>
         <p className="mt-1 text-sm text-slate-300">{view.description}</p>
       </div>
+      {legend && <AnnotationLegend entries={legend.entries} activePin={legend.activePin} onPick={legend.onPick} />}
       <section>
         <h4 className="text-[11px] font-bold uppercase tracking-wide text-emerald-300">Relações espaciais</h4>
         <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-slate-200">{view.relations.map((item) => <li key={item}>{item}</li>)}</ul>
