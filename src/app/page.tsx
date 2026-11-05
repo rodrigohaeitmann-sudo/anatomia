@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { RotateCcw, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bone, RotateCcw, Ruler, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
 import { AnatomyViewer, type FocusRequest, type SectionReport } from "@/components/AnatomyViewer";
 import { AboutSheet } from "@/components/mobile/AboutSheet";
 import type { SheetSnap } from "@/components/mobile/BottomSheet";
@@ -14,7 +14,10 @@ import { ViewSwitcher } from "@/components/packs/ViewSwitcher";
 import { StructureToggleList } from "@/components/StructureToggleList";
 import { CutPanel } from "@/components/tools/CutPanel";
 import { DissectionPanel } from "@/components/tools/DissectionPanel";
+import { LandmarkDetails } from "@/components/tools/LandmarkDetails";
 import { StructureDetails } from "@/components/tools/StructureDetails";
+import { FloatingPrompt, StudyPanel, type QuizState } from "@/components/tools/StudyPanel";
+import type { SelectionChip } from "@/components/mobile/SelectionBar";
 import { mm, resolvePoint } from "@/components/viewer/shared";
 import { ViewerToolbar } from "@/components/ViewerToolbar";
 import { allPacks, type PackView } from "@/data/packs";
@@ -24,15 +27,30 @@ import { groupColor } from "@/lib/groupStyle";
 import { hybridTorsoModel, modelStructures } from "@/lib/modelConfig";
 import { axisComponent } from "@/lib/sectioning";
 import { useCompactLayout, useLowPower } from "@/lib/useLowPower";
-import { defaultCut, defaultDissection, type CutState, type DissectionState, type StructureVisibility, type ViewMode } from "@/lib/viewerTypes";
+import { attachmentsFor, landmarkById, layerLandmarks, loadLayerBuffers, partById, partByMesh, regionByStructure, regionLookup, type LayerAttachment } from "@/lib/anatomyLayers";
+import { useReview } from "@/lib/review";
+import { defaultCut, defaultDissection, defaultStudy, hiddenByLayer, type CutState, type DissectionState, type PickInfo, type StructureVisibility, type StudyState, type ViewMode } from "@/lib/viewerTypes";
 
 type Tab = MobileTab;
 const desktopTabs: { id: Tab; label: string }[] = [
   { id: "details", label: "Ficha" },
+  { id: "study", label: "Estudo" },
   { id: "cut", label: "Corte" },
   { id: "dissection", label: "Dissecar" },
 ];
 const neuroGroups = new Set(["Vasos", "Nervos"]);
+const skeleton = ["axilla", "chest-wall", "costal-cartilages", "iliac-crest"];
+const structureInfo = new Map(modelStructures.map((structure) => [structure.id, structure]));
+const QUIZ_KEY = "anatomia.quiz.v1";
+type QuizHistory = Record<string, { n: number; lastMm: number }>;
+
+function readQuizHistory(): QuizHistory {
+  try {
+    return JSON.parse(window.localStorage.getItem(QUIZ_KEY) ?? "{}") as QuizHistory;
+  } catch {
+    return {};
+  }
+}
 
 function visibilityFor(view: PackView): StructureVisibility {
   const shown = new Set(view.structures);
@@ -68,6 +86,15 @@ export default function Home() {
   const [neuro, setNeuro] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [study, setStudy] = useState<StudyState>(defaultStudy);
+  const [selectedPart, setSelectedPart] = useState<string | null>(null);
+  const [selectedLandmark, setSelectedLandmark] = useState<string | null>(null);
+  const [attachmentFocus, setAttachmentFocus] = useState<string | null>(null);
+  const [rulerPoints, setRulerPoints] = useState<[number, number, number][]>([]);
+  const [quiz, setQuiz] = useState<QuizState | null>(null);
+  const [adjusting, setAdjusting] = useState<string | null>(null);
+  const quizHistory = useRef<QuizHistory>({});
+  const review = useReview();
   const lowPower = useLowPower();
   const compact = useCompactLayout();
 
@@ -102,8 +129,13 @@ export default function Home() {
     setDissection(dissectionFor(view));
     setFocus(null);
     setSelected(null);
+    setSelectedPart(null);
+    setSelectedLandmark(null);
+    setAttachmentFocus(null);
     setActivePin(null);
     setNeuro(false);
+    setStudy((current) => ({ ...current, proximity: null }));
+    setRulerPoints([]);
     history.replaceState(null, "", `#${viewKey}`);
   }, [view, viewKey]);
 
@@ -112,10 +144,140 @@ export default function Home() {
     (structure: string | null) => {
       setSelected(structure);
       if (structure) setActivePin(null);
-      if (structure && !compact) setTab("details");
+      if (structure && !compact && tab !== "study") setTab("details");
     },
-    [compact],
+    [compact, tab],
   );
+
+  // a distance-map target is always shown
+  useEffect(() => {
+    const targets = study.proximity;
+    if (targets?.length) setVisibility((current) => ({ ...current, ...Object.fromEntries(targets.map((id) => [id, true])) }));
+  }, [study.proximity]);
+
+  // ---- quiz -----------------------------------------------------------------------------------------
+  const hidden = useMemo(() => hiddenByLayer(dissection.layer), [dissection.layer]);
+  const quizPool = useMemo(() => layerLandmarks.filter((item) => item.category !== "costela" && visibility[item.structure] && !hidden.has(item.structure)), [visibility, hidden]);
+  const nextQuizTarget = useCallback(() => {
+    if (!quizPool.length) return null;
+    const history = quizHistory.current;
+    const fresh = quizPool.filter((item) => !history[item.id]);
+    if (fresh.length) return fresh[Math.floor(Math.random() * fresh.length)].id;
+    return [...quizPool].sort((a, b) => (history[b.id]?.lastMm ?? 0) - (history[a.id]?.lastMm ?? 0))[Math.floor(Math.random() * Math.min(3, quizPool.length))].id;
+  }, [quizPool]);
+  const startQuiz = () => {
+    quizHistory.current = readQuizHistory();
+    setQuiz({ targetId: nextQuizTarget(), guess: null, errorMm: null, session: [] });
+    setStudy((current) => ({ ...current, ruler: false }));
+    setSelected(null);
+    setSelectedLandmark(null);
+    if (compact) setSnap("peek");
+  };
+  const answerQuiz = (point: [number, number, number]) => {
+    setQuiz((current) => {
+      if (!current?.targetId || current.guess) return current;
+      const target = landmarkById.get(current.targetId);
+      if (!target) return current;
+      const errorMm = Math.hypot(point[0] - target.point[0], point[1] - target.point[1], point[2] - target.point[2]) / mm;
+      const history = { ...quizHistory.current, [target.id]: { n: (quizHistory.current[target.id]?.n ?? 0) + 1, lastMm: errorMm } };
+      quizHistory.current = history;
+      try {
+        window.localStorage.setItem(QUIZ_KEY, JSON.stringify(history));
+      } catch {
+        // storage unavailable: the order simply restarts next time
+      }
+      return { ...current, guess: point, errorMm, session: [...current.session, errorMm] };
+    });
+  };
+
+  // ---- taps on the model ------------------------------------------------------------------------------
+  const handlePick = (structure: string | null, info?: PickInfo) => {
+    if (quiz?.targetId && !quiz.guess) {
+      if (info) answerQuiz(info.point);
+      return;
+    }
+    if (study.ruler) {
+      if (info) setRulerPoints((points) => (points.length >= 2 ? [info.point] : [...points, info.point]));
+      return;
+    }
+    if (adjusting) {
+      if (info) review.update(adjusting, { status: "ajustado", point: info.point });
+      setAdjusting(null);
+      return;
+    }
+    setSelectedLandmark(null);
+    if (!structure) {
+      select(null);
+      setSelectedPart(null);
+      return;
+    }
+    const meshPart = info ? partByMesh.get(info.meshName) : undefined;
+    setSelectedPart(meshPart?.id ?? null);
+    select(structure);
+    if (attachmentFocus && attachmentsFor(structure).length) setAttachmentFocus(structure);
+    if (!meshPart && info && regionByStructure.has(structure)) {
+      loadLayerBuffers()
+        .then((buffers) => {
+          const lookup = regionLookup(structure, buffers);
+          const label = lookup?.labelAt(...info.point);
+          const part = lookup?.parts.find((item) => item.labelIndex === label);
+          if (part) setSelectedPart(part.id);
+        })
+        .catch(() => undefined);
+    }
+  };
+  const pickLandmark = (id: string, info?: PickInfo) => {
+    if (quiz?.targetId && !quiz.guess) return;
+    if (adjusting) {
+      if (info) review.update(adjusting, { status: "ajustado", point: info.point });
+      setAdjusting(null);
+      return;
+    }
+    const landmark = landmarkById.get(id);
+    if (study.ruler && landmark) {
+      const point = review.store[id]?.point ?? landmark.point;
+      setRulerPoints((points) => (points.length >= 2 ? [point] : [...points, point]));
+      return;
+    }
+    setSelectedLandmark(id);
+    setSelected(null);
+    setSelectedPart(null);
+    setActivePin(null);
+    if (!compact) setTab("details");
+  };
+  const pickAttachment = (item: LayerAttachment) => {
+    setSelectedLandmark(null);
+    setSelected(item.muscle);
+    setSelectedPart(item.part);
+    if (!compact) setTab("details");
+  };
+  const showAttachments = (structure: string | null) => {
+    setAttachmentFocus(structure);
+    if (!structure) return;
+    const bones = new Set(attachmentsFor(structure).map((item) => item.boneStructure));
+    setVisibility((current) => ({ ...current, ...Object.fromEntries([...bones].map((id) => [id, true])), [structure]: true }));
+    setFocus({ structure, nonce: Date.now() });
+    if (compact) setSnap("peek");
+  };
+  const showSkeleton = () => {
+    setVisibility(Object.fromEntries(modelStructures.map((item) => [item.id, skeleton.includes(item.id)])));
+    setStudy((current) => ({ ...current, landmarks: true }));
+    setDissection((current) => ({ ...current, layer: 0 }));
+    if (compact) setSnap("peek");
+  };
+  const exportReview = () => {
+    const blob = new Blob([review.exportJson()], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `revisao-anatomia-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+  const rulerMm = rulerPoints.length === 2 ? Math.hypot(rulerPoints[0][0] - rulerPoints[1][0], rulerPoints[0][1] - rulerPoints[1][1], rulerPoints[0][2] - rulerPoints[1][2]) / mm : null;
+  const quizTarget = quiz?.targetId ? landmarkById.get(quiz.targetId) : undefined;
   const openDetails = useCallback(
     (structure: string) => {
       setSelected(structure);
@@ -163,7 +325,63 @@ export default function Home() {
     }
   };
 
+  const deselect = () => {
+    setSelected(null);
+    setSelectedPart(null);
+    setSelectedLandmark(null);
+  };
+  const selectionChip: SelectionChip | null = selectedLandmark
+    ? (() => {
+        const item = landmarkById.get(selectedLandmark);
+        return item ? { group: `Marco · ${item.bone}`, label: item.name, color: "#fde68a" } : null;
+      })()
+    : selected
+      ? { group: selectedPart ? structureInfo.get(selected)?.label ?? "" : structureInfo.get(selected)?.group ?? "", label: (selectedPart && partById.get(selectedPart)?.label) || structureInfo.get(selected)?.label || selected, color: structureInfo.get(selected)?.color ?? "#fff" }
+      : null;
+
   const toolContent = (id: Tab) => {
+    if (id === "study")
+      return (
+        <StudyPanel
+          study={study}
+          onStudy={setStudy}
+          onSkeleton={showSkeleton}
+          rulerPoints={rulerPoints}
+          rulerMm={rulerMm}
+          onClearRuler={() => setRulerPoints([])}
+          quiz={quiz}
+          quizPool={quizPool.length}
+          onQuizStart={startQuiz}
+          onQuizNext={() => setQuiz((current) => (current ? { ...current, targetId: nextQuizTarget(), guess: null, errorMm: null } : current))}
+          onQuizStop={() => setQuiz(null)}
+          review={review.store}
+          onExportReview={exportReview}
+        />
+      );
+    if (id === "details" && selectedLandmark)
+      return (
+        <LandmarkDetails
+          key={selectedLandmark}
+          id={selectedLandmark}
+          review={review.store[selectedLandmark]}
+          adjusting={adjusting === selectedLandmark}
+          onReview={review.update}
+          onAdjust={(lm) => {
+            setAdjusting(lm);
+            if (lm && compact) setSnap("peek");
+          }}
+          onFocus={(point) => {
+            setFocus({ structure: landmarkById.get(selectedLandmark)?.structure ?? "axilla", nonce: Date.now(), point });
+            if (compact) setSnap("peek");
+          }}
+          onSelectMuscle={(structure, part) => {
+            setSelectedLandmark(null);
+            setSelected(structure);
+            setSelectedPart(part);
+          }}
+          onClose={() => setSelectedLandmark(null)}
+        />
+      );
     if (id === "pack") return <PackInfoPanel groupTitle={group.title} pack={pack} view={view} viewIndex={viewIndex} selected={selected} onSelect={openDetails} legend={{ entries, activePin, onPick: pickLegend }} />;
     if (id === "structures") return <StructureToggleList visibility={visibility} onToggle={toggleStructure} embedded={Boolean(compact)} />;
     if (id === "cut") return <CutPanel cut={cut} onChange={setCut} report={section} selected={selected} onSelect={(structure) => (structure ? openDetails(structure) : setSelected(null))} />;
@@ -171,6 +389,14 @@ export default function Home() {
     return (
       <StructureDetails
         structure={selected}
+        part={selectedPart}
+        onPart={setSelectedPart}
+        attachmentsShown={Boolean(selected) && attachmentFocus === selected}
+        onAttachments={showAttachments}
+        fibresShown={study.fibres !== "off"}
+        onFibres={() => setStudy((current) => ({ ...current, fibres: current.fibres === "off" ? "selected" : "off" }))}
+        proximityShown={Boolean(selected && study.proximity?.includes(selected))}
+        onProximity={(structure) => setStudy((current) => ({ ...current, proximity: structure ? [structure] : null }))}
         dissection={dissection}
         onDissection={setDissection}
         onIsolate={isolate}
@@ -180,7 +406,7 @@ export default function Home() {
           setFocus({ structure, nonce: Date.now() });
           if (compact) setSnap("peek");
         }}
-        onClose={() => setSelected(null)}
+        onClose={deselect}
       />
     );
   };
@@ -200,7 +426,7 @@ export default function Home() {
         dissection={dissection}
         selected={selected}
         focus={focus}
-        onSelect={select}
+        onSelect={handlePick}
         onOpenDetails={openDetails}
         onSection={handleSection}
         layout={mobile ? "mobile" : "desktop"}
@@ -208,6 +434,15 @@ export default function Home() {
         activePin={activePin}
         onPin={setActivePin}
         insets={insets}
+        study={quiz ? { ...study, landmarks: false } : study}
+        selectedPart={selectedPart}
+        selectedLandmark={selectedLandmark}
+        attachmentFocus={attachmentFocus}
+        review={review.store}
+        rulerPoints={rulerPoints}
+        quiz={quizTarget ? { target: quizTarget.point, name: quizTarget.name, guess: quiz?.guess ?? null } : null}
+        onPickLandmark={pickLandmark}
+        onPickAttachment={pickAttachment}
       />
     );
 
@@ -216,6 +451,8 @@ export default function Home() {
   if (compact) {
     const rail: RailItem[] = [
       { id: "labels", label: labelModeCaption[labelMode], icon: Tags, active: labelMode !== "hidden", onPress: () => setLabelMode((mode) => nextLabelMode[mode]) },
+      { id: "landmarks", label: "Marcos", icon: Bone, active: study.landmarks, onPress: () => setStudy((current) => ({ ...current, landmarks: !current.landmarks })) },
+      { id: "ruler", label: "Régua", icon: Ruler, active: study.ruler, onPress: () => setStudy((current) => ({ ...current, ruler: !current.ruler })) },
       { id: "cut", label: "Corte", icon: Scissors, active: Boolean(cut.axis), onPress: toggleCut },
       { id: "skin", label: "Pele", icon: Shirt, active: Boolean(visibility.skin), onPress: () => toggleStructure("skin") },
       { id: "neuro", label: "Vasos", icon: Waypoints, active: neuro, onPress: toggleNeuro },
@@ -234,10 +471,13 @@ export default function Home() {
         snap={snap}
         onSnap={setSnap}
         rail={rail}
-        selected={selected}
-        onOpenDetails={() => selected && openDetails(selected)}
-        onIsolate={isolate}
-        onDeselect={() => setSelected(null)}
+        selection={selectionChip}
+        onOpenDetails={() => {
+          setTab("details");
+          setSnap("half");
+        }}
+        onIsolate={selected && !selectedLandmark ? () => isolate(selected) : undefined}
+        onDeselect={deselect}
         onLibrary={() => setLibraryOpen(true)}
         onAbout={() => setAboutOpen(true)}
         renderViewer={(insets) => viewer(true, insets)}
@@ -246,6 +486,24 @@ export default function Home() {
           <>
             <PackLibrary open={libraryOpen} activePackId={pack.id} onSelect={openPack} onClose={() => setLibraryOpen(false)} />
             <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
+            {quiz && (
+              <FloatingPrompt
+                top={86}
+                title={quizTarget ? <>Toque: <span className="text-amber-200">{quizTarget.name}</span></> : "Sem marcos visíveis"}
+                detail={quiz.errorMm !== null ? `Erro ${quiz.errorMm.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mm · média ${(quiz.session.reduce((a, b) => a + b, 0) / quiz.session.length).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mm (${quiz.session.length})` : quizTarget?.bone}
+                actions={[
+                  { label: quiz.errorMm === null ? "Pular" : "Próximo", primary: true, onPress: () => setQuiz((current) => (current ? { ...current, targetId: nextQuizTarget(), guess: null, errorMm: null } : current)) },
+                  { label: "Sair", onPress: () => setQuiz(null) },
+                ]}
+              />
+            )}
+            {adjusting && !quiz && (
+              <FloatingPrompt
+                top={86}
+                title={<>Toque no osso: nova posição de <span className="text-violet-200">{landmarkById.get(adjusting)?.name}</span></>}
+                actions={[{ label: "Cancelar", onPress: () => setAdjusting(null) }]}
+              />
+            )}
           </>
         }
       />

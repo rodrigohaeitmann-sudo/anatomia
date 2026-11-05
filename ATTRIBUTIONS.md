@@ -25,10 +25,10 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 
 ## Z-Anatomy
 
-- Uso: grupos de linfonodos axilares e paraesternais; fáscias peitoral, clavipeitoral, toracolombar e deltoidea; nervo peitoral lateral.
+- Uso: grupos de linfonodos axilares e paraesternais; fáscias peitoral, clavipeitoral, toracolombar e deltoidea; nervo peitoral lateral. Do esqueleto (`SkeletalSystem100.fbx`): marcos ósseos nomeados e áreas de fixação muscular do ombro, tórax e quadril, usados nas camadas de estudo (`src/data/anatomyLayers.json`, `public/models/hybrid/anatomy-layers.bin`).
 - Fonte: https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX
 - Licença: CC BY-SA 4.0. Atribuição solicitada: "Z-Anatomy - The open source atlas of anatomy - CC-BY-SA 4.0" e "BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan".
-- Modificações: transformação de similaridade para o referencial do BodyParts3D (RMS de 2,0 mm), reflexão global e compressão meshopt. Não foram usados componentes do Z-Anatomy com licença não comercial.
+- Modificações: transformação de similaridade para o referencial do BodyParts3D (RMS de 2,0 mm), reflexão global e compressão meshopt. Marcos e áreas de fixação: cada osso do Z-Anatomy foi ajustado ao osso correspondente do BodyParts3D (similaridade global e ajuste rígido por osso; erro mediano de 0,1 a 1,4 mm) e os pontos/áreas foram projetados na superfície do osso do modelo, simplificados e quantizados. A classificação origem/inserção e alguns nomes de partes (trapézio ascendente/descendente) foram corrigidos pela posição. Não foram usados componentes do Z-Anatomy com licença não comercial.
 
 ## Licença da obra derivada
 
@@ -36,4 +36,4 @@ Como incorpora material CC BY-SA, o modelo combinado é distribuído sob **CC BY
 
 Ao adicionar modelos futuros, registre: fonte, licença original, autores, modificações, data de acesso e link.
 
-Data de acesso das fontes: 2026-09-24.
+Data de acesso das fontes: 2026-09-24 (esqueleto do Z-Anatomy: 2026-11-05).

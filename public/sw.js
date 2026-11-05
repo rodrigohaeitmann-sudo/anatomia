@@ -1,7 +1,7 @@
 // Service worker: makes the atlas installable and usable offline after the first visit.
 // Navigations: network first (fresh content), falling back to the cached shell.
 // Static assets and 3D models: cache first (immutable, hashed or versioned files).
-const CACHE = "anatomia-v3";
+const CACHE = "anatomia-v4";
 const SCOPE = self.registration.scope;
 const SHELL = [SCOPE, `${SCOPE}manifest.webmanifest`, `${SCOPE}icons/icon-192.png`, `${SCOPE}icons/icon-512.png`];
 

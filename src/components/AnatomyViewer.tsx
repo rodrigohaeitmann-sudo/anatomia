@@ -9,16 +9,19 @@ import type { PackView, ViewOrientation } from "@/data/packs";
 import { surgicalSpaces } from "@/data/surgicalSpaces";
 import { hybridTorsoModel, modelLandmarks as L, type Landmark } from "@/lib/modelConfig";
 import { computeSection, sectionPlane, type SectionAxis, type SectionResult } from "@/lib/sectioning";
-import { hiddenByLayer, type CutState, type DissectionState, type StructureVisibility, type ViewMode } from "@/lib/viewerTypes";
+import { defaultStudy, hiddenByLayer, type CutState, type DissectionState, type PickInfo, type StructureVisibility, type StudyState, type ViewMode } from "@/lib/viewerTypes";
+import { layerAttachments, layerFibres, layerLandmarks, partById, perforatorZones, regionByStructure, skinMarkings, type LayerAttachment } from "@/lib/anatomyLayers";
+import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
+import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
 import { PinOverlay, PinProjector, type ProjectedPin } from "./viewer/PinOverlay";
 import { HybridModel, type ModelHandle, type PlaneSet } from "./viewer/HybridModel";
 import { SectionCaps } from "./viewer/SectionCaps";
-import { isMesh, resolvePoint, structureById, v3, wallColors } from "./viewer/shared";
+import { isMesh, mm, resolvePoint, structureById, v3, wallColors } from "./viewer/shared";
 
 export type SectionReport = { result: SectionResult; axis: SectionAxis; positionModel: number } | null;
-export type FocusRequest = { structure: string; nonce: number } | null;
+export type FocusRequest = { structure: string; nonce: number; point?: Landmark } | null;
 
 type AnatomyViewerProps = {
   view: PackView;
@@ -33,7 +36,7 @@ type AnatomyViewerProps = {
   dissection: DissectionState;
   selected: string | null;
   focus: FocusRequest;
-  onSelect: (structure: string | null) => void;
+  onSelect: (structure: string | null, info?: PickInfo) => void;
   /** opens the structure card (pins' "Ver ficha"); defaults to onSelect */
   onOpenDetails?: (structure: string) => void;
   onSection: (report: SectionReport) => void;
@@ -44,6 +47,17 @@ type AnatomyViewerProps = {
   onPin?: (key: string | null) => void;
   /** screen area covered by floating UI (px), used to keep the model centred in what is visible */
   insets?: { top: number; bottom: number; right?: number };
+  study?: StudyState;
+  selectedPart?: string | null;
+  selectedLandmark?: string | null;
+  /** muscle whose attachment areas are on screen (drawn see-through) */
+  attachmentFocus?: string | null;
+  /** reviewed landmark status / corrected positions */
+  review?: Record<string, { status: string; point?: Landmark } | undefined>;
+  rulerPoints?: Landmark[];
+  quiz?: { target: Landmark; name: string; guess: Landmark | null } | null;
+  onPickLandmark?: (id: string, info?: PickInfo) => void;
+  onPickAttachment?: (item: LayerAttachment) => void;
 };
 
 
@@ -169,7 +183,9 @@ function modelExtent(root: THREE.Object3D) {
   return box;
 }
 
-export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets }: AnatomyViewerProps) {
+export function AnatomyViewer(props: AnatomyViewerProps) {
+  const { view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets } = props;
+  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment } = props;
   const mobile = layout === "mobile";
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
@@ -206,7 +222,7 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
 
   // ---- camera framing ---------------------------------------------------------------------------
   const orientation = view.orientation;
-  const focusAnchor = focus ? (handle?.snap(focus.structure, structureById.get(focus.structure)?.labelAnchor ?? L.breastCenter) ?? structureById.get(focus.structure)?.labelAnchor) : undefined;
+  const focusAnchor = focus ? (focus.point ?? handle?.snap(focus.structure, structureById.get(focus.structure)?.labelAnchor ?? L.breastCenter) ?? structureById.get(focus.structure)?.labelAnchor) : undefined;
   const anchor = focusAnchor ?? (view.anchor ? resolvePoint(view.anchor) : undefined) ?? (space ? resolvePoint(space.centre) : undefined) ?? L.breastCenter;
   const frame = useMemo(() => framing(orientation, anchor, focusAnchor ? 0.55 : view.distance ?? (space ? 0.8 : 1)), [orientation, anchor, focusAnchor, view.distance, space]);
   const rotationMatrix = useMemo(() => new THREE.Matrix4().makeRotationFromEuler(frame.rotation), [frame.rotation]);
@@ -237,6 +253,50 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [Boolean(cutModel), cut.scope, Boolean(skinModel)],
   );
+
+  // ---- study layers ------------------------------------------------------------------------------
+  const displaced = useMemo(() => {
+    const set = new Set<string>();
+    for (const def of manipulationDefs) if ((dissection.manipulations[def.id] ?? 0) > 0) def.structures.forEach((id) => set.add(id));
+    Object.entries(dissection.retracted).forEach(([id, amount]) => amount > 0 && set.add(id));
+    return set;
+  }, [dissection.manipulations, dissection.retracted]);
+  const landmarkItems = useMemo(() => {
+    const items = layerLandmarks.filter((item) => (study.landmarks && visible(item.structure) && !displaced.has(item.structure)) || item.id === selectedLandmark);
+    return items.map((item) => ({ ...item, point: (review[item.id]?.point ?? item.point) as [number, number, number] }));
+  }, [study.landmarks, visible, displaced, selectedLandmark, review]);
+  const attachmentItems = useMemo(() => {
+    const muscle = attachmentFocus ?? null;
+    return layerAttachments.filter((item) => {
+      if (displaced.has(item.muscle) || displaced.has(item.boneStructure) || !visible(item.boneStructure)) return false;
+      if (study.attachments === "all") return true;
+      return item.muscle === muscle && (!selectedPart || !item.part || item.part === selectedPart);
+    });
+  }, [study.attachments, attachmentFocus, selectedPart, visible, displaced]);
+  const fibreItems = useMemo(() => {
+    if (study.fibres === "off") return [];
+    return layerFibres.filter((item) => {
+      if (!visible(item.structure) || displaced.has(item.structure)) return false;
+      if (study.fibres === "all") return true;
+      if (item.structure !== selected) return false;
+      return !selectedPart || !item.part || item.part === selectedPart;
+    });
+  }, [study.fibres, selected, selectedPart, visible, displaced]);
+  const selectedRegion = useMemo(() => {
+    if (!selectedPart) return null;
+    const structure = selectedPart.split("#")[0];
+    const region = regionByStructure.get(structure)?.parts.find((part) => part.id === selectedPart);
+    return region ? { structure, labelIndex: region.labelIndex } : null;
+  }, [selectedPart]);
+  const selectedMeshes = useMemo(() => {
+    const part = selectedPart ? partById.get(selectedPart) : undefined;
+    const names = part && "meshNames" in part ? (part as { meshNames: string[] }).meshNames : [];
+    return names.length ? new Set(names) : null;
+  }, [selectedPart]);
+  const translucent = useMemo(() => new Set(attachmentFocus ? [attachmentFocus] : []), [attachmentFocus]);
+  const zones = useMemo(() => perforatorZones.filter((zone) => study.zones.includes(zone.id)), [study.zones]);
+  const buffers = useLayerBuffers(attachmentItems.length > 0 || fibreItems.length > 0 || Boolean(selectedRegion));
+  const reviewStatus = useMemo(() => Object.fromEntries(Object.entries(review).map(([id, entry]) => [id, entry?.status])), [review]);
 
   const handleReady = useCallback((next: ModelHandle) => {
     setHandle(next);
@@ -304,10 +364,41 @@ export function AnatomyViewer({ view, viewKey, caption, visibility, viewMode, re
               manipulation={dissection.manipulations}
               retracted={dissection.retracted}
               lowPower={lowPower}
+              selectedMeshes={selectedMeshes}
+              translucent={translucent}
+              proximity={study.proximity}
               onReady={handleReady}
-              onPick={onSelect}
+              onPick={(structure, info) => {
+                // a tap within 9 mm of a shown landmark picks the landmark (rulers and quizzes still get the point)
+                if (info && onPickLandmark && study.landmarks && !quiz) {
+                  let best: string | null = null;
+                  let bestMm = 9;
+                  for (const item of landmarkItems) {
+                    const d = Math.hypot(item.point[0] - info.point[0], item.point[1] - info.point[1], item.point[2] - info.point[2]) / mm;
+                    if (d < bestMm) {
+                      bestMm = d;
+                      best = item.id;
+                    }
+                  }
+                  if (best) {
+                    onPickLandmark(best, info);
+                    return;
+                  }
+                }
+                onSelect(structure, info);
+              }}
             />
           </Suspense>
+          {landmarkItems.length > 0 && <LandmarkDots items={landmarkItems} selected={selectedLandmark} review={reviewStatus} showNames={labelMode !== "hidden" || Boolean(selectedLandmark)} />}
+          {attachmentItems.length > 0 && (
+            <AttachmentAreas items={attachmentItems} buffers={buffers} planes={cutModel && cut.scope === "all" ? [cutWorld] : []} onPick={(item) => onPickAttachment?.(item)} />
+          )}
+          {fibreItems.length > 0 && <FibreLines items={fibreItems} buffers={buffers} />}
+          {selectedRegion && <RegionHighlight root={handle?.root ?? null} structure={selectedRegion.structure} labelIndex={selectedRegion.labelIndex} buffers={buffers} />}
+          {study.markings && <SkinMarkings markings={skinMarkings} showLabels={labelMode !== "hidden"} />}
+          {zones.length > 0 && <PerforatorZones zones={zones} />}
+          {study.ruler && <Ruler points={rulerPoints} />}
+          {quiz && <QuizFeedback target={quiz.target} guess={quiz.guess} name={quiz.name} />}
           <SectionCaps section={section} planeNormal={cutModel ? cutModel.plane.normal : null} selected={selected} />
           <PackOverlay view={view} snap={handle?.snap ?? null} annotations={annotations} />
           {space && <SpaceOverlay space={space} snap={handle?.snap ?? null} annotations={annotations} />}
