@@ -32,6 +32,24 @@ npm run build:hybrid   # registra, monta, gera o manifesto e comprime com meshop
 
 `select_bp3d43.py` regenera `bp3d43-selection.json`, a lista curada de malhas do 4.3 com regras explícitas por nome. Rode-o só para mudar a seleção. O arquivo versionado garante builds idênticos.
 
+## Camadas de estudo (marcos, fixações, fibras, marcação, zonas)
+
+```bash
+npm run layers:hybrid  # extract_zanatomy_skeleton.mjs → decode_model.mjs → build_anatomy_layers.py (~3 min)
+```
+
+Gera `src/data/anatomyLayers.json` (metadados, pontos, linhas, medidas) e `public/models/hybrid/anatomy-layers.bin` (áreas de fixação, fibras e amostras de partição, quantizadas em 16 bits). Tudo é calculado sobre a geometria publicada no GLB desktop, que `decode_model.mjs` decodifica.
+
+| Camada | Como é obtida |
+|---|---|
+| Marcos ósseos | Rótulos do esqueleto do Z-Anatomy. Cada osso do Z-Anatomy é ajustado ao osso do BodyParts3D (similaridade global + ajuste rígido por osso; erro mediano 0,1–1,4 mm). A ponta da linha-guia que toca o osso é projetada na superfície do osso do modelo. Incisura jugular, xifoide, processos espinhosos e rótulos das costelas são calculados nas malhas. |
+| Áreas de fixação | Superfícies de origem/inserção do Z-Anatomy, transferidas pelo mesmo ajuste e projetadas no osso. A classificação origem/inserção vem de tabela própria (o rótulo o/e da fonte diverge em ~1/3 das áreas). Grande dorsal, redondo maior e coracobraquial no úmero e cabeça curta do bíceps no coracoide: contato < 1,6 mm entre as malhas do músculo e do osso. |
+| Fibras | Campo harmônico na superfície de cada músculo (Laplaciano cotangente; u = 0 na origem, 1 na inserção; Choi & Blemker 2013) e linhas de corrente do gradiente, espaçadas pelo lado da origem. |
+| Digitações / fascículos | Partição harmônica do serrátil anterior e do peitoral menor pela costela de origem. |
+| Hilos | Primeiro contato (< 3 mm) da artéria/nervo com o músculo, a partir da origem da artéria subescapular. |
+| Marcação na pele | Bordas e pontos calculados nas malhas (borda livre do grande dorsal, borda inferolateral do peitoral maior, clavícula, margem medial da escápula, linha esternal, linha hemiclavicular, sulco inframamário, EIC) projetados na pele do HRA. |
+| Zonas de perfurantes | Faixas desenhadas com as distâncias da literatura (`src/data/literature.ts`) medidas ao longo do contorno da pele a partir das referências do modelo. São probabilísticas; nenhum vaso é modelado. |
+
 ## Limitações conhecidas
 
 - A musculatura e o esqueleto são de um indivíduo masculino (BodyParts3D). A pele e as mamas são de uma mulher de outra fonte (Visible Human Female). O encaixe foi medido, mas não validado por anatomista.

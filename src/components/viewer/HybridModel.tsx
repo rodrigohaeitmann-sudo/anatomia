@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
-import type { ViewMode } from "@/lib/viewerTypes";
+import type { PickInfo, ViewMode } from "@/lib/viewerTypes";
 import { buildSnapper, isMesh, mm, namedNode, recordFor, resolvePoint, type Snapper } from "./shared";
 
 export type ModelHandle = {
@@ -39,16 +39,31 @@ type Props = {
   manipulation: Record<string, number>;
   retracted: Record<string, number>;
   lowPower: boolean;
+  /** when a portion (mesh) is selected, only those meshes glow */
+  selectedMeshes?: Set<string> | null;
+  /** structures drawn see-through (e.g. a muscle while its attachment areas are shown) */
+  translucent?: Set<string>;
+  /** distance map: surfaces coloured by distance to these structures */
+  proximity?: string[] | null;
   onReady: (handle: ModelHandle) => void;
-  onPick: (structure: string | null) => void;
+  onPick: (structure: string | null, info?: PickInfo) => void;
 };
+
+/** Distance-map ramp (mm): red < 5, orange < 10, yellow < 15, then the tissue colour. */
+export const proximityRamp = [
+  { maxMm: 5, color: "#ef4444", label: "< 5 mm" },
+  { maxMm: 10, color: "#f97316", label: "5–10 mm" },
+  { maxMm: 15, color: "#facc15", label: "10–15 mm" },
+];
+const proximityTissues = new Set<Tissue>(["muscle", "fat", "fascia", "bone", "cartilage", "gland", "ligament", "lymph-node", "artery", "vein", "nerve"]);
 
 export const superficialForCut = new Set(["skin", "breast-fat", "breast-ligaments", "contralateral-breast", "pectoral-fascia", "deltoid-fascia", "thoracolumbar-fascia"]);
 const stepWindowStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
 
-function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean }) {
-  const color = new THREE.Color(opts.override ?? tissueColors[tissue]);
+function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; vertexColors: boolean }) {
+  const color = new THREE.Color(opts.vertexColors ? "#ffffff" : opts.override ?? tissueColors[tissue]);
   let opacity = tissueOpacity[tissue] ?? 1;
+  if (opts.translucent) opacity = Math.min(opacity, 0.3);
   const faded = opts.viewMode === "surgical" && !opts.active && !opts.selected && !opts.override && !opts.emphasis;
   if (faded) {
     opacity = Math.min(opacity, tissue === "skin" ? 0.12 : 0.22);
@@ -64,7 +79,8 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
     side: THREE.DoubleSide,
     clippingPlanes: opts.planes,
     clipShadows: true,
-    emissive: glow ? (opts.selected ? new THREE.Color("#fde68a") : color.clone()).multiplyScalar(glow) : new THREE.Color("#000000"),
+    vertexColors: opts.vertexColors,
+    emissive: glow && !opts.vertexColors ? (opts.selected ? new THREE.Color("#fde68a") : color.clone()).multiplyScalar(glow) : opts.selected ? new THREE.Color("#fde68a").multiplyScalar(0.25) : new THREE.Color("#000000"),
     roughness: vascular ? 0.32 : tissue === "bone" ? 0.72 : tissue === "skin" ? 0.5 : 0.58,
     metalness: 0,
   };
@@ -80,7 +96,7 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
 }
 
 export function HybridModel(props: Props) {
-  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, onReady, onPick } = props;
+  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, proximity = null, onReady, onPick } = props;
   const gltf = useGLTF(modelPath, false, true);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   const invalidate = useThree((state) => state.invalidate);
@@ -183,8 +199,17 @@ export function HybridModel(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, planes.cut, planes.cutScope]);
 
+  // distance map: per-vertex colours from the distance to the target structures (model space)
+  const proximityKey = proximity?.length ? [...proximity].sort().join(",") : "";
+  useEffect(() => {
+    if (!proximityKey) return;
+    paintProximity(scene, new Set(proximityKey.split(",")));
+    invalidate();
+  }, [scene, proximityKey, invalidate]);
+
   // materials, visibility, clipping
   useEffect(() => {
+    const targets = new Set(proximityKey ? proximityKey.split(",") : []);
     const cache = new Map<string, THREE.Material>();
     scene.traverse((object) => {
       if (!isMesh(object)) return;
@@ -200,16 +225,19 @@ export function HybridModel(props: Props) {
       if (planes.skin && record.structure === "skin") list.push(planes.skin);
       if (planes.step && stepWindowStructures.has(record.structure)) list.push(planes.step);
       const override = highlight.get(record.structure);
+      const painted = targets.size > 0 && proximityTissues.has(record.tissue) && !targets.has(record.structure) && Boolean(object.geometry.getAttribute("color"));
       const opts = {
         active: activeStructures.has(record.structure),
         viewMode,
-        selected: selected === record.structure,
+        selected: selectedMeshes ? selectedMeshes.has(record.name) : selected === record.structure,
         override,
-        emphasis: emphasised.has(record.structure),
+        emphasis: emphasised.has(record.structure) || targets.has(record.structure),
         planes: list,
         lowPower,
+        translucent: Boolean(translucent?.has(record.structure)),
+        vertexColors: painted,
       };
-      const key = `${record.tissue}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
+      const key = `${record.tissue}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
       let material = cache.get(key);
       if (!material) {
         material = makeMaterial(record.tissue, opts);
@@ -222,7 +250,7 @@ export function HybridModel(props: Props) {
     });
     invalidate();
     return () => cache.forEach((material) => material.dispose());
-  }, [scene, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, lowPower, invalidate]);
+  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, proximityKey, highlight, emphasised, lowPower, invalidate]);
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     if (event.delta > 6) return;
@@ -238,7 +266,13 @@ export function HybridModel(props: Props) {
     });
     const solid = candidates.find((hit) => ((hit.object as THREE.Mesh).material as THREE.Material).opacity >= 0.5);
     const hit = solid ?? candidates[0];
-    onPick(hit ? recordFor(hit.object)?.structure ?? null : null);
+    const record = hit ? recordFor(hit.object) : undefined;
+    if (!hit || !record) {
+      onPick(null);
+      return;
+    }
+    const local = scene.worldToLocal(hit.point.clone());
+    onPick(record.structure, { meshName: record.name, point: [local.x, local.y, local.z] });
   }
 
   return <primitive object={scene} onClick={handleClick} />;
@@ -256,4 +290,78 @@ function sliceTargets(scene: THREE.Object3D, visible: (structure: string) => boo
     targets.push({ mesh: object, structure: record.structure, tissue: record.tissue, meshName: record.name, toModel: toModel.clone().multiply(object.matrixWorld) });
   });
   return targets;
+}
+
+/**
+ * Colours every eligible mesh by its distance to the target structures: nearest target vertex found
+ * through a uniform grid (cell = ramp limit), only for vertices inside the targets' box.
+ */
+function paintProximity(scene: THREE.Object3D, targets: Set<string>) {
+  scene.updateMatrixWorld(true);
+  const toModel = scene.matrixWorld.clone().invert();
+  const limit = proximityRamp[proximityRamp.length - 1].maxMm * mm;
+  const cell = limit;
+  const grid = new Map<string, number[]>();
+  const box = new THREE.Box3();
+  const v = new THREE.Vector3();
+  const m = new THREE.Matrix4();
+  const seen = new Set<string>();
+  scene.traverse((object) => {
+    if (!isMesh(object)) return;
+    const record = recordFor(object);
+    if (!record || !targets.has(record.structure)) return;
+    m.copy(toModel).multiply(object.matrixWorld);
+    const position = object.geometry.attributes.position;
+    for (let i = 0; i < position.count; i++) {
+      v.fromBufferAttribute(position, i).applyMatrix4(m);
+      // thin the target cloud to ~1 mm voxels
+      const voxel = `${Math.round(v.x / mm)},${Math.round(v.y / mm)},${Math.round(v.z / mm)}`;
+      if (seen.has(voxel)) continue;
+      seen.add(voxel);
+      box.expandByPoint(v);
+      const k = `${Math.floor(v.x / cell)},${Math.floor(v.y / cell)},${Math.floor(v.z / cell)}`;
+      const list = grid.get(k);
+      if (list) list.push(v.x, v.y, v.z);
+      else grid.set(k, [v.x, v.y, v.z]);
+    }
+  });
+  if (box.isEmpty()) return;
+  box.expandByScalar(limit);
+  const ramp = proximityRamp.map((step) => ({ ...step, c: new THREE.Color(step.color) }));
+  const base = new THREE.Color();
+  const out = new THREE.Color();
+  scene.traverse((object) => {
+    if (!isMesh(object)) return;
+    const record = recordFor(object);
+    if (!record || targets.has(record.structure) || !proximityTissues.has(record.tissue)) return;
+    m.copy(toModel).multiply(object.matrixWorld);
+    const position = object.geometry.attributes.position;
+    const colors = new Float32Array(position.count * 3);
+    base.set(tissueColors[record.tissue]);
+    for (let i = 0; i < position.count; i++) {
+      v.fromBufferAttribute(position, i).applyMatrix4(m);
+      let best = Infinity;
+      if (box.containsPoint(v)) {
+        const cx = Math.floor(v.x / cell), cy = Math.floor(v.y / cell), cz = Math.floor(v.z / cell);
+        for (let dx = -1; dx <= 1; dx++)
+          for (let dy = -1; dy <= 1; dy++)
+            for (let dz = -1; dz <= 1; dz++) {
+              const list = grid.get(`${cx + dx},${cy + dy},${cz + dz}`);
+              if (!list) continue;
+              for (let j = 0; j < list.length; j += 3) {
+                const d = (list[j] - v.x) ** 2 + (list[j + 1] - v.y) ** 2 + (list[j + 2] - v.z) ** 2;
+                if (d < best) best = d;
+              }
+            }
+      }
+      const dMm = Math.sqrt(best) / mm;
+      const step = ramp.find((item) => dMm < item.maxMm);
+      if (step) out.copy(step.c).lerp(base, Math.max(0, (dMm - (step.maxMm - 5)) / 5) * 0.25);
+      else out.copy(base);
+      colors[i * 3] = out.r;
+      colors[i * 3 + 1] = out.g;
+      colors[i * 3 + 2] = out.b;
+    }
+    object.geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  });
 }

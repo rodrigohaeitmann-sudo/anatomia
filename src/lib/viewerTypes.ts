@@ -45,3 +45,24 @@ export const dissectionLayers: { label: string; remove: string[] }[] = [
 export function hiddenByLayer(layer: number) {
   return new Set(dissectionLayers.slice(0, layer + 1).flatMap((entry) => entry.remove));
 }
+
+/** Study layers (aba Estudo). */
+export type StudyState = {
+  /** bony landmark dots */
+  landmarks: boolean;
+  /** attachment areas: none, the selected muscle only, or every area on visible bones */
+  attachments: "selected" | "all";
+  /** fibre directions: the selected muscle only, or every muscle that has them */
+  fibres: "off" | "selected" | "all";
+  /** surgical marking lines/points on the skin */
+  markings: boolean;
+  /** perforator zones shown on the skin */
+  zones: string[];
+  /** distance map: colour surfaces by distance (mm) to these structures */
+  proximity: string[] | null;
+  ruler: boolean;
+};
+
+export const defaultStudy: StudyState = { landmarks: false, attachments: "selected", fibres: "off", markings: false, zones: [], proximity: null, ruler: false };
+
+export type PickInfo = { meshName: string; point: [number, number, number] };
