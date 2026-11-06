@@ -22,7 +22,16 @@ export function recordFor(object: THREE.Object3D) {
   return node ? meshRecordByName.get(node.name) : undefined;
 }
 
-export type Snapper = (structureId: string, near: Landmark) => Landmark | undefined;
+/**
+ * Snaps a point to the nearest real vertex of a structure (model space). `near` is a rest-pose point
+ * (landmarks are defined on the anatomical position): the search runs on the rest positions and the
+ * answer is where that vertex is now, so labels and zones ride on the deformed muscles of an arm pose.
+ */
+export type Snapper = {
+  (structureId: string, near: Landmark): Landmark | undefined;
+  /** where a rest-pose point is carried by the current arm pose (displacement of the nearest sampled vertex) */
+  follow: (point: Landmark) => Landmark;
+};
 
 const derived: Record<string, () => Landmark> = {
   breastLateral: () => [L.breastBounds.min[0], L.breastCenter[1], L.breastCenter[2]],
@@ -43,13 +52,15 @@ export function resolvePoint(key: string): Landmark | undefined {
 
 export type LandmarkKey = keyof ModelLandmarks;
 
-/** Builds a lookup that snaps a point to the nearest real vertex of a structure (model space). */
+/** Builds the snapper from the meshes as they are now (rigid manipulations and arm-pose morphs included). */
 export function buildSnapper(root: THREE.Object3D): Snapper {
   root.updateMatrixWorld(true);
   const toModel = root.matrixWorld.clone().invert();
-  const collected = new Map<string, number[]>();
+  const restLists = new Map<string, number[]>();
+  const posedLists = new Map<string, number[]>();
   const vertex = new THREE.Vector3();
   const matrix = new THREE.Matrix4();
+  let posedAny = false;
   root.traverse((object) => {
     if (!isMesh(object)) return;
     const record = recordFor(object);
@@ -57,18 +68,24 @@ export function buildSnapper(root: THREE.Object3D): Snapper {
     matrix.copy(toModel).multiply(object.matrixWorld);
     const position = object.geometry.attributes.position;
     const stride = Math.max(1, Math.floor(position.count / 3000));
-    const list = collected.get(record.structure) ?? [];
+    const rest = restLists.get(record.structure) ?? [];
+    const posed = posedLists.get(record.structure) ?? [];
+    // posed meshes (arm poses are morph targets): remember both the rest and the deformed position
+    const morphed = Boolean(object.morphTargetInfluences?.some((value) => value !== 0));
+    posedAny ||= morphed;
     for (let i = 0; i < position.count; i += stride) {
       vertex.fromBufferAttribute(position, i).applyMatrix4(matrix);
-      list.push(vertex.x, vertex.y, vertex.z);
+      rest.push(vertex.x, vertex.y, vertex.z);
+      if (morphed) object.getVertexPosition(i, vertex).applyMatrix4(matrix);
+      posed.push(vertex.x, vertex.y, vertex.z);
     }
-    collected.set(record.structure, list);
+    restLists.set(record.structure, rest);
+    posedLists.set(record.structure, posed);
   });
-  const samples = new Map([...collected].map(([id, list]) => [id, new Float32Array(list)]));
-  return (structureId, near) => {
-    const pts = samples.get(structureId);
-    if (!pts?.length) return undefined;
-    let best = 0;
+  const restSamples = new Map([...restLists].map(([id, list]) => [id, new Float32Array(list)]));
+  const posedSamples = posedAny ? new Map([...posedLists].map(([id, list]) => [id, new Float32Array(list)])) : restSamples;
+  const nearestIn = (pts: Float32Array, near: Landmark) => {
+    let best = -1;
     let bestDistance = Infinity;
     for (let i = 0; i < pts.length; i += 3) {
       const d = (pts[i] - near[0]) ** 2 + (pts[i + 1] - near[1]) ** 2 + (pts[i + 2] - near[2]) ** 2;
@@ -77,8 +94,34 @@ export function buildSnapper(root: THREE.Object3D): Snapper {
         best = i;
       }
     }
-    return [pts[best], pts[best + 1], pts[best + 2]];
+    return { best, bestDistance };
   };
+  const snap = ((structureId: string, near: Landmark) => {
+    const pts = restSamples.get(structureId);
+    if (!pts?.length) return undefined;
+    const { best } = nearestIn(pts, near);
+    const posed = posedSamples.get(structureId)!;
+    return [posed[best], posed[best + 1], posed[best + 2]] as Landmark;
+  }) as Snapper;
+  snap.follow = (point) => {
+    if (!posedAny) return point;
+    let owner = "";
+    let at = -1;
+    let bestDistance = Infinity;
+    restSamples.forEach((pts, id) => {
+      const { best, bestDistance: d } = nearestIn(pts, point);
+      if (d < bestDistance) {
+        bestDistance = d;
+        at = best;
+        owner = id;
+      }
+    });
+    if (at < 0) return point;
+    const rest = restSamples.get(owner)!;
+    const posed = posedSamples.get(owner)!;
+    return [point[0] + posed[at] - rest[at], point[1] + posed[at + 1] - rest[at + 1], point[2] + posed[at + 2] - rest[at + 2]];
+  };
+  return snap;
 }
 
 export { wallColors } from "@/lib/annotations";

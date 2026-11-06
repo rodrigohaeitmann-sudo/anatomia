@@ -12,6 +12,7 @@ import { computeSection, sectionPlane, type SectionAxis, type SectionResult } fr
 import { defaultStudy, hiddenByLayer, type CutState, type DissectionState, type PickInfo, type StructureVisibility, type StudyState, type ViewMode } from "@/lib/viewerTypes";
 import { layerAttachments, layerFibres, layerLandmarks, partById, perforatorZones, regionByStructure, skinMarkings, type LayerAttachment } from "@/lib/anatomyLayers";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
+import { boneMatrices, posedLandmark } from "@/lib/armPoses";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
@@ -58,7 +59,14 @@ type AnatomyViewerProps = {
   quiz?: { target: Landmark; name: string; guess: Landmark | null } | null;
   onPickLandmark?: (id: string, info?: PickInfo) => void;
   onPickAttachment?: (item: LayerAttachment) => void;
+  /** upper-limb pose id (build_poses.py) or null for the anatomical position; changes are animated */
+  pose?: string | null;
+  onPoseSettled?: (pose: string | null) => void;
 };
+
+const POSE_MS = 950;
+const emptyAnchors = new Map<string, Landmark>();
+const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 
 /**
@@ -111,6 +119,47 @@ function CameraDirector({ position, target, signature }: { position: THREE.Vecto
     invalidate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, controls]);
+  return null;
+}
+
+/**
+ * Arm poses carry the view anchor with the deformed tissue: once a pose settles, camera and orbit target
+ * glide by the anchor's displacement (world space), keeping the user's own orbit and zoom. A view change
+ * (signature) resets the camera to the unshifted frame, so the glide restarts from zero.
+ */
+function CameraFollow({ shift, signature }: { shift: THREE.Vector3; signature: string }) {
+  const { camera, controls, invalidate } = useThree();
+  const applied = useRef(new THREE.Vector3());
+  const lastSignature = useRef(signature);
+  useEffect(() => {
+    if (lastSignature.current !== signature) {
+      lastSignature.current = signature;
+      applied.current.set(0, 0, 0);
+    }
+    const start = applied.current.clone();
+    const goal = shift.clone();
+    if (start.distanceTo(goal) < 1e-6) return;
+    const begin = performance.now();
+    const next = new THREE.Vector3();
+    let frame = 0;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - begin) / 550);
+      next.lerpVectors(start, goal, ease(k));
+      const delta = next.clone().sub(applied.current);
+      camera.position.add(delta);
+      const orbit = controls as unknown as { target: THREE.Vector3; update: () => void } | null;
+      if (orbit) {
+        orbit.target.add(delta);
+        orbit.update();
+      }
+      applied.current.copy(next);
+      invalidate();
+      if (k < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shift.x, shift.y, shift.z, signature, controls]);
   return null;
 }
 
@@ -185,7 +234,7 @@ function modelExtent(root: THREE.Object3D) {
 
 export function AnatomyViewer(props: AnatomyViewerProps) {
   const { view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets } = props;
-  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment } = props;
+  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled } = props;
   const mobile = layout === "mobile";
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
@@ -261,10 +310,83 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     Object.entries(dissection.retracted).forEach(([id, amount]) => amount > 0 && set.add(id));
     return set;
   }, [dissection.manipulations, dissection.retracted]);
+  // ---- arm pose: animate the morph targets, then let overlays follow the bones ----------------------
+  const [settledPose, setSettledPose] = useState<string | null>(null);
+  const [animating, setAnimating] = useState(false);
+  const poseRun = useRef<{ id: string | null; t: number; token: number }>({ id: null, t: 0, token: 0 });
+  const handleRef = useRef<ModelHandle | null>(null);
+  useEffect(() => {
+    if (!handle) return;
+    handleRef.current = handle;
+    const run = poseRun.current;
+    if (run.id === pose && run.t === (pose ? 1 : 0)) return;
+    // a new run supersedes any previous one (which stops at its next frame); it resumes from run.t
+    const token = ++run.token;
+    const live = () => run.token === token;
+    const tween = (from: number, to: number) =>
+      new Promise<void>((resolve) => {
+        const start = performance.now();
+        const step = (now: number) => {
+          if (!live()) return resolve();
+          const k = Math.min(1, (now - start) / (POSE_MS * Math.abs(to - from) || 1));
+          run.t = from + (to - from) * ease(k);
+          handleRef.current?.setPoseFraction(run.t);
+          if (k < 1) requestAnimationFrame(step);
+          else resolve();
+        };
+        requestAnimationFrame(step);
+      });
+    (async () => {
+      setAnimating(true);
+      try {
+        if (run.id && run.id !== pose && run.t > 0) await tween(run.t, 0);
+        if (!live()) return;
+        if (pose) {
+          await handleRef.current?.preparePose(pose);
+          if (!live()) return;
+          if (run.id !== pose) run.t = 0;
+          run.id = pose;
+          await tween(run.t, 1);
+        } else {
+          await handleRef.current?.preparePose(null);
+          run.id = null;
+          run.t = 0;
+        }
+      } catch {
+        // pose data unavailable (offline before the first download): stay in the current position
+      }
+      if (!live()) return;
+      setAnimating(false);
+      const settled = run.t > 0 ? run.id : null;
+      setSettledPose(settled);
+      onPoseSettled?.(settled);
+      handleRef.current?.refresh();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pose, handle]);
+  useEffect(
+    () => () => {
+      poseRun.current.token += 1;
+    },
+    [],
+  );
+  const mats = useMemo(() => boneMatrices(settledPose, 1), [settledPose]);
+  const anchorShift = useMemo(() => {
+    const shift = new THREE.Vector3();
+    if (!settledPose || animating || focusAnchor || !handle) return shift;
+    const moved = handle.snap.follow(anchor);
+    return shift.set(moved[0] - anchor[0], moved[1] - anchor[1], moved[2] - anchor[2]).applyEuler(frame.rotation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settledPose, animating, Boolean(focusAnchor), handle, anchor[0], anchor[1], anchor[2], frame.rotation]);
+
   const landmarkItems = useMemo(() => {
+    if (animating) return [];
     const items = layerLandmarks.filter((item) => (study.landmarks && visible(item.structure) && !displaced.has(item.structure)) || item.id === selectedLandmark);
-    return items.map((item) => ({ ...item, point: (review[item.id]?.point ?? item.point) as [number, number, number] }));
-  }, [study.landmarks, visible, displaced, selectedLandmark, review]);
+    return items.map((item) => {
+      const rest = (review[item.id]?.point ?? item.point) as [number, number, number];
+      return { ...item, point: settledPose ? posedLandmark(item.id, rest, mats, settledPose) : rest };
+    });
+  }, [study.landmarks, visible, displaced, selectedLandmark, review, settledPose, mats, animating]);
   const attachmentItems = useMemo(() => {
     const muscle = attachmentFocus ?? null;
     return layerAttachments.filter((item) => {
@@ -294,7 +416,8 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     return names.length ? new Set(names) : null;
   }, [selectedPart]);
   const translucent = useMemo(() => new Set(attachmentFocus ? [attachmentFocus] : []), [attachmentFocus]);
-  const zones = useMemo(() => perforatorZones.filter((zone) => study.zones.includes(zone.id)), [study.zones]);
+  // skin markings and perforator zones are drawn on the (static) trunk skin: anatomical position only
+  const zones = useMemo(() => (settledPose || animating ? [] : perforatorZones.filter((zone) => study.zones.includes(zone.id))), [study.zones, settledPose, animating]);
   const buffers = useLayerBuffers(attachmentItems.length > 0 || fibreItems.length > 0 || Boolean(selectedRegion));
   const reviewStatus = useMemo(() => Object.fromEntries(Object.entries(review).map(([id, entry]) => [id, entry?.status])), [review]);
 
@@ -390,26 +513,27 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
             />
           </Suspense>
           {landmarkItems.length > 0 && <LandmarkDots items={landmarkItems} selected={selectedLandmark} review={reviewStatus} showNames={labelMode !== "hidden" || Boolean(selectedLandmark)} />}
-          {attachmentItems.length > 0 && (
-            <AttachmentAreas items={attachmentItems} buffers={buffers} planes={cutModel && cut.scope === "all" ? [cutWorld] : []} onPick={(item) => onPickAttachment?.(item)} />
+          {attachmentItems.length > 0 && !animating && (
+            <AttachmentAreas items={attachmentItems} buffers={buffers} planes={cutModel && cut.scope === "all" ? [cutWorld] : []} mats={settledPose ? mats : null} onPick={(item) => onPickAttachment?.(item)} />
           )}
-          {fibreItems.length > 0 && <FibreLines items={fibreItems} buffers={buffers} />}
-          {selectedRegion && <RegionHighlight root={handle?.root ?? null} structure={selectedRegion.structure} labelIndex={selectedRegion.labelIndex} buffers={buffers} />}
-          {study.markings && <SkinMarkings markings={skinMarkings} showLabels={labelMode !== "hidden"} />}
+          {fibreItems.length > 0 && !animating && <FibreLines items={fibreItems} buffers={buffers} pose={settledPose} />}
+          {selectedRegion && !animating && <RegionHighlight key={settledPose ?? "rest"} root={handle?.root ?? null} structure={selectedRegion.structure} labelIndex={selectedRegion.labelIndex} buffers={buffers} />}
+          {study.markings && !settledPose && !animating && <SkinMarkings markings={skinMarkings} showLabels={labelMode !== "hidden"} />}
           {zones.length > 0 && <PerforatorZones zones={zones} />}
           {study.ruler && <Ruler points={rulerPoints} />}
           {quiz && <QuizFeedback target={quiz.target} guess={quiz.guess} name={quiz.name} />}
           <SectionCaps section={section} planeNormal={cutModel ? cutModel.plane.normal : null} selected={selected} />
-          <PackOverlay view={view} snap={handle?.snap ?? null} annotations={annotations} />
-          {space && <SpaceOverlay space={space} snap={handle?.snap ?? null} annotations={annotations} />}
-          {selected && <SelectionMarker structure={selected} snap={handle?.snap ?? null} showName={!mobile && labelMode !== "hidden"} />}
+          {!animating && <PackOverlay view={view} snap={handle?.snap ?? null} annotations={annotations} />}
+          {space && !animating && <SpaceOverlay space={space} snap={handle?.snap ?? null} annotations={annotations} />}
+          {selected && !animating && <SelectionMarker structure={selected} snap={handle?.snap ?? null} showName={!mobile && labelMode !== "hidden"} />}
         </group>
         {!lowPower && <ContactShadows position={[0, L.latissimusBounds.min[1] - 0.15, 0]} opacity={0.45} scale={9} blur={2.6} far={5} />}
         <OrbitControls makeDefault enableDamping dampingFactor={0.12} />
         <CameraDirector position={frame.position} target={frame.target} signature={cameraSignature} />
+        <CameraFollow shift={anchorShift} signature={cameraSignature} />
         <Invalidator deps={[cutModel, skinModel, rotationMatrix]} />
         {insets && <ViewInsets top={insets.top} bottom={insets.bottom} />}
-        {labelMode === "pins" && <PinProjector anchors={anchors} rotation={frame.rotation} onProject={setPins} />}
+        {labelMode === "pins" && <PinProjector anchors={animating ? emptyAnchors : anchors} rotation={frame.rotation} onProject={setPins} />}
       </Canvas>
       {labelMode === "pins" && (
         <PinOverlay

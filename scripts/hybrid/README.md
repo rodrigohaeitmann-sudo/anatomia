@@ -50,6 +50,21 @@ Gera `src/data/anatomyLayers.json` (metadados, pontos, linhas, medidas) e `publi
 | Marcação na pele | Bordas e pontos calculados nas malhas (borda livre do grande dorsal, borda inferolateral do peitoral maior, clavícula, margem medial da escápula, linha esternal, linha hemiclavicular, sulco inframamário, EIC) projetados na pele do HRA. |
 | Zonas de perfurantes | Faixas desenhadas com as distâncias da literatura (`src/data/literature.ts`) medidas ao longo do contorno da pele a partir das referências do modelo. São probabilísticas; nenhum vaso é modelado. |
 
+## Posições do membro superior
+
+```bash
+npm run poses:hybrid   # decode_model.mjs (desktop e celular) → build_poses.py (~15 min)
+```
+
+Gera `src/data/armPoses.json` (posições, cinemática, matrizes dos ossos por quadro-chave, pesos das camadas) e, em `public/models/hybrid/poses/`, os deltas por vértice de cada posição (int16, 3 quadros-chave) para as versões desktop e celular. O app os toca como morph targets. Plano em etapas, resultados e limitações: `docs/movimento-membro-superior.md`.
+
+| Etapa | Como é feita |
+|---|---|
+| Articulações | Centro glenoumeral por ajuste de esfera à cabeça do úmero; SC e AC pelos marcos da clavícula; plano da escápula por PCA |
+| Cinemática | Tórax → clavícula → escápula → úmero; ângulo glenoumeral resolvido para a elevação umerotorácica pedida; inclinação posterior resolvida pelo contato do ângulo inferior com o gradil costal |
+| Pesos | Campo harmônico na superfície de cada músculo entre os ossos de origem e inserção; vasos, nervos, linfonodos e fáscias herdam dos músculos e ossos vizinhos |
+| Deformação | Quatérnios duais; fibras alongadas recolocadas na corda entre as extremidades (peitoral maior, grande dorsal, redondo maior); volume muscular; deslizamento sobre o tórax; colisão com os ossos |
+
 ## Limitações conhecidas
 
 - A musculatura e o esqueleto são de um indivíduo masculino (BodyParts3D). A pele e as mamas são de uma mulher de outra fonte (Visible Human Female). O encaixe foi medido, mas não validado por anatomista.

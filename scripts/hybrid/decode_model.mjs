@@ -1,6 +1,6 @@
-// Decodes the published (meshopt-compressed) desktop model into plain arrays in model space, so the
-// anatomy layers are computed on exactly the geometry the viewer shows.
-// Usage: node scripts/hybrid/decode_model.mjs
+// Decodes a published (meshopt-compressed) model into plain arrays in model space, so the anatomy
+// layers and arm poses are computed on exactly the geometry the viewer shows.
+// Usage: node scripts/hybrid/decode_model.mjs [--mobile]
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,14 +11,16 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const manifest = JSON.parse(readFileSync(join(root, "src/data/hybridTorsoManifest.json"), "utf8"));
 const names = new Set(manifest.meshes.map((mesh) => mesh.name));
-const bytes = readFileSync(join(root, "public", manifest.modelPath.replace(/^\//, "")));
+const mobile = process.argv.includes("--mobile");
+const modelPath = manifest.modelPath.replace(/^\//, "").replace(/\.glb$/, mobile ? "-mobile.glb" : ".glb");
+const bytes = readFileSync(join(root, "public", modelPath));
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 await MeshoptDecoder.ready;
 const gltf = await new Promise((resolve, reject) => loader.parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), "", resolve, reject));
 gltf.scene.updateMatrixWorld(true);
 
-const outDir = join(root, "assets/build/model-meshes");
+const outDir = join(root, mobile ? "assets/build/model-meshes-mobile" : "assets/build/model-meshes");
 mkdirSync(outDir, { recursive: true });
 const index = {};
 const v = new THREE.Vector3();

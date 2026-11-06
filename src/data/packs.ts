@@ -42,6 +42,8 @@ export type PackView = {
   space?: string;
   /** key spatial relationships shown beside the view */
   relations: string[];
+  /** upper-limb position (src/data/armPoses.json); omitted = anatomical position */
+  pose?: string;
 };
 
 export type Pack = { id: string; title: string; summary: string; views: PackView[] };
@@ -262,6 +264,28 @@ export const packGroups: PackGroup[] = [
             relations: ["Anterior: peitorais e subclávio · Posterior: subescapular, redondo maior e GD · Medial: serrátil · Lateral: sulco intertubercular"],
           },
           {
+            id: "abducao",
+            title: "Braço a 90° (braçadeira)",
+            description: "Posição operatória da linfadenectomia: abdução de 90° com leve rotação externa. Peitoral maior, grande dorsal e redondo maior alongam-se e a base da axila se abre.",
+            structures: ["pectoralis-major", "pectoralis-minor", "latissimus-dorsi", "teres-major", "subscapularis", "serratus-anterior", "coracobrachialis-biceps", "deltoid", "axilla", ...axillaryVessels, ...axillaryNerves, "brachial-plexus", "axillary-lymph-nodes", ...thoracicCage],
+            focus: ["pectoralis-major", "latissimus-dorsi", "axillary-vessels"],
+            orientation: "axillary",
+            anchor: "axillaryArteryCenter",
+            distance: 0.85,
+            pose: "abducao-90",
+            labels: [
+              { structure: "pectoralis-major", near: "axillaryArteryCenter", nearOffsetMm: [0, -40, 30], text: "Prega anterior (peitoral maior)" },
+              { structure: "latissimus-dorsi", near: "latissimusAnteriorBorder.0", text: "Prega posterior (GD)" },
+              { structure: "axillary-vessels", near: "axillaryArteryCenter", text: "Veia/artéria axilares" },
+              { structure: "intercostobrachial-nerve", near: "axillaryArteryCenter", text: "Intercostobraquial" },
+            ],
+            relations: [
+              "Na abdução, as pregas axilares (peitoral maior e GD) se afastam e a base da axila se abre",
+              "O feixe axilar acompanha o úmero: no modelo, a veia axilar sobe cerca de 4 cm",
+              "Abdução acima de 90° na braçadeira tensiona o plexo braquial contra a cabeça do úmero (risco de neuropraxia)",
+            ],
+          },
+          {
             id: "zona",
             title: "Zona de dissecção",
             description: "Polígono projetado cujos vértices são pontos reais das estruturas-limite da linfadenectomia (níveis I–II).",
@@ -317,6 +341,28 @@ export const packGroups: PackGroup[] = [
               { structure: "pectoral-nerves", near: "axillaryArteryCenter", text: "Peitorais medial e lateral" },
             ],
             relations: ["O torácico longo corre na face superficial do serrátil, na linha axilar média", "O toracodorsal acompanha os vasos toracodorsais sobre o subescapular", "O intercostobraquial cruza a axila transversalmente abaixo da veia axilar"],
+          },
+          {
+            id: "axila-aberta",
+            title: "Mão atrás da cabeça",
+            description: "Abdução de 130° com rotação externa: a axila fica mais rasa e o feixe neurovascular é estirado em torno do coracoide e do peitoral menor.",
+            structures: [...axillaryNerves, "brachial-plexus", ...axillaryVessels, "pectoralis-minor", "pectoralis-major", "latissimus-dorsi", "serratus-anterior", "subscapularis", "teres-major", "axilla", ...thoracicCage],
+            focus: ["brachial-plexus", "axillary-vessels", "pectoralis-minor"],
+            orientation: "axillary",
+            anchor: "axillaryArteryCenter",
+            distance: 0.9,
+            pose: "abducao-130",
+            labels: [
+              { structure: "pectoralis-minor", near: "axillaryArteryCenter", text: "Peitoral menor (fulcro)" },
+              { structure: "brachial-plexus", near: "axillaryArteryCenter", nearOffsetMm: [-20, 10, 0], text: "Plexo braquial estirado" },
+              { structure: "long-thoracic-nerve", near: "thoracodorsalArteryDistal", text: "Torácico longo" },
+              { structure: "thoracodorsal-nerve", near: "thoracodorsalArteryOrigin", text: "Toracodorsal" },
+            ],
+            relations: [
+              "Em hiperabdução o feixe axilar angula sob o peitoral menor e o coracoide (mecanismo da síndrome de hiperabdução)",
+              "A escápula roda para cima: o ângulo inferior e o pedículo toracodorsal deslocam-se lateral e anteriormente",
+              "Os nervos torácico longo e toracodorsal permanecem nos seus planos (serrátil e face profunda do GD)",
+            ],
           },
           {
             id: "vascular",
@@ -401,6 +447,27 @@ export const packGroups: PackGroup[] = [
               { structure: "thoracodorsal-nerve", near: "thoracodorsalNerveDistal", text: "N. toracodorsal" },
             ],
             relations: ["Hilo na face profunda, ~8–10 cm abaixo da axila e 2–3 cm medial à borda anterior", "O ramo do serrátil permite fluxo retrógrado se o tronco for ligado"],
+          },
+          {
+            id: "decubito-lateral",
+            title: "Decúbito lateral (braço fletido 90°)",
+            description: "Posição de coleta do retalho: ombro fletido a 90° sobre o apoio. A escápula roda e se protrai; o grande dorsal e o redondo maior alongam-se.",
+            structures: ["latissimus-dorsi", "teres-major", "trapezius", "rhomboids", "serratus-anterior", "infraspinatus", "teres-minor", "deltoid", "triceps", "axilla", "thoracodorsal-vessels", "thoracodorsal-nerve", "subscapular-vessels", ...thoracicCage],
+            focus: ["latissimus-dorsi", "teres-major"],
+            orientation: "posterolateral",
+            anchor: "latissimusCenter",
+            pose: "flexao-90",
+            labels: [
+              { structure: "latissimus-dorsi", near: "latissimusAnteriorBorder.0", text: "Borda anterior do GD" },
+              { structure: "latissimus-dorsi", near: "scapulaInferiorAngle", text: "Sobre a ponta da escápula" },
+              { structure: "teres-major", near: "scapulaInferiorAngle", text: "Redondo maior" },
+              { structure: "trapezius", near: "trapeziusInferiorBorder", text: "Trapézio" },
+            ],
+            relations: [
+              "Com o ombro fletido, o ângulo inferior da escápula desliza lateral e anteriormente sobre o tórax",
+              "GD e redondo maior (adutores/extensores) alongam-se: a borda anterior do GD fica mais evidente",
+              "O tendão do GD gira com o úmero em torno do redondo maior até o sulco intertubercular",
+            ],
           },
           {
             id: "plano",

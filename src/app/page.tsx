@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bone, RotateCcw, Ruler, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
+import { Bone, PersonStanding, RotateCcw, Ruler, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
 import { AnatomyViewer, type FocusRequest, type SectionReport } from "@/components/AnatomyViewer";
 import { AboutSheet } from "@/components/mobile/AboutSheet";
 import type { SheetSnap } from "@/components/mobile/BottomSheet";
@@ -18,6 +18,8 @@ import { LandmarkDetails } from "@/components/tools/LandmarkDetails";
 import { StructureDetails } from "@/components/tools/StructureDetails";
 import { FloatingPrompt, StudyPanel, type QuizState } from "@/components/tools/StudyPanel";
 import type { SelectionChip } from "@/components/mobile/SelectionBar";
+import { PosePicker } from "@/components/PosePicker";
+import { armPoseById } from "@/lib/armPoses";
 import { mm, resolvePoint } from "@/components/viewer/shared";
 import { ViewerToolbar } from "@/components/ViewerToolbar";
 import { allPacks, type PackView } from "@/data/packs";
@@ -84,6 +86,9 @@ export default function Home() {
   const [labelMode, setLabelMode] = useState<LabelMode>("names");
   const [activePin, setActivePin] = useState<string | null>(null);
   const [neuro, setNeuro] = useState(false);
+  const [armPose, setArmPose] = useState<string | null>(null);
+  const [poseSettled, setPoseSettled] = useState<string | null>(null);
+  const [posePicker, setPosePicker] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [study, setStudy] = useState<StudyState>(defaultStudy);
@@ -136,6 +141,7 @@ export default function Home() {
     setNeuro(false);
     setStudy((current) => ({ ...current, proximity: null }));
     setRulerPoints([]);
+    setArmPose(view.pose ?? null);
     history.replaceState(null, "", `#${viewKey}`);
   }, [view, viewKey]);
 
@@ -201,7 +207,7 @@ export default function Home() {
       return;
     }
     if (adjusting) {
-      if (info) review.update(adjusting, { status: "ajustado", point: info.point });
+      if (info) review.update(adjusting, { status: "ajustado", point: info.restPoint ?? info.point });
       setAdjusting(null);
       return;
     }
@@ -219,7 +225,7 @@ export default function Home() {
       loadLayerBuffers()
         .then((buffers) => {
           const lookup = regionLookup(structure, buffers);
-          const label = lookup?.labelAt(...info.point);
+          const label = lookup?.labelAt(...(info.restPoint ?? info.point));
           const part = lookup?.parts.find((item) => item.labelIndex === label);
           if (part) setSelectedPart(part.id);
         })
@@ -229,7 +235,7 @@ export default function Home() {
   const pickLandmark = (id: string, info?: PickInfo) => {
     if (quiz?.targetId && !quiz.guess) return;
     if (adjusting) {
-      if (info) review.update(adjusting, { status: "ajustado", point: info.point });
+      if (info) review.update(adjusting, { status: "ajustado", point: info.restPoint ?? info.point });
       setAdjusting(null);
       return;
     }
@@ -275,6 +281,19 @@ export default function Home() {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+  const handlePoseSettled = useCallback((settled: string | null) => {
+    setPoseSettled(settled);
+    // a position that could not be loaded (offline before its first download) leaves the arm at rest
+    if (!settled) setArmPose(null);
+  }, []);
+  /** arm position: the static trunk skin does not follow the movement, so it is hidden in surgical positions */
+  const choosePose = (id: string | null) => {
+    setArmPose(id);
+    setRulerPoints([]);
+    setQuiz(null);
+    // back to the anatomical position: the skin returns if the current view shows it
+    setVisibility((current) => ({ ...current, skin: id ? false : view.structures.includes("skin") }));
   };
   const rulerMm = rulerPoints.length === 2 ? Math.hypot(rulerPoints[0][0] - rulerPoints[1][0], rulerPoints[0][1] - rulerPoints[1][1], rulerPoints[0][2] - rulerPoints[1][2]) / mm : null;
   const quizTarget = quiz?.targetId ? landmarkById.get(quiz.targetId) : undefined;
@@ -443,6 +462,8 @@ export default function Home() {
         quiz={quizTarget ? { target: quizTarget.point, name: quizTarget.name, guess: quiz?.guess ?? null } : null}
         onPickLandmark={pickLandmark}
         onPickAttachment={pickAttachment}
+        pose={armPose}
+        onPoseSettled={handlePoseSettled}
       />
     );
 
@@ -457,6 +478,7 @@ export default function Home() {
       { id: "skin", label: "Pele", icon: Shirt, active: Boolean(visibility.skin), onPress: () => toggleStructure("skin") },
       { id: "neuro", label: "Vasos", icon: Waypoints, active: neuro, onPress: toggleNeuro },
       { id: "focus", label: "Foco", icon: ScanEye, active: viewMode === "surgical", onPress: () => setViewMode((mode) => (mode === "surgical" ? "anatomical" : "surgical")) },
+      { id: "arm", label: "Braço", icon: PersonStanding, active: posePicker || Boolean(armPose), onPress: () => setPosePicker((open) => !open) },
       { id: "reset", label: "Centro", icon: RotateCcw, onPress: () => setResetSignal((value) => value + 1) },
     ];
     return (
@@ -481,6 +503,24 @@ export default function Home() {
         onLibrary={() => setLibraryOpen(true)}
         onAbout={() => setAboutOpen(true)}
         renderViewer={(insets) => viewer(true, insets)}
+        poseLabel={poseSettled && poseSettled !== view.pose ? armPoseById.get(poseSettled)?.short : null}
+        renderFloating={
+          posePicker
+            ? (bottom) => (
+                <PosePicker
+                  variant="floating"
+                  bottom={bottom}
+                  pose={armPose}
+                  settled={poseSettled}
+                  onPose={(id) => {
+                    choosePose(id);
+                    setSnap("peek");
+                  }}
+                  onClose={() => setPosePicker(false)}
+                />
+              )
+            : undefined
+        }
         content={toolContent(tab)}
         overlays={
           <>
@@ -535,6 +575,7 @@ export default function Home() {
             onShowVessels={toggleNeuro}
             onSetViewMode={setViewMode}
           />
+          <PosePicker variant="inline" pose={armPose} settled={poseSettled} onPose={choosePose} />
           {viewer(false)}
           <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
             <div className="-mx-1 mb-3 flex gap-1 overflow-x-auto px-1" role="tablist">
