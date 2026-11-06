@@ -45,12 +45,17 @@ export function sectionPlane(axis: SectionAxis, position: number, flip: boolean)
   return new THREE.Plane().setFromNormalAndCoplanarPoint(normal, point);
 }
 
-type Decoded = { positions: Float32Array; index: ArrayLike<number>; box: THREE.Box3 };
+type Decoded = { positions: Float32Array; index: ArrayLike<number>; box: THREE.Box3; signature: string };
 const decodedCache = new WeakMap<THREE.BufferGeometry, Decoded>();
 
-function decode(geometry: THREE.BufferGeometry): Decoded {
+/** Vertex positions (local space) including the arm-pose morph targets currently applied to the mesh. */
+function decode(mesh: THREE.Mesh): Decoded {
+  const geometry = mesh.geometry;
+  const morphs = geometry.morphAttributes.position;
+  const influences = mesh.morphTargetInfluences;
+  const signature = morphs?.length && influences?.some((value) => value !== 0) ? influences.map((value) => value.toFixed(4)).join(",") : "";
   const cached = decodedCache.get(geometry);
-  if (cached) return cached;
+  if (cached && cached.signature === signature) return cached;
   const attribute = geometry.attributes.position;
   const positions = new Float32Array(attribute.count * 3);
   const v = new THREE.Vector3();
@@ -60,9 +65,18 @@ function decode(geometry: THREE.BufferGeometry): Decoded {
     positions[i * 3 + 1] = v.y;
     positions[i * 3 + 2] = v.z;
   }
+  if (signature && morphs && influences) {
+    morphs.forEach((morph, k) => {
+      const weight = influences[k];
+      if (!weight) return;
+      const array = morph.array as Float32Array;
+      for (let i = 0; i < positions.length; i++) positions[i] += array[i] * weight;
+    });
+  }
   const index = geometry.index ? geometry.index.array : Uint32Array.from({ length: attribute.count }, (_, i) => i);
-  geometry.computeBoundingBox();
-  const decoded = { positions, index, box: geometry.boundingBox!.clone() };
+  const box = new THREE.Box3();
+  for (let i = 0; i < positions.length; i += 3) box.expandByPoint(v.set(positions[i], positions[i + 1], positions[i + 2]));
+  const decoded = { positions, index, box, signature };
   decodedCache.set(geometry, decoded);
   return decoded;
 }
@@ -78,7 +92,7 @@ export function computeSection(targets: SliceTarget[], axis: SectionAxis, plane:
   const box = new THREE.Box3();
 
   for (const target of targets) {
-    const { positions, index, box: localBox } = decode(target.mesh.geometry);
+    const { positions, index, box: localBox } = decode(target.mesh);
     box.copy(localBox).applyMatrix4(target.toModel);
     if (!plane.intersectsBox(box)) continue;
     inverse.copy(target.toModel).invert();

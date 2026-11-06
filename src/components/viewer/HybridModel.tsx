@@ -5,6 +5,7 @@ import { useGLTF } from "@react-three/drei";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
+import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
 import type { PickInfo, ViewMode } from "@/lib/viewerTypes";
@@ -15,7 +16,39 @@ export type ModelHandle = {
   /** meshes currently clipped by the section plane (for caps / 2D view) */
   sliceTargets: () => SliceTarget[];
   root: THREE.Object3D;
+  /** loads an arm pose and attaches its keyframes as morph targets (null removes them) */
+  preparePose: (poseId: string | null) => Promise<void>;
+  /** 0 = anatomical position, 1 = the prepared pose (piecewise between keyframes) */
+  setPoseFraction: (t: number) => void;
+  /** rebuilds anchors (snapper) and section targets after the geometry moved */
+  refresh: () => void;
 };
+
+/** Area-weighted vertex normals of an indexed triangle list (local space). */
+function vertexNormals(positions: Float32Array, index: ArrayLike<number> | null, count: number) {
+  const normals = new Float32Array(count * 3);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+  const total = index ? index.length : count;
+  for (let f = 0; f < total; f += 3) {
+    const i0 = index ? index[f] : f, i1 = index ? index[f + 1] : f + 1, i2 = index ? index[f + 2] : f + 2;
+    a.fromArray(positions, i0 * 3);
+    b.fromArray(positions, i1 * 3);
+    c.fromArray(positions, i2 * 3);
+    n.subVectors(c, b).cross(a.sub(b));
+    for (const i of [i0, i1, i2]) {
+      normals[i * 3] += n.x;
+      normals[i * 3 + 1] += n.y;
+      normals[i * 3 + 2] += n.z;
+    }
+  }
+  for (let i = 0; i < count; i++) {
+    const l = Math.hypot(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]) || 1;
+    normals[i * 3] /= l;
+    normals[i * 3 + 1] /= l;
+    normals[i * 3 + 2] /= l;
+  }
+  return normals;
+}
 
 export type PlaneSet = {
   /** plane applied to every visible mesh (or superficial only) */
@@ -103,6 +136,109 @@ export function HybridModel(props: Props) {
   const original = useRef(new Map<THREE.Object3D, THREE.Matrix4>());
   const pivots = useRef<Map<string, THREE.Vector3> | null>(null);
   const centroids = useRef(new Map<string, THREE.Vector3>());
+  const pose = useRef<{ id: string | null; meshes: THREE.Mesh[]; request: number }>({ id: null, meshes: [], request: 0 });
+  const meshesByName = useMemo(() => {
+    const map = new Map<string, THREE.Mesh[]>();
+    scene.traverse((object) => {
+      if (!isMesh(object)) return;
+      const record = recordFor(object);
+      if (!record) return;
+      const list = map.get(record.name);
+      if (list) list.push(object);
+      else map.set(record.name, [object]);
+    });
+    return map;
+  }, [scene]);
+
+  // ---- arm poses: morph targets computed offline (build_poses.py) ---------------------------------------
+  const clearPose = () => {
+    for (const mesh of pose.current.meshes) {
+      delete mesh.geometry.morphAttributes.position;
+      delete mesh.geometry.morphAttributes.normal;
+      mesh.morphTargetInfluences = undefined;
+      mesh.morphTargetDictionary = undefined;
+      mesh.geometry.computeBoundingBox();
+      mesh.geometry.computeBoundingSphere();
+      // three keeps one morph texture per geometry and rebuilds it only when the target count changes:
+      // disposing drops it (and the GPU buffers, re-uploaded on the next frame)
+      mesh.geometry.dispose();
+    }
+    pose.current.id = null;
+    pose.current.meshes = [];
+  };
+  const preparePose = async (poseId: string | null) => {
+    // the latest request wins: a slower download for an earlier choice never overwrites it
+    const request = ++pose.current.request;
+    if (pose.current.id === poseId) return;
+    if (!poseId) {
+      clearPose();
+      invalidate();
+      return;
+    }
+    const deltas = await loadPose(variantOf(modelPath), poseId);
+    if (request !== pose.current.request) return;
+    clearPose();
+    scene.updateMatrixWorld(true);
+    const toModel = scene.matrixWorld.clone().invert();
+    const unit = deltaUnit(mm);
+    const v = new THREE.Vector3();
+    const meshes: THREE.Mesh[] = [];
+    for (const entry of deltas) {
+      for (const mesh of meshesByName.get(entry.name) ?? []) {
+        const geometry = mesh.geometry;
+        const attribute = geometry.attributes.position;
+        const count = attribute.count;
+        // model-space deltas to the mesh's local (possibly quantised) space
+        const linear = new THREE.Matrix3().setFromMatrix4(toModel.clone().multiply(mesh.matrixWorld)).invert();
+        const base = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) v.fromBufferAttribute(attribute, i).toArray(base, i * 3);
+        const index = geometry.index ? geometry.index.array : null;
+        const restNormals = vertexNormals(base, index, count);
+        const positions: THREE.BufferAttribute[] = [];
+        const normals: THREE.BufferAttribute[] = [];
+        for (const frame of entry.deltas) {
+          const delta = new Float32Array(count * 3);
+          for (let j = 0; j < entry.indices.length; j++) {
+            v.set(frame[j * 3], frame[j * 3 + 1], frame[j * 3 + 2]).multiplyScalar(unit).applyMatrix3(linear);
+            v.toArray(delta, entry.indices[j] * 3);
+          }
+          const posed = base.slice();
+          for (let i = 0; i < posed.length; i++) posed[i] += delta[i];
+          const posedNormals = vertexNormals(posed, index, count);
+          for (let i = 0; i < posedNormals.length; i++) posedNormals[i] -= restNormals[i];
+          positions.push(new THREE.BufferAttribute(delta, 3));
+          normals.push(new THREE.BufferAttribute(posedNormals, 3));
+        }
+        geometry.morphAttributes.position = positions;
+        geometry.morphAttributes.normal = normals;
+        geometry.morphTargetsRelative = true;
+        mesh.updateMorphTargets();
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        geometry.dispose(); // see clearPose: forces a fresh morph texture for this pose
+        meshes.push(mesh);
+      }
+    }
+    pose.current.id = poseId;
+    pose.current.meshes = meshes;
+  };
+  const setPoseFraction = (t: number) => {
+    const influences = influencesAt(t);
+    for (const mesh of pose.current.meshes) {
+      const target = mesh.morphTargetInfluences;
+      if (!target) continue;
+      for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
+    }
+    invalidate();
+  };
+  const handle = (): ModelHandle => ({
+    snap: buildSnapper(scene),
+    sliceTargets: () => sliceTargets(scene, visible, planes),
+    root: scene,
+    preparePose,
+    setPoseFraction,
+    refresh: () => onReady(handle()),
+  });
 
   // capture original node matrices and rest-pose pivots once
   useEffect(() => {
@@ -188,14 +324,14 @@ export function HybridModel(props: Props) {
       node.matrixWorldNeedsUpdate = true;
     });
     scene.updateMatrixWorld(true);
-    onReady({ snap: buildSnapper(scene), sliceTargets: () => sliceTargets(scene, visible, planes), root: scene });
+    onReady(handle());
     invalidate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manipulation, retracted, scene]);
 
   // expose updated slice targets when visibility / planes change
   useEffect(() => {
-    onReady({ snap: buildSnapper(scene), sliceTargets: () => sliceTargets(scene, visible, planes), root: scene });
+    onReady(handle());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, planes.cut, planes.cutScope]);
 
@@ -272,7 +408,20 @@ export function HybridModel(props: Props) {
       return;
     }
     const local = scene.worldToLocal(hit.point.clone());
-    onPick(record.structure, { meshName: record.name, point: [local.x, local.y, local.z] });
+    // the same surface point in the anatomical position (for region lookups and reviewed landmarks)
+    let rest: [number, number, number] = [local.x, local.y, local.z];
+    const mesh = hit.object as THREE.Mesh;
+    if (hit.face && hit.barycoord && mesh.morphTargetInfluences?.some((value) => value !== 0)) {
+      const attribute = mesh.geometry.attributes.position;
+      const p = new THREE.Vector3();
+      const point = new THREE.Vector3();
+      ([hit.face.a, hit.face.b, hit.face.c] as const).forEach((vertex, k) => point.addScaledVector(p.fromBufferAttribute(attribute, vertex), hit.barycoord!.getComponent(k)));
+      scene.updateMatrixWorld();
+      const toModel = scene.matrixWorld.clone().invert().multiply(mesh.matrixWorld);
+      point.applyMatrix4(toModel);
+      rest = [point.x, point.y, point.z];
+    }
+    onPick(record.structure, { meshName: record.name, point: [local.x, local.y, local.z], restPoint: rest });
   }
 
   return <primitive object={scene} onClick={handleClick} />;

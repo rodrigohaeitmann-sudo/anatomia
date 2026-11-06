@@ -24,7 +24,7 @@ Atlas anatômico 3D interativo para mastologia, organizado em packs de visualiza
   - Parede torácica e ombro.
   Cada vista define as estruturas, o enquadramento, rótulos e zonas ancorados em pontos reais das estruturas, e opcionalmente corte, espaço ou manipulação. Link direto: `#pack/vista`.
 - Dissecção livre: profundidade por camadas, janelas de pele, estruturas rebatidas e transpostas (transformações rígidas), vista explodida e espaços cirúrgicos com paredes destacadas.
-- Viabilidade de movimento do membro superior: `docs/movimento-membro-superior.md`.
+- Posição do membro superior (botão **Braço** e vistas com posição nos packs): anatômica, abdução 90° na braçadeira, flexão 90° em decúbito lateral e mão na nuca. Músculos, vasos e nervos são deformados pela posição (pesos anatômicos, quatérnios duais, fibras esticadas entre origem e inserção, volume muscular, deslizamento sobre o tórax), com animação; marcos, fixações, fibras, rótulos e corte acompanham. Plano, método e limitações: `docs/movimento-membro-superior.md`.
 
 ## Desenvolvimento
 

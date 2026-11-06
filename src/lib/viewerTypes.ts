@@ -65,4 +65,5 @@ export type StudyState = {
 
 export const defaultStudy: StudyState = { landmarks: false, attachments: "selected", fibres: "off", markings: false, zones: [], proximity: null, ruler: false };
 
-export type PickInfo = { meshName: string; point: [number, number, number] };
+/** point: tapped surface point as shown (posed); restPoint: the same point in the anatomical position */
+export type PickInfo = { meshName: string; point: [number, number, number]; restPoint?: [number, number, number] };

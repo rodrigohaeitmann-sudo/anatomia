@@ -43,6 +43,10 @@ type Props = {
   renderViewer: (insets: { top: number; bottom: number; right: number }) => React.ReactNode;
   content: React.ReactNode;
   overlays: React.ReactNode;
+  /** panels floating just above the bottom sheet (e.g. the arm-position picker); replaces the selection chip */
+  renderFloating?: (bottom: number) => React.ReactNode;
+  /** short label of the current arm position, shown in the top bar */
+  poseLabel?: string | null;
 };
 
 /**
@@ -51,7 +55,7 @@ type Props = {
  * never dropped, only moved: details open on demand instead of covering the model.
  */
 export function MobileShell(props: Props) {
-  const { groupTitle, groupColor, pack, viewIndex, onViewIndex, tab, onTab, snap, onSnap, rail, selection, onOpenDetails, onIsolate, onDeselect, onLibrary, onAbout, renderViewer, content, overlays } = props;
+  const { groupTitle, groupColor, pack, viewIndex, onViewIndex, tab, onTab, snap, onSnap, rail, selection, onOpenDetails, onIsolate, onDeselect, onLibrary, onAbout, renderViewer, content, overlays, renderFloating, poseLabel } = props;
   const selected = selection !== null;
   const topRef = useRef<HTMLElement>(null);
   const [topHeight, setTopHeight] = useState(64);
@@ -126,10 +130,10 @@ export function MobileShell(props: Props) {
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950">
       {renderViewer({ top: topHeight, bottom: cover, right: snap === "full" ? 0 : 72 })}
-      <TopBar ref={topRef} group={groupTitle} groupColor={groupColor} pack={pack.title} view={`Vista ${viewIndex + 1}/${pack.views.length} · ${view.title}`} onLibrary={onLibrary} onAbout={onAbout} />
+      <TopBar ref={topRef} group={groupTitle} groupColor={groupColor} pack={pack.title} view={`Vista ${viewIndex + 1}/${pack.views.length} · ${view.title}${poseLabel ? ` · ${poseLabel}` : ""}`} onLibrary={onLibrary} onAbout={onAbout} />
       {snap !== "full" && <ToolRail items={rail} top={topHeight + 10} maxHeight={Math.max(120, viewportHeight - topHeight - cover - 24)} />}
       {!selected && snap === "peek" && viewportHeight > 500 && <CoachMark bottom={cover + 10} />}
-      {showSelection && selection && <SelectionBar chip={selection} bottom={cover + 10} onDetails={onOpenDetails} onIsolate={onIsolate} onClose={onDeselect} />}
+      {renderFloating?.(cover + 10) ?? (showSelection && selection && <SelectionBar chip={selection} bottom={cover + 10} onDetails={onOpenDetails} onIsolate={onIsolate} onClose={onDeselect} />)}
       <BottomSheet snap={snap} onSnap={onSnap} header={header} topOffset={topHeight} onCoverChange={setCover}>
         {content}
       </BottomSheet>

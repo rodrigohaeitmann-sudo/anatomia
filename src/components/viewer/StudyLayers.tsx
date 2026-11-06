@@ -17,6 +17,7 @@ import {
   type Marking,
   type Zone,
 } from "@/lib/anatomyLayers";
+import { attachmentBody, deltaUnit, fibreRange, loadFibreOffsets } from "@/lib/armPoses";
 import { isMesh, mm, recordFor } from "./shared";
 
 // Overlays for the study layers. Everything is positioned in model space (inside the rotated group),
@@ -45,6 +46,8 @@ function Tag({ position, children, tone = "slate" }: { position: THREE.Vector3Tu
     </Html>
   );
 }
+
+const identityMatrix = new THREE.Matrix4();
 
 // ---- bony landmarks -------------------------------------------------------------------------------
 /** Dot colours: palpable landmarks amber, deep ones cyan, ribs violet, hila orange; review status wins. */
@@ -113,7 +116,7 @@ export function LandmarkDots({
 }
 
 // ---- attachment areas -----------------------------------------------------------------------------
-export function AttachmentAreas({ items, buffers, planes, onPick }: { items: LayerAttachment[]; buffers: LayerBuffers | null; planes: THREE.Plane[]; onPick: (item: LayerAttachment) => void }) {
+export function AttachmentAreas({ items, buffers, planes, mats = null, onPick }: { items: LayerAttachment[]; buffers: LayerBuffers | null; planes: THREE.Plane[]; mats?: THREE.Matrix4[] | null; onPick: (item: LayerAttachment) => void }) {
   const materials = useMemo(() => {
     const make = (color: string) => new THREE.MeshStandardMaterial({ color, roughness: 0.55, emissive: new THREE.Color(color).multiplyScalar(0.18), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -6, side: THREE.DoubleSide });
     return { origin: make(attachmentColors.origin), insertion: make(attachmentColors.insertion), originComputed: make(attachmentColors.originComputed), insertionComputed: make(attachmentColors.insertionComputed) };
@@ -130,18 +133,20 @@ export function AttachmentAreas({ items, buffers, planes, onPick }: { items: Lay
       {items.map((item) => {
         const computed = item.source !== "Z-Anatomy";
         const material = item.kind === "origin" ? (computed ? materials.originComputed : materials.origin) : computed ? materials.insertionComputed : materials.insertion;
+        // areas lie on bones: in an arm pose they move rigidly with their bone
         return (
-          <mesh
-            key={item.id}
-            geometry={geometries.get(item.id)}
-            material={material}
-            renderOrder={1}
-            onClick={(event: ThreeEvent<MouseEvent>) => {
-              if (event.delta > 6) return;
-              event.stopPropagation();
-              onPick(item);
-            }}
-          />
+          <group key={item.id} matrixAutoUpdate={false} matrix={mats ? mats[attachmentBody(item.bone)] : identityMatrix}>
+            <mesh
+              geometry={geometries.get(item.id)}
+              material={material}
+              renderOrder={1}
+              onClick={(event: ThreeEvent<MouseEvent>) => {
+                if (event.delta > 6) return;
+                event.stopPropagation();
+                onPick(item);
+              }}
+            />
+          </group>
         );
       })}
     </group>
@@ -149,17 +154,48 @@ export function AttachmentAreas({ items, buffers, planes, onPick }: { items: Lay
 }
 
 // ---- fibre directions -----------------------------------------------------------------------------
-export function FibreLines({ items, buffers }: { items: LayerFibre[]; buffers: LayerBuffers | null }) {
+export function FibreLines({ items, buffers, pose = null }: { items: LayerFibre[]; buffers: LayerBuffers | null; pose?: string | null }) {
+  // in an arm pose the fibres ride on the deformed muscles (offsets computed offline from the pose deltas)
+  const [offsets, setOffsets] = useState<{ pose: string; data: Int16Array } | null>(null);
+  useEffect(() => {
+    if (!pose || offsets?.pose === pose) return;
+    let alive = true;
+    loadFibreOffsets(pose)
+      .then((data) => alive && setOffsets({ pose, data }))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [pose, offsets]);
   // screen-space wide lines (LineSegments2) stay legible on phones; one draw call per muscle
   const sets = useMemo(() => {
     if (!buffers) return [];
+    const shift = pose ? (offsets?.pose === pose ? offsets.data : null) : null;
+    if (pose && !shift) return [];
+    const unit = deltaUnit(mm);
     return items.map((item) => {
-      const array = fibreGeometry(item, buffers).getAttribute("position").array as Float32Array;
       const points: [number, number, number][] = [];
-      for (let i = 0; i < array.length; i += 3) points.push([array[i], array[i + 1], array[i + 2]]);
+      if (!shift) {
+        const array = fibreGeometry(item, buffers).getAttribute("position").array as Float32Array;
+        for (let i = 0; i < array.length; i += 3) points.push([array[i], array[i + 1], array[i + 2]]);
+        return { id: item.id, points };
+      }
+      // segment endpoints in the order fibreGeometry emits them (each polyline as consecutive pairs)
+      const [p0] = item.positions;
+      const [c0, cn] = item.counts;
+      const at = (index: number): [number, number, number] => {
+        const k = (index - fibreRange.first) * 3;
+        return [buffers.positions[index * 3] + shift[k] * unit, buffers.positions[index * 3 + 1] + shift[k + 1] * unit, buffers.positions[index * 3 + 2] + shift[k + 2] * unit];
+      };
+      let cursor = p0;
+      for (let k = 0; k < cn; k++) {
+        const count = buffers.lineCounts[c0 + k];
+        for (let j = 1; j < count; j++) points.push(at(cursor + j - 1), at(cursor + j));
+        cursor += count;
+      }
       return { id: item.id, points };
     });
-  }, [items, buffers]);
+  }, [items, buffers, pose, offsets]);
   return (
     <group>
       {sets.map((entry) => (
@@ -205,7 +241,11 @@ export function RegionHighlight({ root, structure, labelIndex, buffers }: { root
       overlay.setAttribute("position", position);
       if (geometry.attributes.normal) overlay.setAttribute("normal", geometry.attributes.normal);
       overlay.setIndex(tris);
+      // follow the arm pose: share the morph targets and the parent's influences array
+      overlay.morphAttributes = geometry.morphAttributes;
+      overlay.morphTargetsRelative = geometry.morphTargetsRelative;
       const mesh = new THREE.Mesh(overlay, material);
+      if (object.morphTargetInfluences) mesh.morphTargetInfluences = object.morphTargetInfluences;
       mesh.renderOrder = 5;
       mesh.raycast = () => undefined;
       object.add(mesh);
