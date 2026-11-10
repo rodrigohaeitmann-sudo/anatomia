@@ -8,6 +8,7 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 - Fonte: https://github.com/hubmapconsortium/ccf-3d-reference-object-library (`VH_Female/v1.3`).
 - Licença: Creative Commons Attribution 4.0 International (CC BY 4.0).
 - Modificações: transformação rígida para o referencial do BodyParts3D, recorte da pele ao tronco, compressão em profundidade da base posterior da mama sobre a parede torácica, redução de malha da gordura mamária contralateral (20%), reflexão global e compressão meshopt.
+- No aplicativo, a pele e as mamas também são exibidas deformadas (ptose graus I–III, `docs/plano-mamoplastia.md`). A deformação é calculada na exibição; o arquivo distribuído não muda.
 
 ## BodyParts3D 4.3 – The Database Center for Life Science (DBCLS)
 

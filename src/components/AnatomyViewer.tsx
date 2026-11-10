@@ -10,9 +10,11 @@ import { surgicalSpaces } from "@/data/surgicalSpaces";
 import { hybridTorsoModel, modelLandmarks as L, type Landmark } from "@/lib/modelConfig";
 import { computeSection, sectionPlane, type SectionAxis, type SectionResult } from "@/lib/sectioning";
 import { defaultStudy, hiddenByLayer, type CutState, type DissectionState, type PickInfo, type StructureVisibility, type StudyState, type ViewMode } from "@/lib/viewerTypes";
-import { layerAttachments, layerFibres, layerLandmarks, partById, perforatorZones, regionByStructure, skinMarkings, type LayerAttachment } from "@/lib/anatomyLayers";
+import { layerAttachments, layerFibres, layerLandmarks, partById, perforatorZones, regionByStructure, skinMarkings, type LayerAttachment, type Zone } from "@/lib/anatomyLayers";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { boneMatrices, posedLandmark } from "@/lib/armPoses";
+import type { BreastSide } from "@/lib/breastMap";
+import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
@@ -62,9 +64,15 @@ type AnatomyViewerProps = {
   /** upper-limb pose id (build_poses.py) or null for the anatomical position; changes are animated */
   pose?: string | null;
   onPoseSettled?: (pose: string | null) => void;
+  /** breast state id (src/data/breastModel.json: ptosis grades) or null for the breast as scanned; changes are animated */
+  breast?: string | null;
+  onBreastSettled?: (state: string | null) => void;
 };
 
 const POSE_MS = 950;
+/** animation time per breast level (one ptosis grade), and its ceiling */
+const BREAST_MS = 700;
+const BREAST_MAX_MS = 1500;
 const emptyAnchors = new Map<string, Landmark>();
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -77,6 +85,8 @@ const orientations: Record<ViewOrientation, { yaw: number; offset: Landmark }> =
   anterior: { yaw: -0.15, offset: [-3.6, 2.05, 4.2] },
   anterolateral: { yaw: 0.08, offset: [-3.6, 2.05, 4.2] },
   lateral: { yaw: 2.23, offset: [2.9, 1.7, 3.7] },
+  // true profile at eye level (the nipple is read against the inframammary fold: no looking down on it)
+  profile: { yaw: 2.23, offset: [3.0, 0.15, 3.83] },
   axillary: { yaw: 2.21, offset: [2.2, 1.7, 3.0] },
   posterior: { yaw: -2.47, offset: [4.1, 2.2, 5.2] },
   posterolateral: { yaw: 3.03, offset: [4.1, 2.2, 5.2] },
@@ -234,7 +244,7 @@ function modelExtent(root: THREE.Object3D) {
 
 export function AnatomyViewer(props: AnatomyViewerProps) {
   const { view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets } = props;
-  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled } = props;
+  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled, breast = null, onBreastSettled } = props;
   const mobile = layout === "mobile";
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
@@ -312,13 +322,20 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   }, [dissection.manipulations, dissection.retracted]);
   // ---- arm pose: animate the morph targets, then let overlays follow the bones ----------------------
   const [settledPose, setSettledPose] = useState<string | null>(null);
-  const [animating, setAnimating] = useState(false);
-  const poseRun = useRef<{ id: string | null; t: number; token: number }>({ id: null, t: 0, token: 0 });
+  const [poseAnimating, setAnimating] = useState(false);
+  const poseRun = useRef<{ id: string | null; t: number; token: number; root: THREE.Object3D | null }>({ id: null, t: 0, token: 0, root: null });
   const handleRef = useRef<ModelHandle | null>(null);
   useEffect(() => {
     if (!handle) return;
     handleRef.current = handle;
     const run = poseRun.current;
+    // a model mounted anew (camera reset) is back in the anatomical position: the pose is put on again at once
+    const fresh = run.root !== handle.root;
+    if (fresh) {
+      run.root = handle.root;
+      run.id = null;
+      run.t = 0;
+    }
     if (run.id === pose && run.t === (pose ? 1 : 0)) return;
     // a new run supersedes any previous one (which stops at its next frame); it resumes from run.t
     const token = ++run.token;
@@ -328,7 +345,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         const start = performance.now();
         const step = (now: number) => {
           if (!live()) return resolve();
-          const k = Math.min(1, (now - start) / (POSE_MS * Math.abs(to - from) || 1));
+          const k = fresh ? 1 : Math.min(1, (now - start) / (POSE_MS * Math.abs(to - from) || 1));
           run.t = from + (to - from) * ease(k);
           handleRef.current?.setPoseFraction(run.t);
           if (k < 1) requestAnimationFrame(step);
@@ -370,14 +387,80 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     },
     [],
   );
+  // ---- breast state: animate the morph level, then let overlays follow the deformed skin ------------------
+  const [settledBreast, setSettledBreast] = useState(0);
+  const [breastAnimating, setBreastAnimating] = useState(false);
+  const breastRun = useRef<{ level: number; token: number; root: THREE.Object3D | null }>({ level: 0, token: 0, root: null });
+  useEffect(() => {
+    if (!handle) return;
+    handleRef.current = handle;
+    const run = breastRun.current;
+    const target = breastLevel(breast);
+    const fresh = run.root !== handle.root;
+    if (fresh) {
+      run.root = handle.root;
+      run.level = 0;
+    }
+    if (run.level === target) return;
+    const token = ++run.token;
+    const live = () => run.token === token;
+    (async () => {
+      setBreastAnimating(true);
+      try {
+        await handle.prepareBreast();
+        if (!live()) return;
+        const from = run.level;
+        const duration = fresh ? 0 : Math.min(BREAST_MAX_MS, BREAST_MS * Math.abs(target - from));
+        await new Promise<void>((resolve) => {
+          const start = performance.now();
+          const step = (now: number) => {
+            if (!live()) return resolve();
+            const k = duration ? Math.min(1, (now - start) / duration) : 1;
+            run.level = from + (target - from) * ease(k);
+            handleRef.current?.setBreastLevel(run.level);
+            if (k < 1) requestAnimationFrame(step);
+            else resolve();
+          };
+          requestAnimationFrame(step);
+        });
+      } catch {
+        // chart unavailable (offline before the first download): the breast stays as it is
+      }
+      if (!live()) return;
+      setBreastAnimating(false);
+      setSettledBreast(run.level);
+      onBreastSettled?.(breastStateAt(run.level)?.id ?? null);
+      handleRef.current?.refresh();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breast, handle]);
+  useEffect(
+    () => () => {
+      breastRun.current.token += 1;
+    },
+    [],
+  );
+  const animating = poseAnimating || breastAnimating;
+  // the chart itself, to carry loose overlay points (skin markings, perforator zones) with the breast
+  const [breastSides, setBreastSides] = useState<Record<BreastSideId, BreastSide> | null>(null);
+  useEffect(() => {
+    if (settledBreast <= 0 || breastSides) return;
+    let alive = true;
+    loadBreastSides()
+      .then((sides) => alive && setBreastSides(sides))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [settledBreast, breastSides]);
   const mats = useMemo(() => boneMatrices(settledPose, 1), [settledPose]);
   const anchorShift = useMemo(() => {
     const shift = new THREE.Vector3();
-    if (!settledPose || animating || focusAnchor || !handle) return shift;
+    if ((!settledPose && settledBreast <= 0) || animating || focusAnchor || !handle || view.follow === false) return shift;
     const moved = handle.snap.follow(anchor);
     return shift.set(moved[0] - anchor[0], moved[1] - anchor[1], moved[2] - anchor[2]).applyEuler(frame.rotation);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settledPose, animating, Boolean(focusAnchor), handle, anchor[0], anchor[1], anchor[2], frame.rotation]);
+  }, [settledPose, settledBreast, animating, Boolean(focusAnchor), handle, anchor[0], anchor[1], anchor[2], frame.rotation, view.follow]);
 
   const landmarkItems = useMemo(() => {
     if (animating) return [];
@@ -416,8 +499,22 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     return names.length ? new Set(names) : null;
   }, [selectedPart]);
   const translucent = useMemo(() => new Set(attachmentFocus ? [attachmentFocus] : []), [attachmentFocus]);
-  // skin markings and perforator zones are drawn on the (static) trunk skin: anatomical position only
-  const zones = useMemo(() => (settledPose || animating ? [] : perforatorZones.filter((zone) => study.zones.includes(zone.id))), [study.zones, settledPose, animating]);
+  const solid = useMemo(() => new Set(view.solid ?? []), [view.solid]);
+  // skin markings and perforator zones are drawn on the trunk skin, which does not follow the arm (anatomical
+  // position only) but does carry the breast: in a breast state their points go through the same map
+  const overSkin = !settledPose && !animating && (settledBreast <= 0 || Boolean(breastSides));
+  const zones = useMemo(() => {
+    if (!overSkin) return [];
+    const shown = perforatorZones.filter((zone) => study.zones.includes(zone.id));
+    if (settledBreast <= 0 || !breastSides) return shown;
+    const move = (strip: Zone["strip"]) => ({ left: displacePoints(breastSides, strip.left, settledBreast), right: displacePoints(breastSides, strip.right, settledBreast) });
+    return shown.map((zone) => ({ ...zone, strip: move(zone.strip), emphasis: zone.emphasis ? move(zone.emphasis) : zone.emphasis }));
+  }, [study.zones, overSkin, settledBreast, breastSides]);
+  const markings = useMemo(() => {
+    if (!overSkin || !study.markings) return [];
+    if (settledBreast <= 0 || !breastSides) return skinMarkings;
+    return skinMarkings.map((item) => ({ ...item, points: displacePoints(breastSides, item.points, settledBreast) }));
+  }, [study.markings, overSkin, settledBreast, breastSides]);
   const buffers = useLayerBuffers(attachmentItems.length > 0 || fibreItems.length > 0 || Boolean(selectedRegion));
   const reviewStatus = useMemo(() => Object.fromEntries(Object.entries(review).map(([id, entry]) => [id, entry?.status])), [review]);
 
@@ -489,6 +586,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
               lowPower={lowPower}
               selectedMeshes={selectedMeshes}
               translucent={translucent}
+              solid={solid}
               proximity={study.proximity}
               onReady={handleReady}
               onPick={(structure, info) => {
@@ -518,7 +616,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
           )}
           {fibreItems.length > 0 && !animating && <FibreLines items={fibreItems} buffers={buffers} pose={settledPose} />}
           {selectedRegion && !animating && <RegionHighlight key={settledPose ?? "rest"} root={handle?.root ?? null} structure={selectedRegion.structure} labelIndex={selectedRegion.labelIndex} buffers={buffers} />}
-          {study.markings && !settledPose && !animating && <SkinMarkings markings={skinMarkings} showLabels={labelMode !== "hidden"} />}
+          {markings.length > 0 && <SkinMarkings markings={markings} showLabels={labelMode !== "hidden"} />}
           {zones.length > 0 && <PerforatorZones zones={zones} />}
           {study.ruler && <Ruler points={rulerPoints} />}
           {quiz && <QuizFeedback target={quiz.target} guess={quiz.guess} name={quiz.name} />}

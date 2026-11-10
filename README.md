@@ -18,13 +18,15 @@ Atlas anatômico 3D interativo para mastologia, organizado em packs de visualiza
 - Seleção por toque com ficha anatômica: origem, inserção, inervação, vascularização, ação, marcos e relevância cirúrgica. Porções musculares selecionáveis (partes do peitoral maior, deltoide e trapézio; cabeças do tríceps e do bíceps; digitações do serrátil anterior e fascículos do peitoral menor por costela).
 - Aba **Estudo** (`docs/plano-marcos-anatomicos.md`): 71 marcos ósseos e hilos com ficha; áreas de origem e inserção sobre os ossos; direção das fibras; marcação pré-operatória na pele; zonas probabilísticas de perfurantes (LICAP, TDAP, IMAP); régua em mm; mapa de distância até nervos e vasos; quadro "Modelo × literatura" e variações com referências; autoavaliação "encontre o marco"; revisão do especialista exportável.
 - Packs de visualização por grupo (`src/data/packs.ts`), cada um com várias vistas:
-  - Mama: anatomia da mama (camadas, parênquima, cortes sagital e transversal), irrigação e inervação, drenagem linfática, planos de reconstrução.
+  - Mama: anatomia da mama (camadas, parênquima, cortes sagital e transversal), ptose mamária (perfis sem ptose e graus I–III de Regnault, frente, por dentro, corte sagital), irrigação e inervação, drenagem linfática, planos de reconstrução.
   - Axila: dissecção axilar (fáscia e músculos → limites sem fáscia → zona de dissecção projetada → níveis de Berg) e marcos anatômicos (nervos a preservar, eixo vascular, Rotter, corte transversal).
   - Retalhos: grande dorsal (músculo, pedículo, plano GD–serrátil, triângulos, arco de rotação) e toracolateral (pedículos, zona doadora, corte).
   - Parede torácica e ombro.
   Cada vista define as estruturas, o enquadramento, rótulos e zonas ancorados em pontos reais das estruturas, e opcionalmente corte, espaço ou manipulação. Link direto: `#pack/vista`.
 - Dissecção livre: profundidade por camadas, janelas de pele, estruturas rebatidas e transpostas (transformações rígidas), vista explodida e espaços cirúrgicos com paredes destacadas.
 - Posição do membro superior (botão **Braço** e vistas com posição nos packs): anatômica, abdução 90° na braçadeira, flexão 90° em decúbito lateral e mão na nuca. Músculos, vasos e nervos são deformados pela posição (pesos anatômicos, quatérnios duais, fibras esticadas entre origem e inserção, volume muscular, deslizamento sobre o tórax), com animação; marcos, fixações, fibras, rótulos e corte acompanham. Plano, método e limitações: `docs/movimento-membro-superior.md`.
+
+- Forma da mama (botão **Mama** e pack Ptose mamária): sem ptose ou ptose graus I, II e III. Pele, corpo adiposo, lobos, ductos, ligamentos, mamilo e aréola das duas mamas são deformados por um mesmo mapa (fluxo incompressível preso à parede torácica, com volume preservado), calculado no aparelho a partir de 76 kB de parâmetros medidos nas malhas; rótulos, marcação na pele, zonas e corte acompanham. Cada estado mostra as medidas tiradas no próprio modelo (mamilo × sulco, fúrcula–mamilo, mamilo–sulco) e o grau de Regnault que resulta delas. É a primeira fase da simulação de mamoplastia; plano, especificação das técnicas e limitações: `docs/plano-mamoplastia.md`.
 
 ## Desenvolvimento
 
@@ -51,6 +53,8 @@ O visualizador usa um **modelo híbrido feminino** (`public/models/hybrid/torso-
 - **linfonodos axilares e fáscias do Z-Anatomy**.
 
 Nenhuma estrutura anatômica é desenhada proceduralmente. Os guias cirúrgicos (ilha de pele, incisões, loja, dreno) são marcações didáticas ancoradas em marcos anatômicos calculados das malhas.
+
+Os estados da mama (ptose) não alteram o arquivo do modelo: são deformações das malhas reais aplicadas no app (`npm run breast:hybrid` regenera a carta e os parâmetros).
 
 O processo (registro entre fontes, preservação das referências anatômicas, limitações) está em `scripts/hybrid/README.md`. As atribuições estão em `ATTRIBUTIONS.md`.
 

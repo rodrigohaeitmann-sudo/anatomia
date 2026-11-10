@@ -36,6 +36,8 @@ export type Snapper = {
 const derived: Record<string, () => Landmark> = {
   breastLateral: () => [L.breastBounds.min[0], L.breastCenter[1], L.breastCenter[2]],
   breastMedial: () => [L.breastBounds.max[0], L.breastCenter[1], L.breastCenter[2]],
+  /** middle of the breast profile: halfway between the fold and the nipple tip, a little above the fold */
+  breastProfile: () => [(L.inframammaryFold[0] + L.nipple[0]) / 2, L.inframammaryFold[1] + 15 * L.unitsPerMm, (L.inframammaryFold[2] + L.nipple[2]) / 2],
 };
 
 /** A landmark name ("key" or "key.index"), a derived landmark, or a structure id, resolved to a model-space point. */

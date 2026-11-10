@@ -65,9 +65,28 @@ Gera `src/data/armPoses.json` (posições, cinemática, matrizes dos ossos por q
 | Pesos | Campo harmônico na superfície de cada músculo entre os ossos de origem e inserção; vasos, nervos, linfonodos e fáscias herdam dos músculos e ossos vizinhos |
 | Deformação | Quatérnios duais; fibras alongadas recolocadas na corda entre as extremidades (peitoral maior, grande dorsal, redondo maior); volume muscular; deslizamento sobre o tórax; colisão com os ossos |
 
+## Mama: carta e ptose
+
+```bash
+npm run breast:hybrid  # decode_model.mjs → build_breast.py (~10 s) → check_breast_map.mjs
+```
+
+Gera `src/data/breastModel.json` (carta dos dois lados, curvas do sulco, parâmetros dos estados e medidas clínicas), `public/models/hybrid/breast-chart.bin` (superfície-base das duas mamas, uint16, passo de 0,005 mm) e `scripts/hybrid/breast-test-vectors.json` (pontos de teste). A deformação não é gravada: o app avalia o mapa em cada vértice (`src/lib/breastMap.ts`) e `check_breast_map.mjs` confere que ele reproduz o pipeline (tolerância de 0,02 mm). Plano em fases, especificação das técnicas e limitações: `docs/plano-mamoplastia.md`.
+
+| Etapa | Como é feita |
+|---|---|
+| Eixo e carta | Eixo vertical pela linha média do esterno (incisura jugular e xifoide) e pelo meio do tronco na altura do mamilo; coordenadas cilíndricas (arco, altura, raio), uma carta por lado |
+| Superfície-base | Raio da pele fora da pegada do corpo adiposo e continuação harmônica (membrana) por dentro, suavizada: o tronco sem o monte mamário |
+| Sulco inframamário | Maior concavidade vertical da pele junto ao limite inferior do corpo adiposo, coluna a coluna |
+| Ptose | Mapa de fluxo de um campo incompressível preso à parede (camada de cisalhamento, afinamento do polo superior, acúmulo abaixo do sulco); grau III com giro polar em torno do sulco |
+| Medidas | Tiradas no modelo deformado: mamilo × sulco, contorno inferior, fúrcula–mamilo e mamilo–sulco sobre a pele; a classificação de Regnault sai delas |
+
+`--figures DIR` grava os perfis de cada estado no meridiano da mama, para revisão.
+
 ## Limitações conhecidas
 
 - A musculatura e o esqueleto são de um indivíduo masculino (BodyParts3D). A pele e as mamas são de uma mulher de outra fonte (Visible Human Female). O encaixe foi medido, mas não validado por anatomista.
 - O braço da pele do HRA está abduzido e o do BodyParts3D, pendente. Por isso a pele foi recortada no tronco, e úmero, deltoide e vasos/nervos do braço ficam sem cobertura cutânea.
 - As fáscias toracolombares do Z-Anatomy são superfícies de baixa resolução (160–313 triângulos), mantidas como estão na fonte.
+- A ptose é um modelo geométrico (fluxo com volume preservado), não uma simulação física, e parte de uma única mama, de cadáver em decúbito.
 - Os linfonodos do Z-Anatomy representam grupos (anterior, posterior, lateral, central, apical, interpeitoral, paraesternal), não linfonodos individuais.

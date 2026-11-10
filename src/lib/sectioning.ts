@@ -55,8 +55,9 @@ function decode(mesh: THREE.Mesh): Decoded {
   const influences = mesh.morphTargetInfluences;
   const signature = morphs?.length && influences?.some((value) => value !== 0) ? influences.map((value) => value.toFixed(4)).join(",") : "";
   const cached = decodedCache.get(geometry);
-  if (cached && cached.signature === signature) return cached;
   const attribute = geometry.attributes.position;
+  // the vertex count changes when a mesh is refined (trunk skin over the breast, light model)
+  if (cached && cached.signature === signature && cached.positions.length === attribute.count * 3) return cached;
   const positions = new Float32Array(attribute.count * 3);
   const v = new THREE.Vector3();
   for (let i = 0; i < attribute.count; i++) {

@@ -6,6 +6,8 @@ import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
+import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides } from "@/lib/breastStates";
+import { meanEdgeLength, subdivideRegion } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
 import type { PickInfo, ViewMode } from "@/lib/viewerTypes";
@@ -20,6 +22,10 @@ export type ModelHandle = {
   preparePose: (poseId: string | null) => Promise<void>;
   /** 0 = anatomical position, 1 = the prepared pose (piecewise between keyframes) */
   setPoseFraction: (t: number) => void;
+  /** computes the breast states (ptosis grades) and attaches them as morph targets to skin and breast */
+  prepareBreast: () => Promise<void>;
+  /** 0 = breast as scanned, k = k-th breast state; fractions blend neighbouring states */
+  setBreastLevel: (level: number) => void;
   /** rebuilds anchors (snapper) and section targets after the geometry moved */
   refresh: () => void;
 };
@@ -50,6 +56,74 @@ function vertexNormals(positions: Float32Array, index: ArrayLike<number> | null,
   return normals;
 }
 
+type MorphSet = { positions: THREE.BufferAttribute[]; normals: THREE.BufferAttribute[] };
+
+/**
+ * Attaches relative morph targets to a mesh: one per keyframe, from vertex displacements in the mesh's
+ * local space (normals are recomputed on every deformed keyframe), or a set built before for the same
+ * geometry. Returns the set.
+ */
+function setMorphTargets(mesh: THREE.Mesh, deltas: Float32Array[] | MorphSet): MorphSet {
+  const geometry = mesh.geometry;
+  let set: MorphSet;
+  if (Array.isArray(deltas)) {
+    const attribute = geometry.attributes.position;
+    const count = attribute.count;
+    const v = new THREE.Vector3();
+    const base = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) v.fromBufferAttribute(attribute, i).toArray(base, i * 3);
+    const index = geometry.index ? geometry.index.array : null;
+    const restNormals = vertexNormals(base, index, count);
+    set = { positions: [], normals: [] };
+    for (const delta of deltas) {
+      const posed = base.slice();
+      for (let i = 0; i < posed.length; i++) posed[i] += delta[i];
+      const posedNormals = vertexNormals(posed, index, count);
+      for (let i = 0; i < posedNormals.length; i++) posedNormals[i] -= restNormals[i];
+      set.positions.push(new THREE.BufferAttribute(delta, 3));
+      set.normals.push(new THREE.BufferAttribute(posedNormals, 3));
+    }
+  } else {
+    set = deltas;
+  }
+  geometry.morphAttributes.position = set.positions;
+  geometry.morphAttributes.normal = set.normals;
+  geometry.morphTargetsRelative = true;
+  mesh.updateMorphTargets();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  // three keeps one morph texture per geometry and rebuilds it only when the target count changes:
+  // disposing drops it (and the GPU buffers, re-uploaded on the next frame)
+  geometry.dispose();
+  return set;
+}
+
+/** Breast morph targets per (shared) geometry: computed once, put back at once when the canvas is mounted anew. */
+const breastMorphs = new WeakMap<THREE.BufferGeometry, MorphSet | null>();
+
+function clearMorphTargets(mesh: THREE.Mesh) {
+  delete mesh.geometry.morphAttributes.position;
+  delete mesh.geometry.morphAttributes.normal;
+  mesh.morphTargetInfluences = undefined;
+  mesh.morphTargetDictionary = undefined;
+  mesh.geometry.computeBoundingBox();
+  mesh.geometry.computeBoundingSphere();
+  mesh.geometry.dispose();
+}
+
+/** Morph influences for a level on an axis of `count` keyframes (0 = rest, k = k-th keyframe), piecewise linear. */
+function levelInfluences(level: number, count: number) {
+  const out = new Array<number>(count).fill(0);
+  const k = Math.min(Math.max(level, 0), count);
+  const hi = Math.min(Math.ceil(k), count);
+  if (hi > 0) {
+    const lo = hi - 1;
+    if (lo >= 1) out[lo - 1] = 1 - (k - lo);
+    out[hi - 1] = k - lo;
+  }
+  return out;
+}
+
 export type PlaneSet = {
   /** plane applied to every visible mesh (or superficial only) */
   cut: THREE.Plane | null;
@@ -76,6 +150,8 @@ type Props = {
   selectedMeshes?: Set<string> | null;
   /** structures drawn see-through (e.g. a muscle while its attachment areas are shown) */
   translucent?: Set<string>;
+  /** structures drawn opaque whatever their tissue (e.g. the skin when a view is about the surface) */
+  solid?: Set<string>;
   /** distance map: surfaces coloured by distance to these structures */
   proximity?: string[] | null;
   onReady: (handle: ModelHandle) => void;
@@ -93,9 +169,9 @@ const proximityTissues = new Set<Tissue>(["muscle", "fat", "fascia", "bone", "ca
 export const superficialForCut = new Set(["skin", "breast-fat", "breast-ligaments", "contralateral-breast", "pectoral-fascia", "deltoid-fascia", "thoracolumbar-fascia"]);
 const stepWindowStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
 
-function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; vertexColors: boolean }) {
+function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; solid: boolean; vertexColors: boolean }) {
   const color = new THREE.Color(opts.vertexColors ? "#ffffff" : opts.override ?? tissueColors[tissue]);
-  let opacity = tissueOpacity[tissue] ?? 1;
+  let opacity = opts.solid ? 1 : tissueOpacity[tissue] ?? 1;
   if (opts.translucent) opacity = Math.min(opacity, 0.3);
   const faded = opts.viewMode === "surgical" && !opts.active && !opts.selected && !opts.override && !opts.emphasis;
   if (faded) {
@@ -129,9 +205,30 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
 }
 
 export function HybridModel(props: Props) {
-  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, proximity = null, onReady, onPick } = props;
+  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, solid, proximity = null, onReady, onPick } = props;
   const gltf = useGLTF(modelPath, false, true);
-  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  const scene = useMemo(() => {
+    const clone = gltf.scene.clone(true);
+    // Geometries are shared with the cached glTF. Morph targets left by a previous mount (resetting the
+    // camera remounts the canvas) would be drawn by meshes that have no influences yet: start clean and
+    // let the viewer prepare the current arm pose and breast state again.
+    clone.traverse((object) => {
+      if (isMesh(object) && (object.geometry.morphAttributes.position || object.geometry.morphAttributes.normal)) clearMorphTargets(object);
+    });
+    return clone;
+  }, [gltf.scene]);
+  // false once this scene is gone: asynchronous work must not touch the (shared) geometries any more
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    // a new scene (other model file) starts without morph targets: forget what was prepared for the old one
+    pose.current = { id: null, meshes: [], request: pose.current.request + 1 };
+    breast.current = { meshes: [], pending: null, level: 0 };
+    return () => {
+      alive.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene]);
   const invalidate = useThree((state) => state.invalidate);
   const original = useRef(new Map<THREE.Object3D, THREE.Matrix4>());
   const pivots = useRef<Map<string, THREE.Vector3> | null>(null);
@@ -150,19 +247,18 @@ export function HybridModel(props: Props) {
     return map;
   }, [scene]);
 
+  /** Mesh-local to model space with the node matrices captured at load, i.e. ignoring rigid manipulations. */
+  const restMatrix = (mesh: THREE.Object3D) => {
+    const chain: THREE.Object3D[] = [];
+    for (let node: THREE.Object3D | null = mesh; node && node !== scene; node = node.parent) chain.push(node);
+    const matrix = new THREE.Matrix4();
+    for (let i = chain.length - 1; i >= 0; i--) matrix.multiply(original.current.get(chain[i]) ?? chain[i].matrix);
+    return matrix;
+  };
+
   // ---- arm poses: morph targets computed offline (build_poses.py) ---------------------------------------
   const clearPose = () => {
-    for (const mesh of pose.current.meshes) {
-      delete mesh.geometry.morphAttributes.position;
-      delete mesh.geometry.morphAttributes.normal;
-      mesh.morphTargetInfluences = undefined;
-      mesh.morphTargetDictionary = undefined;
-      mesh.geometry.computeBoundingBox();
-      mesh.geometry.computeBoundingSphere();
-      // three keeps one morph texture per geometry and rebuilds it only when the target count changes:
-      // disposing drops it (and the GPU buffers, re-uploaded on the next frame)
-      mesh.geometry.dispose();
-    }
+    pose.current.meshes.forEach(clearMorphTargets);
     pose.current.id = null;
     pose.current.meshes = [];
   };
@@ -176,46 +272,26 @@ export function HybridModel(props: Props) {
       return;
     }
     const deltas = await loadPose(variantOf(modelPath), poseId);
-    if (request !== pose.current.request) return;
+    // the latest request wins, and a model unmounted meanwhile must not touch the shared geometries
+    if (request !== pose.current.request || !alive.current) return;
     clearPose();
-    scene.updateMatrixWorld(true);
-    const toModel = scene.matrixWorld.clone().invert();
     const unit = deltaUnit(mm);
     const v = new THREE.Vector3();
     const meshes: THREE.Mesh[] = [];
     for (const entry of deltas) {
       for (const mesh of meshesByName.get(entry.name) ?? []) {
-        const geometry = mesh.geometry;
-        const attribute = geometry.attributes.position;
-        const count = attribute.count;
+        const count = mesh.geometry.attributes.position.count;
         // model-space deltas to the mesh's local (possibly quantised) space
-        const linear = new THREE.Matrix3().setFromMatrix4(toModel.clone().multiply(mesh.matrixWorld)).invert();
-        const base = new Float32Array(count * 3);
-        for (let i = 0; i < count; i++) v.fromBufferAttribute(attribute, i).toArray(base, i * 3);
-        const index = geometry.index ? geometry.index.array : null;
-        const restNormals = vertexNormals(base, index, count);
-        const positions: THREE.BufferAttribute[] = [];
-        const normals: THREE.BufferAttribute[] = [];
-        for (const frame of entry.deltas) {
+        const linear = new THREE.Matrix3().setFromMatrix4(restMatrix(mesh)).invert();
+        const frames = entry.deltas.map((frame) => {
           const delta = new Float32Array(count * 3);
           for (let j = 0; j < entry.indices.length; j++) {
             v.set(frame[j * 3], frame[j * 3 + 1], frame[j * 3 + 2]).multiplyScalar(unit).applyMatrix3(linear);
             v.toArray(delta, entry.indices[j] * 3);
           }
-          const posed = base.slice();
-          for (let i = 0; i < posed.length; i++) posed[i] += delta[i];
-          const posedNormals = vertexNormals(posed, index, count);
-          for (let i = 0; i < posedNormals.length; i++) posedNormals[i] -= restNormals[i];
-          positions.push(new THREE.BufferAttribute(delta, 3));
-          normals.push(new THREE.BufferAttribute(posedNormals, 3));
-        }
-        geometry.morphAttributes.position = positions;
-        geometry.morphAttributes.normal = normals;
-        geometry.morphTargetsRelative = true;
-        mesh.updateMorphTargets();
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        geometry.dispose(); // see clearPose: forces a fresh morph texture for this pose
+          return delta;
+        });
+        setMorphTargets(mesh, frames);
         meshes.push(mesh);
       }
     }
@@ -231,12 +307,88 @@ export function HybridModel(props: Props) {
     }
     invalidate();
   };
+
+  // ---- breast states: morph targets computed on the device (breastMap.ts) -------------------------------
+  const breast = useRef<{ meshes: THREE.Mesh[]; pending: Promise<void> | null; level: number }>({ meshes: [], pending: null, level: 0 });
+  const setBreastLevel = (level: number) => {
+    breast.current.level = level;
+    const influences = levelInfluences(level, breastStates.length);
+    for (const mesh of breast.current.meshes) {
+      const target = mesh.morphTargetInfluences;
+      if (target) for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
+    }
+    invalidate();
+  };
+  const prepareBreast = () => {
+    const state = breast.current;
+    if (!state.pending) {
+      state.pending = (async () => {
+        const sides = await loadBreastSides();
+        const v = new THREE.Vector3();
+        state.meshes = [];
+        for (const [name, which] of breastMeshSides) {
+          for (const mesh of meshesByName.get(name) ?? []) {
+            if (!alive.current) return;
+            const known = breastMorphs.get(mesh.geometry);
+            if (known !== undefined) {
+              if (known) {
+                setMorphTargets(mesh, known);
+                state.meshes.push(mesh);
+              }
+              continue;
+            }
+            const toModel = restMatrix(mesh);
+            const restPositions = () => {
+              const attribute = mesh.geometry.attributes.position;
+              const out = new Float32Array(attribute.count * 3);
+              for (let i = 0; i < attribute.count; i++) v.fromBufferAttribute(attribute, i).applyMatrix4(toModel).toArray(out, i * 3);
+              return out;
+            };
+            let rest = restPositions();
+            let deltas = breastDisplacements(sides, which, rest);
+            // the light model's skin is too coarse over the breast for the stretch of the upper pole: refine it there
+            if (deltas && name === breastSkinMesh && mesh.geometry.index) {
+              const last = deltas[deltas.length - 1];
+              const index = mesh.geometry.index.array;
+              const moved = new Uint8Array(rest.length / 3);
+              for (let i = 0; i < moved.length; i++) if (last[i * 3] || last[i * 3 + 1] || last[i * 3 + 2]) moved[i] = 1;
+              const region = moved.slice();
+              for (let f = 0; f < index.length; f += 3) if (moved[index[f]] || moved[index[f + 1]] || moved[index[f + 2]]) region[index[f]] = region[index[f + 1]] = region[index[f + 2]] = 1;
+              const edgeMm = meanEdgeLength(rest, index, region) / mm;
+              if (subdivideRegion(mesh.geometry, region, edgeMm > 9 ? 2 : edgeMm > 4.5 ? 1 : 0)) {
+                rest = restPositions();
+                deltas = breastDisplacements(sides, which, rest);
+              }
+            }
+            const count = rest.length / 3;
+            if (deltas) {
+              const linear = new THREE.Matrix3().setFromMatrix4(toModel).invert();
+              for (const frame of deltas) for (let i = 0; i < count; i++) v.fromArray(frame, i * 3).applyMatrix3(linear).toArray(frame, i * 3);
+              breastMorphs.set(mesh.geometry, setMorphTargets(mesh, deltas));
+              state.meshes.push(mesh);
+            } else {
+              breastMorphs.set(mesh.geometry, null);
+            }
+            // a few hundred thousand vertices in all: yield between meshes so the page stays responsive
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        }
+        if (alive.current) setBreastLevel(state.level);
+      })();
+      state.pending.catch(() => {
+        state.pending = null;
+      });
+    }
+    return state.pending;
+  };
   const handle = (): ModelHandle => ({
     snap: buildSnapper(scene),
     sliceTargets: () => sliceTargets(scene, visible, planes),
     root: scene,
     preparePose,
     setPoseFraction,
+    prepareBreast,
+    setBreastLevel,
     refresh: () => onReady(handle()),
   });
 
@@ -371,9 +523,10 @@ export function HybridModel(props: Props) {
         planes: list,
         lowPower,
         translucent: Boolean(translucent?.has(record.structure)),
+        solid: Boolean(solid?.has(record.structure)),
         vertexColors: painted,
       };
-      const key = `${record.tissue}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
+      const key = `${record.tissue}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${opts.solid}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
       let material = cache.get(key);
       if (!material) {
         material = makeMaterial(record.tissue, opts);
@@ -386,7 +539,7 @@ export function HybridModel(props: Props) {
     });
     invalidate();
     return () => cache.forEach((material) => material.dispose());
-  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, proximityKey, highlight, emphasised, lowPower, invalidate]);
+  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, solid, proximityKey, highlight, emphasised, lowPower, invalidate]);
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     if (event.delta > 6) return;

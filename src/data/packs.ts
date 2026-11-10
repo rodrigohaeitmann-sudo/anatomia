@@ -4,10 +4,11 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
+import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
 
-export type ViewOrientation = "anterior" | "anterolateral" | "lateral" | "axillary" | "posterior" | "posterolateral";
+export type ViewOrientation = "anterior" | "anterolateral" | "lateral" | "profile" | "axillary" | "posterior" | "posterolateral";
 
 /** A point: nearest vertex of `structure` to `near` (landmark key, "landmark.index" or structure id), plus an optional offset in mm. */
 export type AnchoredPoint = { structure: string; near: string; nearOffsetMm?: [number, number, number]; offsetMm?: [number, number, number] };
@@ -44,6 +45,12 @@ export type PackView = {
   relations: string[];
   /** upper-limb position (src/data/armPoses.json); omitted = anatomical position */
   pose?: string;
+  /** breast state (src/data/breastModel.json: ptosis grades); omitted = breast as scanned */
+  breast?: string;
+  /** structures drawn opaque in this view (the skin, when the view is about the surface) */
+  solid?: string[];
+  /** false: the camera stays where it is when the arm pose or the breast state changes (default: it follows the anchor) */
+  follow?: boolean;
 };
 
 export type Pack = { id: string; title: string; summary: string; views: PackView[] };
@@ -54,11 +61,48 @@ const thoracicCage = ["chest-wall", "costal-cartilages"];
 const axillaryNerves = ["thoracodorsal-nerve", "long-thoracic-nerve", "intercostobrachial-nerve", "pectoral-nerves"];
 const axillaryVessels = ["axillary-vessels", "lateral-thoracic-vessels", "subscapular-vessels", "thoracodorsal-vessels", "thoracoacromial-vessels"];
 
+const cm = (mm: number) => (mm / 10).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+/** Measurements taken on the deformed model by scripts/hybrid/build_breast.py, as one sentence. */
+const breastFacts = (state: string | null) => {
+  const m = measurementsOf(state);
+  const level = Math.round(Math.abs(m.nippleToFoldMm));
+  const nipple = level < 3 ? "mamilo na altura do sulco" : `mamilo ${level} mm ${m.nippleToFoldMm > 0 ? "acima" : "abaixo"} do sulco`;
+  return `${nipple}, fúrcula–mamilo ${cm(m.notchToNippleMm)} cm, mamilo–sulco ${cm(m.nippleToFoldSkinMm)} cm`;
+};
+// Surface views: opaque skin with the nipple-areola complex on it. Profiles leave the far nipple out:
+// at eye level it would show beside the near breast.
+const ptosisProfileStructures = ["skin", "nipple-areola"];
+const ptosisSurface = [...ptosisProfileStructures, "contralateral-breast"];
+const ptosisLabels: PackLabel[] = [
+  { structure: "nipple-areola", near: "nipple", text: "Mamilo" },
+  { structure: "skin", near: "inframammaryFold", text: "Sulco inframamário (fixo)" },
+  { structure: "skin", near: "nipple", nearOffsetMm: [0, 60, -25], text: "Polo superior" },
+  { structure: "skin", near: "nipple", nearOffsetMm: [0, -32, -8], text: "Polo inferior" },
+];
+const ptosisProfile = (index: number, extra: string[]): PackView => {
+  const state = breastStates[index];
+  return {
+    id: state.id,
+    title: state.short,
+    description: state.description,
+    structures: ptosisProfileStructures,
+    solid: ["skin"],
+    orientation: "profile",
+    // same fixed frame for every grade: the nipple is seen going down past the fold
+    anchor: "breastProfile",
+    follow: false,
+    distance: 0.9,
+    breast: state.id,
+    labels: ptosisLabels,
+    relations: [`No modelo: ${breastFacts(state.id)}`, ...extra],
+  };
+};
+
 export const packGroups: PackGroup[] = [
   {
     id: "mama",
     title: "Mama",
-    description: "Anatomia da glândula, irrigação, inervação, drenagem e planos de reconstrução.",
+    description: "Anatomia da glândula, ptose, irrigação, inervação, drenagem e planos de reconstrução.",
     packs: [
       {
         id: "anatomia-mama",
@@ -123,6 +167,83 @@ export const packGroups: PackGroup[] = [
             anchor: "breastCenter",
             cut: { axis: "transverse", at: "nipple" },
             relations: ["Os vasos torácicos internos ficam ~1–2 cm lateral ao esterno, profundos às cartilagens", "Lateralmente, a mama alcança a borda anterior do grande dorsal"],
+          },
+        ],
+      },
+      {
+        id: "ptose-mamaria",
+        title: "Ptose mamária",
+        summary: "Do perfil sem ptose aos graus I–III de Regnault: o que desce, o que estica e o que continua preso à parede. A forma muda em qualquer vista pelo seletor Forma da mama.",
+        views: [
+          {
+            id: "sem-ptose",
+            title: "Sem ptose",
+            description: "Perfil de referência: a mama como no exame de origem, com o mamilo acima do sulco inframamário.",
+            structures: ptosisProfileStructures,
+            solid: ["skin"],
+            orientation: "profile",
+            anchor: "breastProfile",
+            follow: false,
+            distance: 0.9,
+            labels: ptosisLabels,
+            relations: [
+              `No modelo: ${breastFacts(null)}`,
+              "Regnault classifica a ptose pela posição do mamilo em relação ao sulco inframamário e ao contorno inferior da mama",
+              "O sulco é uma zona de aderência dermofascial: é o ponto fixo sobre o qual a mama pende",
+            ],
+          },
+          ptosisProfile(0, ["Grau I: mamilo na altura do sulco (até 1 cm), acima do contorno inferior", "Pseudoptose é diferente: o mamilo fica acima do sulco e só o polo inferior desce"]),
+          ptosisProfile(1, ["Grau II: mamilo 1–3 cm abaixo do sulco, ainda acima do contorno inferior", "A distância fúrcula–mamilo e o segmento mamilo–sulco definem a pele a ressecar e a subida do complexo areolopapilar"]),
+          ptosisProfile(2, ["Grau III: mamilo mais de 3 cm abaixo do sulco, no contorno mais baixo, apontando para baixo", "Subidas longas do complexo areolopapilar exigem pedículo mais confiável ou enxerto livre de aréola"]),
+          {
+            id: "frente",
+            title: "Frente",
+            description: "As duas mamas com ptose moderada: polo superior esvaziado e bolsa pendente sobre o sulco, que passa a ficar oculto.",
+            structures: ptosisSurface,
+            solid: ["skin"],
+            orientation: "anterior",
+            anchor: "breastCenter",
+            breast: "ptose-2",
+            labels: [
+              { structure: "nipple-areola", near: "nipple", text: "Mamilo" },
+              { structure: "skin", near: "nipple", nearOffsetMm: [0, 60, -25], text: "Polo superior esvaziado" },
+              { structure: "skin", near: "nipple", nearOffsetMm: [0, -32, -8], text: "Polo inferior pendente" },
+            ],
+            relations: [`No modelo: ${breastFacts("ptose-2")}`, "A base da mama (pegada sobre o tórax) não muda: muda a distribuição do volume dentro do envelope de pele"],
+          },
+          {
+            id: "por-dentro",
+            title: "Por dentro",
+            description: "Pele translúcida: corpo adiposo, lobos, ductos e ligamentos de Cooper acompanham a descida sobre a fáscia peitoral, que permanece no lugar.",
+            structures: ["skin", "breast", "breast-fat", "breast-ligaments", "nipple-areola", "pectoral-fascia", "pectoralis-major", "serratus-anterior", ...thoracicCage],
+            focus: ["breast", "breast-ligaments"],
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: 0.7,
+            breast: "ptose-2",
+            labels: [
+              { structure: "breast", near: "nipple", text: "Glândula deslizada" },
+              { structure: "breast-ligaments", near: "breastCenter", text: "Ligamentos de Cooper alongados" },
+              { structure: "pectoralis-major", near: "breastCenter", nearOffsetMm: [0, 60, 0], text: "Peitoral maior (não se move)" },
+              { structure: "skin", near: "inframammaryFold", text: "Sulco inframamário" },
+            ],
+            relations: [
+              "O plano de deslizamento é o espaço retromamário, entre a fáscia superficial profunda e a fáscia peitoral",
+              "O tecido junto à parede quase não se desloca; o superficial desce mais (camada de cisalhamento de ~2 cm no modelo)",
+              "Modelo geométrico: mesmo mapa aplicado à pele e a todas as estruturas reais da mama, com volume preservado",
+            ],
+          },
+          {
+            id: "corte-sagital",
+            title: "Corte sagital",
+            description: "Plano sagital pelo meridiano da mama com ptose moderada: polo superior fino, polo inferior espesso e pendente à frente da parede abdominal.",
+            structures: ["skin", ...breastParts, "pectoral-fascia", "pectoralis-major", "pectoralis-minor", "intercostal-muscles", ...thoracicCage],
+            orientation: "lateral",
+            anchor: "nipple",
+            distance: 0.75,
+            breast: "ptose-2",
+            cut: { axis: "sagittal", at: "nipple" },
+            relations: ["O polo inferior pende à frente da pele abaixo do sulco, sem atravessá-la", "Compare com Anatomia da mama → Corte sagital pelo mamilo (mesmo plano, sem ptose)"],
           },
         ],
       },
