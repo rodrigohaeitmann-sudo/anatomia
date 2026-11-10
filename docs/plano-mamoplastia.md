@@ -112,8 +112,8 @@ Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa ci
 |---|---|---|---|
 | 0 | Avaliação do app e do modelo | Este documento; medidas da mama; correção do reset de câmera | feito |
 | 1 | **Mama ptótica** | Carta dos dois lados; ptose graus I–III; seletor **Forma da mama**; pack **Ptose mamária** (7 vistas); medidas clínicas; marcações e zonas acompanham a mama | feito |
-| 2 | **Marcação pré-operatória** | Linha média, meridiano, sulco, ponto A; padrões: T invertido (Wise/Pitanguy), vertical (Lejour/Lassus/Hall-Findlay), periareolar; pontos B, C, D, E; medidas na ficha | planejado |
-| 3 | **Pedículos e ressecções em 3D** | Volumes de pedículo (7 tipos) e de ressecção por técnica; cor por peça na glândula real; peso estimado; ficha de cada pedículo | planejado |
+| 2 | **Marcação pré-operatória** | Linha média, meridiano, sulco, ponto A; padrões: T invertido (Wise/Pitanguy), vertical (Lejour/Lassus/Hall-Findlay), periareolar; pontos B, C, D, E; medidas na ficha | piloto fora do app (Wise) |
+| 3 | **Pedículos e ressecções em 3D** | Volumes de pedículo (7 tipos) e de ressecção por técnica; cor por peça na glândula real; peso estimado; ficha de cada pedículo | piloto fora do app (6 pedículos, 2 ressecções) |
 | 4 | **Remanejamento e resultado** | Sequência por etapas (marcação → desepitelização → ressecção → transposição → fechamento dos pilares → pele); mapa do pós-operatório; cicatrizes | planejado |
 | 5 | **Enriquecimento anatômico** | Camada esquemática: perfurantes da torácica interna (2º–4º EIC), ramos da torácica lateral, perfurantes intercostais anteriores (4º–6º), ramo da toracoacromial; septo de Würinger e ligamentos; ramo cutâneo lateral do 4º intercostal; zonas de segurança por pedículo | planejado |
 | 6 | **Oncoplastia** | Tumor por quadrante → padrão de ressecção e pedículo (níveis de Clough); mamoplastia terapêutica; simetrização | planejado |
@@ -138,6 +138,55 @@ Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa ci
 | Ptose III | 86 mm abaixo | 99 mm abaixo | 35,4 cm | 12,6 cm | grau III |
 
 Critério usado (Regnault, 1976): grau I, mamilo na altura do sulco (±1 cm); grau II, abaixo do sulco e acima do contorno inferior; grau III, abaixo do sulco e no contorno mais baixo (até 2 cm dele).
+
+![Perfis no app: sem ptose e ptose graus I, II e III](img/mamoplastia-ptose-perfis.jpg)
+
+*Perfis no app (pack Ptose mamária), com a câmera fixa: o sulco não se move e o mamilo desce.*
+
+## Piloto das fases 2 e 3
+
+`scripts/hybrid/pilot_mammaplasty.py` gera, a partir da carta, a marcação e as peças sobre a mama com ptose grau II. É um piloto: roda fora do app, serve para provar que as estruturas podem ser criadas e medi-las, e todas as dimensões são propostas.
+
+**Como.** A pele da mama em pé é desenrolada numa carta (X através da mama, s ao longo do meridiano a partir do ponto A). As linhas são traçadas sobre a pele com comprimento verdadeiro (a linha mais reta a partir de um ponto, com um rumo e um comprimento). Cada peça é o tecido sob uma região de pele, entre duas superfícies de profundidade da carta em repouso, fechada como malha.
+
+![Marcação de Wise sobre a mama com ptose grau II: frente, oblíqua e de baixo](img/mamoplastia-piloto-marcacao.jpg)
+
+*Marcação (render do piloto, fora do app): fechadura no ponto A, ramos de 5 cm, ramos horizontais até os extremos do sulco (em vermelho, oculto sob a mama) e meridiano.*
+
+| Medida no piloto (ptose II, ramos a 90°) | Valor |
+|---|---|
+| Fúrcula → ponto A (reta) | 25,8 cm |
+| Ponto A → mamilo atual (sobre a pele) | 3,6 cm |
+| Abertura da fechadura (aréola de 42 mm) | 10,0 cm de arco |
+| Ramos medial e lateral | 5,0 cm cada |
+| Distância B–C | 6,1 cm |
+| Ramos horizontais medial + lateral | 11,1 + 10,5 cm |
+| Incisão no sulco (D–E) | 15,2 cm |
+
+| Peça | Região na pele | Profundidade | Volume | Peso estimado |
+|---|---|---|---|---|
+| Pedículo inferior | Aréola + 1 cm até 8 cm de base no sulco | até a parede | 155 mL | 148 g |
+| Pedículo superior | Da fechadura à aréola + 1 cm | 25 mm | 70 mL | 66 g |
+| Pedículo superomedial | Metade medial da fechadura e início do ramo medial até a aréola | até a parede | 131 mL | 124 g |
+| Pedículo medial | Ramo medial até a aréola | até a parede | 113 mL | 107 g |
+| Pedículo lateral | Ramo lateral até a aréola | até a parede | 126 mL | 120 g |
+| Pedículo central | Aréola + 1 cm, sem ponte dérmica | até a parede | 112 mL | 107 g |
+| Ressecção em ferradura (com pedículo inferior) | Padrão de Wise menos o pedículo | deixa 5 mm sobre a fáscia | 41 mL | 39 g |
+| Ressecção central inferior (com pedículo superior) | Padrão de Wise menos o pedículo | deixa 5 mm sobre a fáscia | 57 mL | 54 g |
+
+![Pedículo inferior (verde) e ressecção em ferradura (laranja)](img/mamoplastia-piloto-pediculo-inferior.jpg)
+
+![Pedículo superior (azul) e ressecção central inferior (laranja)](img/mamoplastia-piloto-pediculo-superior.jpg)
+
+*Peças (render do piloto): pele translúcida, costelas e peitoral maior do modelo como contexto.*
+
+### O que o piloto mostrou
+
+1. **Funciona.** Marcação com comprimentos verdadeiros sobre a pele ptótica e volumes fechados com peso saem da carta em ~20 s, e cada ponto guarda a pré-imagem em repouso (pode ir a qualquer estado pelo mapa do app).
+2. **O plano de deslizamento precisa ir para a fáscia antes da fase 3.** Hoje o tecido atrás da superfície-base não se move e há 18 mm de cisalhamento à frente dela. Para pele, gordura e glândula inteiras o resultado convence; numa peça, a face profunda fica acima da pele que a cobre (até 6 cm no pedículo superior de 25 mm, 6–8 cm no inferior) e as peças aparecem como lâminas inclinadas (visível nas figuras). A correção é medir a profundidade a partir da face posterior do corpo adiposo (fáscia peitoral) dentro da pegada, com camada de cisalhamento fina, e recalibrar os graus.
+3. **Em pé ou na mesa?** As peças são cortadas na forma em decúbito (repouso do modelo). Falta decidir se são mostradas na mama em pé, na posição da mesa, ou nas duas.
+4. **O sulco deste corpo é curto e baixo.** Os ramos horizontais somam 21,7 cm para 15,2 cm de sulco, e o ponto A fica a 25,8 cm da fúrcula (a regra dos 19–23 cm daria um ponto mais alto). São os números de que o especialista precisa para fixar as regras: ângulo dos ramos, extremos D e E, e qual referência manda na posição do novo mamilo.
+5. **As ressecções são pequenas** (40–60 g): a mama do modelo não é hipertrófica. Uma mamoplastia redutora de ensino pede o parâmetro de hipertrofia.
 
 ## Especificação proposta (para o especialista confirmar antes das fases 2–4)
 
@@ -178,6 +227,7 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 - **Grau III** é uma mama longa e achatada (fúrcula–mamilo de 35 cm): um dos fenótipos possíveis.
 - **Pele do modelo de celular**: refinada sobre a mama, mas ainda mais grossa que a do desktop; restam facetas discretas no grau III.
 - **Braço e mama** são independentes: a mama não sobe com a abdução.
+- **Plano de deslizamento**: fica a cerca de 2 cm da superfície-base, e não na fáscia peitoral (ver o piloto). Não afeta a forma externa; afeta as peças cirúrgicas.
 - **Literatura**: as referências abaixo foram conferidas por título, autores e paginação em índices e fontes secundárias, não no texto completo.
 
 ## Decisões que dependem de você
@@ -188,6 +238,7 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 4. **Convenção do ponto A** e da posição do novo mamilo (no ponto A, ou 1–2 cm abaixo nas técnicas verticais).
 5. As estruturas **esquemáticas** (perfurantes, septo de Würinger, nervo do 4º intercostal) podem entrar com rótulo de procedência, ou só com fonte segmentada?
 6. Marcação e peças **bilaterais**, ou só no lado operado como o resto do atlas?
+7. As peças devem aparecer na mama **em pé**, na **posição da mesa**, ou nas duas?
 
 ## Reprodução
 
@@ -195,6 +246,7 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 pip install -r scripts/hybrid/requirements.txt
 npm run breast:hybrid      # decodifica o modelo, mede a carta, grava JSON e binário, confere o mapa do app
 python3 scripts/hybrid/build_breast.py --figures saida/   # perfis de cada estado, para revisão (requer matplotlib)
+python3 scripts/hybrid/pilot_mammaplasty.py --figures saida/   # piloto das fases 2-3: medidas, volumes e figuras (requer shapely e matplotlib)
 ```
 
 ## Referências

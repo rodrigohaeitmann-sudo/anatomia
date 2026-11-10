@@ -83,6 +83,8 @@ Gera `src/data/breastModel.json` (carta dos dois lados, curvas do sulco, parâme
 
 `--figures DIR` grava os perfis de cada estado no meridiano da mama, para revisão.
 
+`pilot_mammaplasty.py` é o piloto das fases 2 e 3 do plano (marcação de Wise e volumes de pedículo e de ressecção sobre a mama ptótica). Não gera dados para o app: imprime medidas e volumes, grava `assets/build/mammaplasty-pilot.json` e, com `--figures DIR`, as figuras.
+
 ## Limitações conhecidas
 
 - A musculatura e o esqueleto são de um indivíduo masculino (BodyParts3D). A pele e as mamas são de uma mulher de outra fonte (Visible Human Female). O encaixe foi medido, mas não validado por anatomista.
