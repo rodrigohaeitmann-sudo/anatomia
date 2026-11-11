@@ -21,6 +21,7 @@ export function StructureToggleList({ visibility, onToggle, embedded = false }: 
                       <span>
                         {structure.label}
                         {structure.schematic && <span className="ml-1.5 rounded bg-amber-400/15 px-1 py-px align-middle text-[10px] font-semibold text-amber-200">esquemático</span>}
+                        {structure.plan && <span className="ml-1.5 rounded bg-emerald-400/15 px-1 py-px align-middle text-[10px] font-semibold text-emerald-200">plano</span>}
                       </span>
                     </span>
                     <input type="checkbox" checked={visibility[structure.id] ?? false} onChange={() => onToggle(structure.id)} className="h-4 w-4 accent-sky-400" />

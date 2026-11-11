@@ -4,6 +4,7 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
+import { mammaplastyPack } from "@/data/mammaplasty";
 import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
@@ -109,7 +110,7 @@ export const packGroups: PackGroup[] = [
   {
     id: "mama",
     title: "Mama",
-    description: "Anatomia da glândula, ptose, irrigação, inervação, drenagem e planos de reconstrução.",
+    description: "Anatomia da glândula, ptose, mamoplastia redutora, irrigação, inervação, drenagem e planos de reconstrução.",
     packs: [
       {
         id: "anatomia-mama",
@@ -254,6 +255,7 @@ export const packGroups: PackGroup[] = [
           },
         ],
       },
+      mammaplastyPack,
       {
         id: "vascular-mama",
         title: "Irrigação e inervação da mama",

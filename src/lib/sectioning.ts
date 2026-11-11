@@ -193,7 +193,7 @@ export function pointInLoop(x: number, y: number, pts: Float32Array) {
 }
 
 /** Tissues whose sections are drawn filled (volumes); surfaces (skin, fasciae) are outlined only. */
-export const filledTissues = new Set(["muscle", "bone", "cartilage", "fat", "gland", "duct", "artery", "vein", "nerve", "lymph-node", "nipple", "areola", "ligament"]);
+export const filledTissues = new Set(["muscle", "bone", "cartilage", "fat", "gland", "duct", "artery", "vein", "nerve", "lymph-node", "nipple", "areola", "ligament", "piece", "marking"]);
 
 /** Groups closed loops of one mesh into outer shapes with holes (even-odd nesting). */
 export function shapesFor(loops: SectionLoop[]) {

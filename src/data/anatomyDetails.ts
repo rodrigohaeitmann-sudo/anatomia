@@ -3,6 +3,8 @@
  * Conteúdo didático de referência (anatomia descritiva e cirúrgica clássica); deve ser revisado
  * por especialistas antes de uso formal. Lado descrito: o do modelo (direito).
  */
+import { planDetails } from "@/data/mammaplasty";
+
 export type AnatomyDetail = {
   summary: string;
   origin?: string;
@@ -18,6 +20,7 @@ export type AnatomyDetail = {
 };
 
 export const anatomyDetails: Record<string, AnatomyDetail> = {
+  ...planDetails,
   "latissimus-dorsi": {
     summary: "Músculo largo e plano do dorso, em leque, que converge da região toracolombar para o sulco intertubercular do úmero. Unidade doadora do retalho do grande dorsal.",
     origin: "Processos espinhosos de T7–T12 e vértebras lombares/sacrais via fáscia toracolombar, terço posterior da crista ilíaca, 3–4 últimas costelas e, frequentemente, o ângulo inferior da escápula.",

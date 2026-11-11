@@ -1,17 +1,44 @@
 /**
- * Schematic breast anatomy (src/data/breastAnatomy.json, written by scripts/hybrid/build_breast_anatomy.py):
- * arteries that enter the breast, nerves of the nipple-areola complex, the horizontal septum and its
- * ligaments. The pipeline traces centre lines and sheets on landmarks of the real meshes; the meshes
- * themselves are built here, so that tubes keep their calibre when the breast changes shape (the centre
- * line is carried by the breast map and the tube is rebuilt around it).
+ * Meshes built on the device from compact descriptions written by the pipeline:
+ *
+ *  - schematic breast anatomy (src/data/breastAnatomy.json, scripts/hybrid/build_breast_anatomy.py): arteries
+ *    that enter the breast, nerves of the nipple-areola complex, the horizontal septum and its ligaments;
+ *  - surgical plans (src/data/mammaplasty.json + mammaplasty.bin, scripts/hybrid/build_mammaplasty.py):
+ *    pre-operative markings (pen lines) and the pedicle and resection of every technique.
+ *
+ * Centre lines and mid-surfaces are carried by the breast map and the tube or slab is rebuilt around them,
+ * so vessels and pen lines keep their calibre when the breast changes shape. Pieces are closed meshes whose
+ * vertices move with the map like those of the gland.
  */
 import * as THREE from "three";
 import data from "@/data/breastAnatomy.json";
+import plans from "@/data/mammaplasty.json";
 
 type TubeData = { kind: "tube"; points: number[]; radiusMm: number[] };
 type SheetData = { kind: "sheet"; size: number[]; points: number[]; thicknessMm: number };
+/** closed mesh in the binary: positions as uint16 between min and max, then uint16 indices */
+type SolidData = { kind: "solid"; byteOffset: number; vertices: number; triangles: number; min: number[]; max: number[] };
 
-const geometryData = data.geometry as unknown as Record<string, TubeData | SheetData>;
+const geometryData = { ...data.geometry, ...plans.geometry } as unknown as Record<string, TubeData | SheetData | SolidData>;
+let planBin: ArrayBuffer | null = null;
+let planRequest: Promise<void> | null = null;
+
+/**
+ * Binary with the pieces of the surgical plans. Suspends the calling component until it is loaded (it is
+ * requested once, with the model). If it cannot be loaded the model still opens, without the pieces.
+ */
+export function readPlanBin(): ArrayBuffer {
+  if (planBin) return planBin;
+  if (!planRequest) {
+    planRequest = fetch(plans.bin)
+      .then((response) => (response.ok ? response.arrayBuffer() : new ArrayBuffer(0)))
+      .catch(() => new ArrayBuffer(0))
+      .then((buffer) => {
+        planBin = buffer;
+      });
+  }
+  throw planRequest;
+}
 
 /** Centre line and calibre kept on a tube mesh (`mesh.userData.tube`), in model units. */
 export type TubeSpec = { points: Float32Array; radii: [number, number]; sides: number };
@@ -140,9 +167,12 @@ function sheetIndex(nu: number, nv: number) {
 // geometries are shared by every mount of the model, like those of the glTF (one set per tube resolution)
 const cache = new Map<string, { geometry: THREE.BufferGeometry; tube?: TubeSpec; sheet?: SheetSpec }>();
 
-/** One mesh per schematic structure part, in model space, named as in the manifest (`sides`: tube resolution). */
-export function buildSchematicMeshes(unitsPerMm: number, sides: number): THREE.Mesh[] {
-  return schematicMeshNames.map((name) => {
+/**
+ * One mesh per generated part, in model space, named as in the manifests (`sides`: tube resolution;
+ * `planBin`: contents of mammaplasty.bin, for the pieces).
+ */
+export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBin: ArrayBuffer): THREE.Mesh[] {
+  const meshes = schematicMeshNames.map((name) => {
     const key = `${name}|${sides}`;
     let entry = cache.get(key);
     if (!entry) {
@@ -154,6 +184,13 @@ export function buildSchematicMeshes(unitsPerMm: number, sides: number): THREE.M
         tube = { points: Float32Array.from(item.points), radii: [item.radiusMm[0] * unitsPerMm, item.radiusMm[1] * unitsPerMm], sides };
         geometry.setAttribute("position", new THREE.BufferAttribute(tubeVertices(tube.points, tube.radii, sides), 3));
         geometry.setIndex(tubeIndex(tube.points.length / 3, sides));
+      } else if (item.kind === "solid") {
+        if (planBin.byteLength < item.byteOffset + item.vertices * 6 + item.triangles * 6) return null;
+        const quantised = new Uint16Array(planBin.slice(item.byteOffset, item.byteOffset + item.vertices * 6));
+        const positions = new Float32Array(item.vertices * 3);
+        for (let i = 0; i < positions.length; i++) positions[i] = item.min[i % 3] + (quantised[i] / 65535) * (item.max[i % 3] - item.min[i % 3]);
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(planBin.slice(item.byteOffset + item.vertices * 6, item.byteOffset + item.vertices * 6 + item.triangles * 6)), 1));
       } else {
         sheet = { points: Float32Array.from(item.points), size: [item.size[0], item.size[1]], thickness: item.thicknessMm * unitsPerMm };
         geometry.setAttribute("position", new THREE.BufferAttribute(sheetVertices(sheet.points, sheet.size, sheet.thickness), 3));
@@ -171,4 +208,5 @@ export function buildSchematicMeshes(unitsPerMm: number, sides: number): THREE.M
     if (entry.sheet) mesh.userData.sheet = entry.sheet;
     return mesh;
   });
+  return meshes.filter((mesh): mesh is THREE.Mesh => mesh !== null);
 }

@@ -37,6 +37,12 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 - Origem: não vêm de exame nem de atlas 3D. São linhas de centro e lâminas traçadas por `scripts/hybrid/build_breast_anatomy.py` com regras tiradas da literatura (Würinger et al. 1998; Schlenz et al. 2000; van Deventer 2004; O'Dey et al. 2007; Bayati & Seckel 1995), ancoradas em marcos medidos nas malhas das fontes acima. No aplicativo aparecem com a fonte "Esquemático (literatura)" e com aviso na ficha.
 - Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
 
+## Planos cirúrgicos (este projeto)
+
+- Uso: marcações pré-operatórias, pedículos e ressecções da mamoplastia redutora (`src/data/mammaplasty.json`, `public/models/hybrid/mammaplasty.bin`).
+- Origem: gerados por `scripts/hybrid/build_mammaplasty.py` sobre a pele e a mama do HRA deformadas pelo mapa da mama. As peças são porções do volume da mama do modelo; as linhas seguem sua pele. Técnicas pelas descrições originais (Pitanguy 1967; Wise 1956; Robbins 1977; Courtiss & Goldwyn 1977; Hall-Findlay 1999), com dimensões propostas neste projeto. No aplicativo aparecem com a fonte "Plano cirúrgico (este projeto)" e com aviso na ficha.
+- Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
+
 ## Licença da obra derivada
 
 Como incorpora material CC BY-SA, o modelo combinado é distribuído sob **CC BY-SA 4.0**, com as atribuições acima. O código do aplicativo continua sob a licença do repositório.

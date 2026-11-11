@@ -6,7 +6,7 @@ import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
-import { buildSchematicMeshes, schematicMeshNames, sheetVertices, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
+import { buildSchematicMeshes, readPlanBin, schematicMeshNames, sheetVertices, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
 import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
 import { meanEdgeLength, subdivideRegion } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
@@ -208,10 +208,12 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
 export function HybridModel(props: Props) {
   const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, solid, proximity = null, onReady, onPick } = props;
   const gltf = useGLTF(modelPath, false, true);
+  // pieces of the surgical plans (a small binary, loaded with the model)
+  const planBin = readPlanBin();
   const scene = useMemo(() => {
     const clone = gltf.scene.clone(true);
-    // schematic structures (literature): built here, in model space, and treated as any other mesh from now on
-    for (const mesh of buildSchematicMeshes(mm, lowPower ? 6 : 8)) clone.add(mesh);
+    // schematic structures (literature) and surgical plans: built here, in model space, and treated as any other mesh from now on
+    for (const mesh of buildSchematicMeshes(mm, lowPower ? 6 : 8, planBin)) clone.add(mesh);
     // Geometries are shared with the cached glTF. Morph targets left by a previous mount (resetting the
     // camera remounts the canvas) would be drawn by meshes that have no influences yet: start clean and
     // let the viewer prepare the current arm pose and breast state again.
@@ -219,7 +221,7 @@ export function HybridModel(props: Props) {
       if (isMesh(object) && (object.geometry.morphAttributes.position || object.geometry.morphAttributes.normal)) clearMorphTargets(object);
     });
     return clone;
-  }, [gltf.scene, lowPower]);
+  }, [gltf.scene, lowPower, planBin]);
   // false once this scene is gone: asynchronous work must not touch the (shared) geometries any more
   const alive = useRef(true);
   useEffect(() => {

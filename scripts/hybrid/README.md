@@ -72,6 +72,25 @@ Gera `src/data/breastAnatomy.json`: 10 estruturas que as fontes não trazem e qu
 
 Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior, parede (envoltória externa de músculos, costelas e cartilagens), pele, aréola, mamilo e sulco são **medidos nas malhas**; profundidades no subcutâneo, calibres (ampliados 1,35× para leitura) e espessuras são valores de desenho. O script confere que todo trajeto fica sob a pele e fora dos ossos. No app, `src/lib/breastAnatomy.ts` constrói tubos e lâminas e os reconstrói em cada estado da mama a partir da linha de centro deformada.
 
+## Mamoplastia redutora: marcações e peças
+
+```bash
+npm run mammaplasty:hybrid   # decode_model.mjs → build_breast_anatomy.py → build_mammaplasty.py (~1 min; `-- --figures DIR` grava renders)
+```
+
+Gera `src/data/mammaplasty.json` (linhas das marcações, pontos nomeados, medidas, o que cada técnica conserva e secciona) e `public/models/hybrid/mammaplasty.bin` (pedículos e ressecções: posições em repouso em 16 bits e índices). Três técnicas: Pitanguy (pedículo superior), Wise com pedículo inferior, vertical com pedículo superomedial.
+
+| Etapa | Como |
+|---|---|
+| Mama a operar | Ptose grau II com hipertrofia moderada, em pé (estado `ptose-2` de `build_breast.py`) |
+| Carta da pele em pé | A pele do estado é desenrolada (X através da mama, s ao longo do meridiano a partir do ponto A); cada ponto guarda a pré-imagem em repouso (`pilot_mammaplasty.Standing`) |
+| Marcação | Ponto A = projeção do sulco no meridiano. Linhas traçadas com comprimento verdadeiro (a mais reta a partir de um ponto, com rumo e comprimento). Saem como linhas de centro em repouso; o app as leva à mama em pé |
+| Peças | Tecido atrás de uma região da mama vista de frente, da pele reto para trás: até a parede (face posterior do corpo adiposo), até a pele da face inferior onde a mama pende, ou até uma espessura de retalho. Malhas fechadas construídas na mama em pé e invertidas para o repouso (Newton sobre o mapa da mama) |
+| Volume e peso | Volume da malha na mama em pé × 0,95 g/mL |
+| Conserva × secciona | Cada vaso e nervo de `breastAnatomy.json` é seguido até o mamilo: seccionado se passa pela peça ressecada ou se cruza a linha da marcação ainda superficial, fora da base do pedículo |
+
+As dimensões (aréola, ramos, ângulo, bases, espessuras, tecido deixado sobre a fáscia) estão no topo do script e são propostas a confirmar com o especialista. `pilot_mammaplasty.py` guarda a carta da pele em pé e o renderizador de conferência usados aqui; seu `main()` é o piloto original das fases 2 e 3.
+
 ## Posições do membro superior
 
 ```bash

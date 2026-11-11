@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Pilot for phases 2-3 of docs/plano-mamoplastia.md: pre-operative marking and surgical pieces.
 
-Status: PILOT. It shows that the marking and the pieces (pedicles, resections) can be generated from
-the breast chart of build_breast.py and measures them. Nothing here is shipped to the app yet, and
-every dimension (areola, limbs, angle, pedicle bases, flap thickness) is a proposal to be confirmed
-by the specialist.
+Status: PILOT, kept as the library of build_mammaplasty.py, which ships the markings and pieces to the
+app: the standing skin chart (Standing), the bezier helper and the review renderer (tube, splat) live
+here. Running this file still gives the original pilot report, where the pieces were cut in the rest
+chart; build_mammaplasty.py designs them on the standing breast instead (see docs/plano-mamoplastia.md).
+Every dimension (areola, limbs, angle, pedicle bases, flap thickness) is a proposal to be confirmed by
+the specialist.
 
 1. Standing chart. The skin of a breast state (the ptotic breast, as in the standing patient) is
    unrolled into (X, s): X across the breast, s the length of skin down each meridian from the
