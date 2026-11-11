@@ -8,6 +8,7 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 - Fonte: https://github.com/hubmapconsortium/ccf-3d-reference-object-library (`VH_Female/v1.3`).
 - Licença: Creative Commons Attribution 4.0 International (CC BY 4.0).
 - Modificações: transformação rígida para o referencial do BodyParts3D, recorte da pele ao tronco, compressão em profundidade da base posterior da mama sobre a parede torácica, redução de malha da gordura mamária contralateral (20%), reflexão global e compressão meshopt.
+- No aplicativo, a pele e as mamas também são exibidas deformadas (ptose graus I–III, `docs/plano-mamoplastia.md`). A deformação é calculada na exibição; o arquivo distribuído não muda.
 
 ## BodyParts3D 4.3 – The Database Center for Life Science (DBCLS)
 
@@ -29,6 +30,18 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 - Fonte: https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX
 - Licença: CC BY-SA 4.0. Atribuição solicitada: "Z-Anatomy - The open source atlas of anatomy - CC-BY-SA 4.0" e "BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan".
 - Modificações: transformação de similaridade para o referencial do BodyParts3D (RMS de 2,0 mm), reflexão global e compressão meshopt. Marcos e áreas de fixação: cada osso do Z-Anatomy foi ajustado ao osso correspondente do BodyParts3D (similaridade global e ajuste rígido por osso; erro mediano de 0,1 a 1,4 mm) e os pontos/áreas foram projetados na superfície do osso do modelo, simplificados e quantizados. A classificação origem/inserção e alguns nomes de partes (trapézio ascendente/descendente) foram corrigidos pela posição. Não foram usados componentes do Z-Anatomy com licença não comercial.
+
+## Camada esquemática da mama (este projeto)
+
+- Uso: perfurantes da torácica interna, ramos mamários da torácica lateral, perfurantes intercostais anteriores, ramo mamário da toracoacromial, septo horizontal de Würinger, ligamentos medial e lateral, ligamento do sulco inframamário, ramos cutâneos dos nervos intercostais para o complexo areolopapilar (`src/data/breastAnatomy.json`).
+- Origem: não vêm de exame nem de atlas 3D. São linhas de centro e lâminas traçadas por `scripts/hybrid/build_breast_anatomy.py` com regras tiradas da literatura (Würinger et al. 1998; Schlenz et al. 2000; van Deventer 2004; O'Dey et al. 2007; Bayati & Seckel 1995), ancoradas em marcos medidos nas malhas das fontes acima. No aplicativo aparecem com a fonte "Esquemático (literatura)" e com aviso na ficha.
+- Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
+
+## Planos cirúrgicos (este projeto)
+
+- Uso: marcações pré-operatórias, pedículos e ressecções da mamoplastia redutora (`src/data/mammaplasty.json`, `public/models/hybrid/mammaplasty.bin`).
+- Origem: gerados por `scripts/hybrid/build_mammaplasty.py` sobre a pele e a mama do HRA deformadas pelo mapa da mama. As peças são porções do volume da mama do modelo; as linhas seguem sua pele. Técnicas pelas descrições originais (Pitanguy 1967; Wise 1956; Robbins 1977; Courtiss & Goldwyn 1977; Hall-Findlay 1999), com dimensões propostas neste projeto. No aplicativo aparecem com a fonte "Plano cirúrgico (este projeto)" e com aviso na ficha.
+- Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
 
 ## Licença da obra derivada
 

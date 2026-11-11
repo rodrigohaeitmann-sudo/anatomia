@@ -108,6 +108,41 @@ export const references: Record<string, Reference> = {
     url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3808403/",
     evidence: "método",
   },
+  "wuringer-1998": {
+    id: "wuringer-1998",
+    label: "Würinger et al., Plast Reconstr Surg 1998",
+    detail: "Septo fibroso horizontal da fáscia peitoral (5ª costela) ao mamilo, entre uma camada vascular cranial (toracoacromial e ramo da torácica lateral) e uma caudal (perfurantes intercostais); guia o principal nervo do mamilo e continua nos ligamentos verticais medial e lateral.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/?term=Nerve+and+vessel+supplying+ligamentous+suspension+of+the+mammary+gland",
+    evidence: "resumo",
+  },
+  "schlenz-2000": {
+    id: "schlenz-2000",
+    label: "Schlenz et al., Plast Reconstr Surg 2000 (28 cadáveres)",
+    detail: "Inervação do complexo areolopapilar pelos ramos cutâneos laterais e anteriores do 3º, 4º e 5º nervos intercostais; trajeto do ramo lateral.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/10724249/",
+    evidence: "resumo",
+  },
+  "van-deventer-2004": {
+    id: "van-deventer-2004",
+    label: "van Deventer, Aesthetic Plast Surg 2004 (27 mamas)",
+    detail: "Fontes arteriais do complexo areolopapilar após injeção de látex em 15 cadáveres.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/15633023/",
+    evidence: "resumo",
+  },
+  "odey-2007": {
+    id: "odey-2007",
+    label: "O'Dey et al., Plast Reconstr Surg 2007 (14 mamas)",
+    detail: "Microdissecção das fontes arteriais do complexo areolopapilar e confiabilidade vascular dos pedículos.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/17496587/",
+    evidence: "resumo",
+  },
+  "bayati-1995": {
+    id: "bayati-1995",
+    label: "Bayati & Seckel, Plast Reconstr Surg 1995 (13 dissecções)",
+    detail: "Ligamento do sulco inframamário: do periósteo da 5ª costela e da fáscia entre a 5ª e a 6ª costelas à derme profunda do sulco.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/?term=Bayati+Seckel+Inframammary+crease+ligament",
+    evidence: "resumo",
+  },
   "z-anatomy": {
     id: "z-anatomy",
     label: "Z-Anatomy (CC BY-SA 4.0)",
@@ -127,6 +162,53 @@ const mmText = (value: number | undefined | null) => (typeof value === "number" 
 
 /** Model × literature comparisons and anatomical variations, per structure id. */
 export const literatureByStructure: Record<string, { comparisons?: Comparison[]; variations?: Variation[] }> = {
+  "internal-thoracic-perforators": {
+    variations: [
+      { label: "Constância", text: "Em 27 de 27 mamas dissecadas, o complexo areolopapilar recebia ao menos um ramo da torácica interna: é a fonte considerada constante.", refs: ["van-deventer-2004"] },
+      { label: "Ordem das fontes", text: "Em outra série, as fontes do complexo areolopapilar foram, em ordem decrescente de regularidade: torácica lateral, torácica interna, ramos intercostais anteriores e torácica superior.", refs: ["odey-2007"] },
+    ],
+  },
+  "lateral-mammary-branches": {
+    variations: [
+      { label: "Constância", text: "Ramos da torácica lateral chegavam ao complexo areolopapilar em 19 de 27 mamas; em 2 de 27 havia ramos diretos da artéria axilar.", refs: ["van-deventer-2004"] },
+      { label: "Pedículos", text: "Em microdissecção de 14 mamas, os acessos lateral e medial mostraram vantagem vascular sobre os pedículos inferior e superior.", refs: ["odey-2007"] },
+    ],
+  },
+  "intercostal-perforators": {
+    variations: [
+      { label: "Camada caudal do septo", text: "As perfurantes das artérias intercostais formam a camada vascular caudal do septo horizontal; a camada cranial vem da toracoacromial e de um ramo da torácica lateral.", refs: ["wuringer-1998"] },
+      { label: "Contribuição ao complexo areolopapilar", text: "Ramos intercostais anteriores foram a terceira fonte em regularidade em uma série; em outra, as intercostais posteriores chegavam ao complexo em apenas 1 de 27 mamas.", refs: ["odey-2007", "van-deventer-2004"] },
+    ],
+  },
+  "thoracoacromial-mammary-branch": {
+    variations: [{ label: "Camada cranial do septo", text: "A camada vascular cranial do septo horizontal recebe sangue da artéria toracoacromial e de um ramo da torácica lateral.", refs: ["wuringer-1998"] }],
+  },
+  "horizontal-septum": {
+    variations: [
+      { label: "Descrição original", text: "Septo fibroso horizontal que nasce da fáscia peitoral na altura da 5ª costela e vai até o mamilo, entre duas camadas vasculares. Suas bordas continuam em ligamentos verticais medial e lateral: o conjunto foi comparado a uma tipoia, como um sutiã.", refs: ["wuringer-1998"] },
+    ],
+  },
+  "septum-ligaments": {
+    variations: [{ label: "Descrição original", text: "As bordas do septo horizontal continuam em ligamentos verticais medial e lateral, que levam vasos e nervos próprios.", refs: ["wuringer-1998"] }],
+  },
+  "inframammary-ligament": {
+    variations: [
+      { label: "Descrição original", text: "Em 13 dissecções em cadáver e uma em paciente, um ligamento ia do periósteo da 5ª costela (medialmente) e da fáscia entre a 5ª e a 6ª costelas (lateralmente) à derme profunda do sulco.", refs: ["bayati-1995"] },
+      { label: "Controvérsia", text: "Estudos posteriores não encontraram um ligamento verdadeiro e descrevem o sulco como uma condensação das fáscias ou uma zona de aderência da derme. Trate esta estrutura como uma das descrições possíveis.", refs: ["bayati-1995"] },
+    ],
+  },
+  "fourth-intercostal-lateral-branch": {
+    variations: [
+      { label: "Trajeto", text: "Em 93% das mamas, os ramos cutâneos laterais seguiam profundamente, na fáscia peitoral, e chegavam ao mamilo por sua face posterior; em 7%, seguiam superficialmente no subcutâneo e chegavam pelo lado lateral.", refs: ["schlenz-2000"] },
+      { label: "Fontes", text: "O mamilo e a aréola eram sempre inervados por ramos cutâneos laterais e anteriores do 3º, 4º e 5º nervos intercostais. O septo horizontal guia o principal nervo do mamilo.", refs: ["schlenz-2000", "wuringer-1998"] },
+    ],
+  },
+  "lateral-cutaneous-branches": {
+    variations: [{ label: "Fontes", text: "Os ramos cutâneos laterais do 3º, 4º e 5º nervos intercostais participam da inervação do complexo areolopapilar.", refs: ["schlenz-2000"] }],
+  },
+  "anterior-cutaneous-branches": {
+    variations: [{ label: "Fontes", text: "Os ramos cutâneos anteriores do 3º, 4º e 5º nervos intercostais participam da inervação do complexo areolopapilar, pelo lado medial.", refs: ["schlenz-2000"] }],
+  },
   "pectoralis-major": {
     comparisons: [
       {

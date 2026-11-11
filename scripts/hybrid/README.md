@@ -50,6 +50,47 @@ Gera `src/data/anatomyLayers.json` (metadados, pontos, linhas, medidas) e `publi
 | Marcação na pele | Bordas e pontos calculados nas malhas (borda livre do grande dorsal, borda inferolateral do peitoral maior, clavícula, margem medial da escápula, linha esternal, linha hemiclavicular, sulco inframamário, EIC) projetados na pele do HRA. |
 | Zonas de perfurantes | Faixas desenhadas com as distâncias da literatura (`src/data/literature.ts`) medidas ao longo do contorno da pele a partir das referências do modelo. São probabilísticas; nenhum vaso é modelado. |
 
+## Anatomia esquemática da mama
+
+```bash
+npm run anatomy:breast   # decode_model.mjs → build_breast_anatomy.py (~1 min; `-- --figures DIR` grava renders de conferência)
+```
+
+Gera `src/data/breastAnatomy.json`: 10 estruturas que as fontes não trazem e que diferenciam os pedículos da mamoplastia. São as únicas estruturas do app que não vêm de segmentação; aparecem com a fonte "Esquemático (literatura)" e com aviso na ficha.
+
+| Estrutura | Regra do traçado | Referência |
+|---|---|---|
+| Perfurantes da torácica interna (2º–4º espaços) | Do tronco real, pelo meio do espaço intercostal ao lado da borda esternal, através do peitoral maior; depois no subcutâneo (10 → 6 mm da pele) até as bordas superomedial e medial da aréola | van Deventer 2004; O'Dey et al. 2007 |
+| Ramos mamários laterais | Do tronco real da torácica lateral, contornando a borda medida do peitoral maior; subcutâneo até a borda lateral da aréola | idem |
+| Perfurantes intercostais anteriores (4º–6º espaços) | Do espaço intercostal, 1,5–2 cm medial ao meridiano, através da parede; seguem o septo até a região retroareolar | Würinger et al. 1998 |
+| Ramo mamário da toracoacromial | Da ponta do ramo peitoral real, sob o peitoral maior até o 4º espaço; perfura e segue a face cranial do septo | Würinger et al. 1998 |
+| Septo horizontal | Lâmina da parede, ao longo da linha medida da 5ª costela, até 9 mm atrás do mamilo | Würinger et al. 1998 |
+| Ligamentos medial e lateral | Lâminas verticais nos limites medidos do corpo adiposo, da parede à derme, do septo até a 2ª/3ª costela | Würinger et al. 1998 |
+| Ligamento do sulco inframamário | Faixa da parede (9 mm acima) à derme, ao longo do sulco medido na pele | Bayati & Seckel 1995 |
+| Ramo cutâneo lateral do 4º intercostal | Emerge no 4º espaço perto da linha axilar média; ramo profundo sobre a parede (fáscia) até o meio da mama e daí ao mamilo junto ao septo; ramo superficial pelo subcutâneo | Schlenz et al. 2000 |
+| Ramos cutâneos laterais (3º, 5º) e anteriores (3º–5º) | Dos espaços correspondentes, pelo subcutâneo, até a pele lateral/medial e a borda da aréola | Schlenz et al. 2000 |
+
+Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior, parede (envoltória externa de músculos, costelas e cartilagens), pele, aréola, mamilo e sulco são **medidos nas malhas**; profundidades no subcutâneo, calibres (ampliados 1,35× para leitura) e espessuras são valores de desenho. O script confere que todo trajeto fica sob a pele e fora dos ossos. No app, `src/lib/breastAnatomy.ts` constrói tubos e lâminas e os reconstrói em cada estado da mama a partir da linha de centro deformada.
+
+## Mamoplastia redutora: marcações e peças
+
+```bash
+npm run mammaplasty:hybrid   # decode_model.mjs → build_breast_anatomy.py → build_mammaplasty.py (~1 min; `-- --figures DIR` grava renders)
+```
+
+Gera `src/data/mammaplasty.json` (linhas das marcações, pontos nomeados, medidas, o que cada técnica conserva e secciona) e `public/models/hybrid/mammaplasty.bin` (pedículos e ressecções: posições em repouso em 16 bits e índices). Três técnicas: Pitanguy (pedículo superior), Wise com pedículo inferior, vertical com pedículo superomedial.
+
+| Etapa | Como |
+|---|---|
+| Mama a operar | Ptose grau II com hipertrofia moderada, em pé (estado `ptose-2` de `build_breast.py`) |
+| Carta da pele em pé | A pele do estado é desenrolada (X através da mama, s ao longo do meridiano a partir do ponto A); cada ponto guarda a pré-imagem em repouso (`pilot_mammaplasty.Standing`) |
+| Marcação | Ponto A = projeção do sulco no meridiano. Linhas traçadas com comprimento verdadeiro (a mais reta a partir de um ponto, com rumo e comprimento). Saem como linhas de centro em repouso; o app as leva à mama em pé |
+| Peças | Tecido atrás de uma região da mama vista de frente, da pele reto para trás: até a parede (face posterior do corpo adiposo), até a pele da face inferior onde a mama pende, ou até uma espessura de retalho. Malhas fechadas construídas na mama em pé e invertidas para o repouso (Newton sobre o mapa da mama) |
+| Volume e peso | Volume da malha na mama em pé × 0,95 g/mL |
+| Conserva × secciona | Cada vaso e nervo de `breastAnatomy.json` é seguido até o mamilo: seccionado se passa pela peça ressecada ou se cruza a linha da marcação ainda superficial, fora da base do pedículo |
+
+As dimensões (aréola, ramos, ângulo, bases, espessuras, tecido deixado sobre a fáscia) estão no topo do script e são propostas a confirmar com o especialista. `pilot_mammaplasty.py` guarda a carta da pele em pé e o renderizador de conferência usados aqui; seu `main()` é o piloto original das fases 2 e 3.
+
 ## Posições do membro superior
 
 ```bash
@@ -65,9 +106,30 @@ Gera `src/data/armPoses.json` (posições, cinemática, matrizes dos ossos por q
 | Pesos | Campo harmônico na superfície de cada músculo entre os ossos de origem e inserção; vasos, nervos, linfonodos e fáscias herdam dos músculos e ossos vizinhos |
 | Deformação | Quatérnios duais; fibras alongadas recolocadas na corda entre as extremidades (peitoral maior, grande dorsal, redondo maior); volume muscular; deslizamento sobre o tórax; colisão com os ossos |
 
+## Mama: carta e ptose
+
+```bash
+npm run breast:hybrid  # decode_model.mjs → build_breast.py (~10 s) → check_breast_map.mjs
+```
+
+Gera `src/data/breastModel.json` (carta dos dois lados, curvas do sulco, parâmetros dos estados e medidas clínicas), `public/models/hybrid/breast-chart.bin` (superfície-base das duas mamas, uint16, passo de 0,005 mm) e `scripts/hybrid/breast-test-vectors.json` (pontos de teste). A deformação não é gravada: o app avalia o mapa em cada vértice (`src/lib/breastMap.ts`) e `check_breast_map.mjs` confere que ele reproduz o pipeline (tolerância de 0,02 mm). Plano em fases, especificação das técnicas e limitações: `docs/plano-mamoplastia.md`.
+
+| Etapa | Como é feita |
+|---|---|
+| Eixo e carta | Eixo vertical pela linha média do esterno (incisura jugular e xifoide) e pelo meio do tronco na altura do mamilo; coordenadas cilíndricas (arco, altura, raio), uma carta por lado |
+| Superfície-base | Raio da pele fora da pegada do corpo adiposo e continuação harmônica (membrana) por dentro, suavizada: o tronco sem o monte mamário |
+| Sulco inframamário | Maior concavidade vertical da pele junto ao limite inferior do corpo adiposo, coluna a coluna |
+| Ptose | Mapa de fluxo de um campo incompressível preso à parede (camada de cisalhamento, afinamento do polo superior, acúmulo abaixo do sulco); grau III com giro polar em torno do sulco |
+| Medidas | Tiradas no modelo deformado: mamilo × sulco, contorno inferior, fúrcula–mamilo e mamilo–sulco sobre a pele; a classificação de Regnault sai delas |
+
+`--figures DIR` grava os perfis de cada estado no meridiano da mama, para revisão.
+
+`pilot_mammaplasty.py` é o piloto das fases 2 e 3 do plano (marcação de Wise e volumes de pedículo e de ressecção sobre a mama ptótica). Não gera dados para o app: imprime medidas e volumes, grava `assets/build/mammaplasty-pilot.json` e, com `--figures DIR`, as figuras.
+
 ## Limitações conhecidas
 
 - A musculatura e o esqueleto são de um indivíduo masculino (BodyParts3D). A pele e as mamas são de uma mulher de outra fonte (Visible Human Female). O encaixe foi medido, mas não validado por anatomista.
 - O braço da pele do HRA está abduzido e o do BodyParts3D, pendente. Por isso a pele foi recortada no tronco, e úmero, deltoide e vasos/nervos do braço ficam sem cobertura cutânea.
 - As fáscias toracolombares do Z-Anatomy são superfícies de baixa resolução (160–313 triângulos), mantidas como estão na fonte.
+- A ptose é um modelo geométrico (fluxo com volume preservado), não uma simulação física, e parte de uma única mama, de cadáver em decúbito.
 - Os linfonodos do Z-Anatomy representam grupos (anterior, posterior, lateral, central, apical, interpeitoral, paraesternal), não linfonodos individuais.

@@ -16,7 +16,14 @@ export function StructureToggleList({ visibility, onToggle, embedded = false }: 
                 .filter((structure) => structure.group === group)
                 .map((structure) => (
                   <label key={structure.id} title={`Fonte: ${structure.sources.join(", ")}`} className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-slate-900/80 px-3 py-2 text-sm text-slate-200">
-                    <span className="flex items-center gap-2"><span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: structure.color }} />{structure.label}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: structure.color }} />
+                      <span>
+                        {structure.label}
+                        {structure.schematic && <span className="ml-1.5 rounded bg-amber-400/15 px-1 py-px align-middle text-[10px] font-semibold text-amber-200">esquemático</span>}
+                        {structure.plan && <span className="ml-1.5 rounded bg-emerald-400/15 px-1 py-px align-middle text-[10px] font-semibold text-emerald-200">plano</span>}
+                      </span>
+                    </span>
                     <input type="checkbox" checked={visibility[structure.id] ?? false} onChange={() => onToggle(structure.id)} className="h-4 w-4 accent-sky-400" />
                   </label>
                 ))}

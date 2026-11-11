@@ -1,4 +1,6 @@
+import breastAnatomy from "@/data/breastAnatomy.json";
 import hybridTorsoManifest from "@/data/hybridTorsoManifest.json";
+import mammaplasty from "@/data/mammaplasty.json";
 
 export type Tissue =
   | "skin"
@@ -15,7 +17,11 @@ export type Tissue =
   | "artery"
   | "vein"
   | "nerve"
-  | "lymph-node";
+  | "lymph-node"
+  /** pen line of a pre-operative marking (surgical plan) */
+  | "marking"
+  /** pedicle or resection of a surgical plan */
+  | "piece";
 
 export type ModelStructureConfig = {
   id: string;
@@ -26,6 +32,10 @@ export type ModelStructureConfig = {
   meshNames: string[];
   labelAnchor: [number, number, number];
   sources: string[];
+  /** traced from the literature on landmarks of the real meshes (src/data/breastAnatomy.json), not segmented */
+  schematic: boolean;
+  /** marking or piece of a surgical plan (src/data/mammaplasty.json) */
+  plan: boolean;
 };
 
 export type ModelMeshRecord = {
@@ -37,6 +47,9 @@ export type ModelMeshRecord = {
   license: string;
   triangles: number;
   fma?: string;
+  /** own colour and opacity (schematic sheets); default: those of the tissue */
+  color?: string;
+  opacity?: number;
 };
 
 type ManifestStructure = { label: string; group: string; visible: boolean; labelAnchor: [number, number, number]; meshNames: string[] };
@@ -80,6 +93,8 @@ export const tissueColors: Record<Tissue, string> = {
   vein: "#2a5bb8",
   nerve: "#f5d547",
   "lymph-node": "#7cc26b",
+  marking: "#2536a8",
+  piece: "#3fae6b",
 };
 
 /** Default opacity per tissue; deep structures are opaque so anatomical relations read clearly. */
@@ -90,11 +105,15 @@ export const tissueOpacity: Partial<Record<Tissue, number>> = {
   ligament: 0.85,
 };
 
-export const modelMeshes = hybridTorsoManifest.meshes as ModelMeshRecord[];
+/** Source name of the schematic structures (scripts/hybrid/build_breast_anatomy.py). */
+export const schematicSource = breastAnatomy.source;
+/** Source name of markings and pieces of the surgical plans (scripts/hybrid/build_mammaplasty.py). */
+export const planSource = mammaplasty.source;
+export const modelMeshes = [...hybridTorsoManifest.meshes, ...breastAnatomy.meshes, ...mammaplasty.meshes] as ModelMeshRecord[];
 export const modelLandmarks = hybridTorsoManifest.landmarks as unknown as ModelLandmarks;
 export const hybridTorsoModel = hybridTorsoManifest;
 
-const manifestStructures = hybridTorsoManifest.structures as unknown as Record<string, ManifestStructure>;
+const manifestStructures = { ...hybridTorsoManifest.structures, ...breastAnatomy.structures, ...mammaplasty.structures } as unknown as Record<string, ManifestStructure>;
 const meshByName = new Map(modelMeshes.map((mesh) => [mesh.name, mesh]));
 
 function dominantTissue(meshNames: string[]): Tissue {
@@ -106,15 +125,20 @@ function dominantTissue(meshNames: string[]): Tissue {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "muscle";
 }
 
+/** Colour of a mesh: its own, or that of its tissue. */
+export const meshColor = (meshName: string, tissue: Tissue | string) => meshByName.get(meshName)?.color ?? tissueColors[tissue as Tissue];
+
 export const modelStructures: ModelStructureConfig[] = Object.entries(manifestStructures).map(([id, structure]) => ({
   id,
   label: structure.label,
   group: structure.group,
-  color: tissueColors[dominantTissue(structure.meshNames)],
+  color: meshByName.get(structure.meshNames[0])?.color ?? tissueColors[dominantTissue(structure.meshNames)],
   defaultVisible: structure.visible,
   meshNames: structure.meshNames,
   labelAnchor: structure.labelAnchor,
   sources: [...new Set(structure.meshNames.map((name) => meshByName.get(name)?.source).filter((source): source is string => Boolean(source)))],
+  schematic: structure.meshNames.every((name) => meshByName.get(name)?.source === schematicSource),
+  plan: structure.meshNames.every((name) => meshByName.get(name)?.source === planSource),
 }));
 
 export const structureGroups = [...new Set(modelStructures.map((structure) => structure.group))];

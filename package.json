@@ -12,6 +12,10 @@
     "build:hybrid": "python3 scripts/hybrid/build_hybrid_model.py && npm run pack:hybrid",
     "layers:hybrid": "node scripts/hybrid/extract_zanatomy_skeleton.mjs && node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_anatomy_layers.py",
     "poses:hybrid": "node scripts/hybrid/decode_model.mjs && node scripts/hybrid/decode_model.mjs --mobile && python3 scripts/hybrid/build_poses.py",
+    "breast:hybrid": "node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast.py && npm run check:breast",
+    "check:breast": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hybrid/check_breast_map.mjs",
+    "anatomy:breast": "node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast_anatomy.py",
+    "mammaplasty:hybrid": "node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast_anatomy.py && python3 scripts/hybrid/build_mammaplasty.py",
     "pack:hybrid": "gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid.glb -cc -kn -km -ke -vp 16 -vn 10 && gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid-mobile.glb -cc -kn -km -ke -vp 14 -vn 8 -si 0.35"
   },
   "dependencies": {

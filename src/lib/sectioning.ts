@@ -55,8 +55,9 @@ function decode(mesh: THREE.Mesh): Decoded {
   const influences = mesh.morphTargetInfluences;
   const signature = morphs?.length && influences?.some((value) => value !== 0) ? influences.map((value) => value.toFixed(4)).join(",") : "";
   const cached = decodedCache.get(geometry);
-  if (cached && cached.signature === signature) return cached;
   const attribute = geometry.attributes.position;
+  // the vertex count changes when a mesh is refined (trunk skin over the breast, light model)
+  if (cached && cached.signature === signature && cached.positions.length === attribute.count * 3) return cached;
   const positions = new Float32Array(attribute.count * 3);
   const v = new THREE.Vector3();
   for (let i = 0; i < attribute.count; i++) {
@@ -192,7 +193,7 @@ export function pointInLoop(x: number, y: number, pts: Float32Array) {
 }
 
 /** Tissues whose sections are drawn filled (volumes); surfaces (skin, fasciae) are outlined only. */
-export const filledTissues = new Set(["muscle", "bone", "cartilage", "fat", "gland", "duct", "artery", "vein", "nerve", "lymph-node", "nipple", "areola", "ligament"]);
+export const filledTissues = new Set(["muscle", "bone", "cartilage", "fat", "gland", "duct", "artery", "vein", "nerve", "lymph-node", "nipple", "areola", "ligament", "piece", "marking"]);
 
 /** Groups closed loops of one mesh into outer shapes with holes (even-odd nesting). */
 export function shapesFor(loops: SectionLoop[]) {

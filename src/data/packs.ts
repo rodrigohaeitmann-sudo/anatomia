@@ -4,10 +4,12 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
+import { mammaplastyPack } from "@/data/mammaplasty";
+import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
 
-export type ViewOrientation = "anterior" | "anterolateral" | "lateral" | "axillary" | "posterior" | "posterolateral";
+export type ViewOrientation = "anterior" | "anterolateral" | "lateral" | "profile" | "axillary" | "posterior" | "posterolateral";
 
 /** A point: nearest vertex of `structure` to `near` (landmark key, "landmark.index" or structure id), plus an optional offset in mm. */
 export type AnchoredPoint = { structure: string; near: string; nearOffsetMm?: [number, number, number]; offsetMm?: [number, number, number] };
@@ -44,6 +46,12 @@ export type PackView = {
   relations: string[];
   /** upper-limb position (src/data/armPoses.json); omitted = anatomical position */
   pose?: string;
+  /** breast state (src/data/breastModel.json: ptosis grades); omitted = breast as scanned */
+  breast?: string;
+  /** structures drawn opaque in this view (the skin, when the view is about the surface) */
+  solid?: string[];
+  /** false: the camera stays where it is when the arm pose or the breast state changes (default: it follows the anchor) */
+  follow?: boolean;
 };
 
 export type Pack = { id: string; title: string; summary: string; views: PackView[] };
@@ -53,12 +61,56 @@ const breastParts = ["breast", "breast-fat", "breast-ligaments", "nipple-areola"
 const thoracicCage = ["chest-wall", "costal-cartilages"];
 const axillaryNerves = ["thoracodorsal-nerve", "long-thoracic-nerve", "intercostobrachial-nerve", "pectoral-nerves"];
 const axillaryVessels = ["axillary-vessels", "lateral-thoracic-vessels", "subscapular-vessels", "thoracodorsal-vessels", "thoracoacromial-vessels"];
+// Schematic structures traced from the literature (src/data/breastAnatomy.json).
+const mammaryArteries = ["internal-thoracic-perforators", "lateral-mammary-branches", "intercostal-perforators", "thoracoacromial-mammary-branch"];
+const mammaryNerves = ["fourth-intercostal-lateral-branch", "lateral-cutaneous-branches", "anterior-cutaneous-branches"];
+const breastSuspension = ["horizontal-septum", "septum-ligaments", "inframammary-ligament"];
+const arterialSources = ["internal-thoracic-vessels", "lateral-thoracic-vessels", "thoracoacromial-vessels"];
+const schematicNote = "Camada esquemática: trajetos típicos da literatura, traçados sobre as costelas, os vasos de origem, a parede e a pele do modelo";
+
+const cm = (mm: number) => (mm / 10).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+/** Measurements taken on the deformed model by scripts/hybrid/build_breast.py, as one sentence. */
+const breastFacts = (state: string | null) => {
+  const m = measurementsOf(state);
+  const level = Math.round(Math.abs(m.nippleToFoldMm));
+  const nipple = level < 3 ? "mamilo na altura do sulco" : `mamilo ${level} mm ${m.nippleToFoldMm > 0 ? "acima" : "abaixo"} do sulco`;
+  const volume = `volume ≈ ${Math.round(m.volumeMl / 10) * 10} mL${m.volumeGainPct > 0 ? ` (+${m.volumeGainPct}%)` : ""}`;
+  return `${nipple}, fúrcula–mamilo ${cm(m.notchToNippleMm)} cm, mamilo–sulco ${cm(m.nippleToFoldSkinMm)} cm, ${volume}`;
+};
+// Surface views: opaque skin with the nipple-areola complex on it. Profiles leave the far nipple out:
+// at eye level it would show beside the near breast.
+const ptosisProfileStructures = ["skin", "nipple-areola"];
+const ptosisSurface = [...ptosisProfileStructures, "contralateral-breast"];
+const ptosisLabels: PackLabel[] = [
+  { structure: "nipple-areola", near: "nipple", text: "Mamilo" },
+  { structure: "skin", near: "inframammaryFold", text: "Sulco inframamário (fixo)" },
+  { structure: "skin", near: "nipple", nearOffsetMm: [0, 60, -25], text: "Polo superior" },
+  { structure: "skin", near: "nipple", nearOffsetMm: [0, -32, -8], text: "Polo inferior" },
+];
+const ptosisProfile = (index: number, extra: string[]): PackView => {
+  const state = breastStates[index];
+  return {
+    id: state.id,
+    title: state.short,
+    description: state.description,
+    structures: ptosisProfileStructures,
+    solid: ["skin"],
+    orientation: "profile",
+    // same fixed frame for every grade: the nipple is seen going down past the fold
+    anchor: "breastProfile",
+    follow: false,
+    distance: 0.9,
+    breast: state.id,
+    labels: ptosisLabels,
+    relations: [`No modelo: ${breastFacts(state.id)}`, ...extra],
+  };
+};
 
 export const packGroups: PackGroup[] = [
   {
     id: "mama",
     title: "Mama",
-    description: "Anatomia da glândula, irrigação, inervação, drenagem e planos de reconstrução.",
+    description: "Anatomia da glândula, ptose, mamoplastia redutora, irrigação, inervação, drenagem e planos de reconstrução.",
     packs: [
       {
         id: "anatomia-mama",
@@ -127,9 +179,87 @@ export const packGroups: PackGroup[] = [
         ],
       },
       {
+        id: "ptose-mamaria",
+        title: "Ptose mamária",
+        summary: "Do perfil sem ptose aos graus I–III de Regnault, cada um com a hipertrofia que costuma acompanhá-lo: o que desce, o que cresce e o que continua preso à parede. A forma muda em qualquer vista pelo seletor Forma da mama.",
+        views: [
+          {
+            id: "sem-ptose",
+            title: "Sem ptose",
+            description: "Perfil de referência: a mama como no exame de origem, com o mamilo acima do sulco inframamário.",
+            structures: ptosisProfileStructures,
+            solid: ["skin"],
+            orientation: "profile",
+            anchor: "breastProfile",
+            follow: false,
+            distance: 0.9,
+            labels: ptosisLabels,
+            relations: [
+              `No modelo: ${breastFacts(null)}`,
+              "Regnault classifica a ptose pela posição do mamilo em relação ao sulco inframamário e ao contorno inferior da mama",
+              "O sulco é uma zona de aderência dermofascial: é o ponto fixo sobre o qual a mama pende",
+            ],
+          },
+          ptosisProfile(0, ["Grau I: mamilo na altura do sulco (até 1 cm), acima do contorno inferior", "Hipertrofia leve: a mama já pesa mais e o polo inferior ultrapassa o sulco", "Pseudoptose é diferente: o mamilo fica acima do sulco e só o polo inferior desce"]),
+          ptosisProfile(1, ["Grau II: mamilo 1–3 cm abaixo do sulco, ainda acima do contorno inferior", "Hipertrofia moderada: é o quadro mais comum de quem procura a mamoplastia redutora", "A distância fúrcula–mamilo e o segmento mamilo–sulco definem a pele a ressecar e a subida do complexo areolopapilar"]),
+          ptosisProfile(2, ["Grau III: mamilo mais de 3 cm abaixo do sulco, no contorno mais baixo, apontando para baixo", "Hipertrofia acentuada: mama pendente, larga na base e pesada; o eixo da mama aponta para baixo", "Subidas longas do complexo areolopapilar exigem pedículo mais confiável ou enxerto livre de aréola"]),
+          {
+            id: "frente",
+            title: "Frente",
+            description: "As duas mamas com ptose grau II e hipertrofia moderada: polo superior esvaziado e bolsa pendente sobre o sulco, que passa a ficar oculto.",
+            structures: ptosisSurface,
+            solid: ["skin"],
+            orientation: "anterior",
+            anchor: "breastCenter",
+            breast: "ptose-2",
+            labels: [
+              { structure: "nipple-areola", near: "nipple", text: "Mamilo" },
+              { structure: "skin", near: "nipple", nearOffsetMm: [0, 60, -25], text: "Polo superior esvaziado" },
+              { structure: "skin", near: "nipple", nearOffsetMm: [0, -32, -8], text: "Polo inferior pendente" },
+            ],
+            relations: [`No modelo: ${breastFacts("ptose-2")}`, "A base da mama (pegada sobre o tórax) continua no lugar: o volume, agora maior, acumula-se no polo inferior e alarga a mama"],
+          },
+          {
+            id: "por-dentro",
+            title: "Por dentro",
+            description: "Pele translúcida: corpo adiposo, lobos, ductos e ligamentos de Cooper acompanham a descida sobre a fáscia peitoral, que permanece no lugar.",
+            structures: ["skin", "breast", "breast-fat", "breast-ligaments", "nipple-areola", "pectoral-fascia", "pectoralis-major", "serratus-anterior", ...thoracicCage],
+            focus: ["breast", "breast-ligaments"],
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: 0.7,
+            breast: "ptose-2",
+            labels: [
+              { structure: "breast", near: "nipple", text: "Glândula deslizada" },
+              { structure: "breast-ligaments", near: "breastCenter", text: "Ligamentos de Cooper alongados" },
+              { structure: "pectoralis-major", near: "breastCenter", nearOffsetMm: [0, 60, 0], text: "Peitoral maior (não se move)" },
+              { structure: "skin", near: "inframammaryFold", text: "Sulco inframamário" },
+            ],
+            relations: [
+              "O plano de deslizamento é o espaço retromamário, entre a fáscia superficial profunda e a fáscia peitoral",
+              "O tecido junto à parede quase não se desloca; o superficial desce mais (no modelo, camada de cisalhamento de 0,7 cm sobre a fáscia e 2 cm junto ao sulco)",
+              "Modelo geométrico: o mesmo mapa é aplicado à pele e a todas as estruturas reais da mama; o deslizamento conserva o volume e a hipertrofia é um crescimento somado a ele",
+            ],
+          },
+          {
+            id: "corte-sagital",
+            title: "Corte sagital",
+            description: "Plano sagital pelo meridiano da mama com ptose grau II e hipertrofia moderada: polo superior fino, polo inferior espesso e pendente à frente da parede abdominal.",
+            structures: ["skin", ...breastParts, "pectoral-fascia", "pectoralis-major", "pectoralis-minor", "intercostal-muscles", ...thoracicCage],
+            orientation: "lateral",
+            anchor: "nipple",
+            distance: 0.75,
+            breast: "ptose-2",
+            cut: { axis: "sagittal", at: "nipple" },
+            relations: ["O polo inferior pende à frente da pele abaixo do sulco, sem atravessá-la", "Compare com Anatomia da mama → Corte sagital pelo mamilo (mesmo plano, sem ptose)"],
+          },
+        ],
+      },
+      mammaplastyPack,
+      {
         id: "vascular-mama",
         title: "Irrigação e inervação da mama",
-        summary: "Fontes arteriais (torácica interna, torácica lateral, toracoacromial, intercostais) e inervação sensitiva.",
+        summary: "Fontes arteriais (torácica interna, torácica lateral, toracoacromial, intercostais), os ramos que entram na mama, o septo de Würinger com seus ligamentos e a inervação do complexo areolopapilar.",
         views: [
           {
             id: "arterial",
@@ -163,6 +293,110 @@ export const packGroups: PackGroup[] = [
               { structure: "pectoral-nerves", near: "axillaryArteryCenter", text: "Nervos peitorais" },
             ],
             relations: ["O CAP recebe principalmente o ramo cutâneo lateral do 4º intercostal", "Os nervos peitorais são motores do peitoral maior e menor (não da mama)"],
+          },
+          {
+            id: "ramos-mamarios",
+            title: "Ramos que entram na mama",
+            description: "Dos troncos reais ao complexo areolopapilar: perfurantes da torácica interna, ramos da torácica lateral, perfurantes intercostais e ramo da toracoacromial.",
+            structures: ["skin", "nipple-areola", ...arterialSources, ...mammaryArteries, ...thoracicCage],
+            focus: mammaryArteries,
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: 0.5,
+            labels: [
+              { structure: "internal-thoracic-perforators", near: "breastMedial", nearOffsetMm: [0, 40, 0], text: "Perfurantes da torácica interna (2º–4º EIC)" },
+              { structure: "lateral-mammary-branches", near: "breastLateral", nearOffsetMm: [-20, -10, -30], text: "Ramos mamários laterais" },
+              { structure: "intercostal-perforators", near: "inframammaryFold", nearOffsetMm: [10, 0, -30], text: "Perfurantes intercostais (4º–6º EIC)" },
+              { structure: "thoracoacromial-mammary-branch", near: "breastLateral", nearOffsetMm: [-20, 60, -30], text: "Ramo da toracoacromial" },
+            ],
+            relations: [
+              "Medial: perfurantes da torácica interna, superficiais, do esterno à borda medial e superior da aréola: base dos pedículos superomedial, medial e superior",
+              "Lateral: ramos da torácica lateral contornam a borda do peitoral maior: base do pedículo lateral",
+              "Profundo: perfurantes intercostais e ramo da toracoacromial atravessam o peitoral maior e seguem pelo septo: base dos pedículos inferior e central",
+              schematicNote,
+            ],
+          },
+          {
+            id: "septo",
+            title: "Septo de Würinger e ligamentos",
+            description: "Septo horizontal da 5ª costela ao mamilo, ligamentos medial e lateral e ligamento do sulco inframamário: a suspensão fascial da glândula.",
+            structures: ["skin", "nipple-areola", ...breastSuspension, "intercostal-perforators", "thoracoacromial-mammary-branch", "fourth-intercostal-lateral-branch", "pectoralis-major", "serratus-anterior", ...thoracicCage],
+            focus: breastSuspension,
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: 0.5,
+            labels: [
+              { structure: "horizontal-septum", near: "nipple", nearOffsetMm: [10, 0, -30], text: "Septo horizontal" },
+              { structure: "septum-ligaments", near: "breastMedial", nearOffsetMm: [0, 50, 0], text: "Ligamento medial" },
+              { structure: "septum-ligaments", near: "breastLateral", nearOffsetMm: [0, 50, 0], text: "Ligamento lateral" },
+              { structure: "inframammary-ligament", near: "inframammaryFold", text: "Ligamento do sulco" },
+              { structure: "fourth-intercostal-lateral-branch", near: "breastLateral", text: "Ramo lateral do 4º intercostal" },
+            ],
+            relations: [
+              "O septo nasce da fáscia peitoral ao longo da 5ª costela e vai até o mamilo; suas bordas sobem como ligamentos verticais: o conjunto funciona como uma tipoia",
+              "Camada cranial do septo: toracoacromial e ramo da torácica lateral. Camada caudal: perfurantes intercostais do 4º ao 6º espaços",
+              "O nervo principal do mamilo corre junto ao septo",
+              schematicNote,
+            ],
+          },
+          {
+            id: "inervacao-cap",
+            title: "Inervação do complexo areolopapilar",
+            description: "Ramos cutâneos laterais (3º–5º) e anteriores (3º–5º) dos nervos intercostais convergindo para o mamilo e a aréola.",
+            structures: ["skin", "nipple-areola", ...mammaryNerves, "horizontal-septum", "pectoralis-major", "serratus-anterior", ...thoracicCage],
+            focus: mammaryNerves,
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: 0.55,
+            labels: [
+              { structure: "fourth-intercostal-lateral-branch", near: "breastLateral", nearOffsetMm: [-30, 20, -50], text: "Ramo cutâneo lateral do 4º intercostal" },
+              { structure: "lateral-cutaneous-branches", near: "breastLateral", nearOffsetMm: [-30, -40, -50], text: "Ramo lateral do 5º (e do 3º, acima)" },
+              { structure: "anterior-cutaneous-branches", near: "breastMedial", nearOffsetMm: [20, 0, 0], text: "Ramos cutâneos anteriores" },
+            ],
+            relations: [
+              "Ramo profundo do 4º intercostal: na fáscia peitoral até o meio da mama, depois para a frente, chegando ao mamilo por trás (93% em Schlenz et al., 2000)",
+              "Ramo superficial: pelo subcutâneo até a borda lateral da aréola (7%)",
+              "Ramos anteriores: superficiais, do esterno à borda medial da aréola",
+              schematicNote,
+            ],
+          },
+          {
+            id: "corte-septo",
+            title: "Corte sagital: septo e vasos",
+            description: "Plano sagital pelo mamilo: o septo horizontal entre a camada vascular cranial e a caudal, da parede ao mamilo.",
+            structures: ["skin", "breast", "nipple-areola", "horizontal-septum", "inframammary-ligament", "intercostal-perforators", "thoracoacromial-mammary-branch", "fourth-intercostal-lateral-branch", "pectoral-fascia", "pectoralis-major", "intercostal-muscles", ...thoracicCage],
+            focus: ["horizontal-septum", "intercostal-perforators", "thoracoacromial-mammary-branch"],
+            orientation: "lateral",
+            anchor: "nipple",
+            distance: 0.6,
+            cut: { axis: "sagittal", at: "nipple" },
+            relations: [
+              "Acima do septo: glândula cranial e ramo da toracoacromial. Abaixo: glândula caudal e perfurantes intercostais",
+              "O pedículo inferior leva a parte caudal com as perfurantes; o superior, a parte cranial sem a base profunda",
+              schematicNote,
+            ],
+          },
+          {
+            id: "septo-ptose",
+            title: "Septo e vasos na ptose",
+            description: "Mama com ptose grau II: o mamilo desce, o septo deixa de ser horizontal e os ramos que chegam ao complexo areolopapilar se alongam.",
+            structures: ["skin", "nipple-areola", ...breastSuspension, ...mammaryArteries, "fourth-intercostal-lateral-branch", ...arterialSources, ...thoracicCage],
+            focus: ["horizontal-septum", ...mammaryArteries],
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: 0.6,
+            breast: "ptose-2",
+            labels: [
+              { structure: "horizontal-septum", near: "nipple", nearOffsetMm: [10, 0, -30], text: "Septo, agora oblíquo" },
+              { structure: "internal-thoracic-perforators", near: "breastMedial", nearOffsetMm: [0, 40, 0], text: "Perfurantes mediais alongados" },
+              { structure: "lateral-mammary-branches", near: "breastLateral", nearOffsetMm: [-20, -10, -30], text: "Ramos laterais" },
+            ],
+            relations: [
+              "As origens na parede não se movem; o que se alonga é o trecho dentro da mama",
+              "Quanto maior a distância até o mamilo, mais longo o pedículo e maior a subida do complexo areolopapilar na cirurgia",
+              "Vasos e nervos são levados pelo mesmo mapa da mama e mantêm o calibre; o septo acompanha a glândula",
+              schematicNote,
+            ],
           },
         ],
       },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bone, PersonStanding, RotateCcw, Ruler, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
+import { Bone, CircleDot, PersonStanding, RotateCcw, Ruler, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
 import { AnatomyViewer, type FocusRequest, type SectionReport } from "@/components/AnatomyViewer";
 import { AboutSheet } from "@/components/mobile/AboutSheet";
 import type { SheetSnap } from "@/components/mobile/BottomSheet";
@@ -18,8 +18,10 @@ import { LandmarkDetails } from "@/components/tools/LandmarkDetails";
 import { StructureDetails } from "@/components/tools/StructureDetails";
 import { FloatingPrompt, StudyPanel, type QuizState } from "@/components/tools/StudyPanel";
 import type { SelectionChip } from "@/components/mobile/SelectionBar";
+import { BreastPicker } from "@/components/BreastPicker";
 import { PosePicker } from "@/components/PosePicker";
 import { armPoseById } from "@/lib/armPoses";
+import { breastStateById } from "@/lib/breastStates";
 import { mm, resolvePoint } from "@/components/viewer/shared";
 import { ViewerToolbar } from "@/components/ViewerToolbar";
 import { allPacks, type PackView } from "@/data/packs";
@@ -89,6 +91,9 @@ export default function Home() {
   const [armPose, setArmPose] = useState<string | null>(null);
   const [poseSettled, setPoseSettled] = useState<string | null>(null);
   const [posePicker, setPosePicker] = useState(false);
+  const [breast, setBreast] = useState<string | null>(null);
+  const [breastSettled, setBreastSettled] = useState<string | null>(null);
+  const [breastPicker, setBreastPicker] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [study, setStudy] = useState<StudyState>(defaultStudy);
@@ -142,6 +147,7 @@ export default function Home() {
     setStudy((current) => ({ ...current, proximity: null }));
     setRulerPoints([]);
     setArmPose(view.pose ?? null);
+    setBreast(view.breast ?? null);
     history.replaceState(null, "", `#${viewKey}`);
   }, [view, viewKey]);
 
@@ -294,6 +300,17 @@ export default function Home() {
     setQuiz(null);
     // back to the anatomical position: the skin returns if the current view shows it
     setVisibility((current) => ({ ...current, skin: id ? false : view.structures.includes("skin") }));
+  };
+  const handleBreastSettled = useCallback((settled: string | null) => {
+    setBreastSettled(settled);
+    // a state that could not be computed (chart not downloaded yet, offline) leaves the breast as scanned
+    if (!settled) setBreast(null);
+  }, []);
+  /** breast shape: skin and breast structures are deformed together, so nothing has to be hidden */
+  const chooseBreast = (id: string | null) => {
+    setBreast(id);
+    setRulerPoints([]);
+    setQuiz(null);
   };
   const rulerMm = rulerPoints.length === 2 ? Math.hypot(rulerPoints[0][0] - rulerPoints[1][0], rulerPoints[0][1] - rulerPoints[1][1], rulerPoints[0][2] - rulerPoints[1][2]) / mm : null;
   const quizTarget = quiz?.targetId ? landmarkById.get(quiz.targetId) : undefined;
@@ -464,6 +481,8 @@ export default function Home() {
         onPickAttachment={pickAttachment}
         pose={armPose}
         onPoseSettled={handlePoseSettled}
+        breast={breast}
+        onBreastSettled={handleBreastSettled}
       />
     );
 
@@ -478,7 +497,26 @@ export default function Home() {
       { id: "skin", label: "Pele", icon: Shirt, active: Boolean(visibility.skin), onPress: () => toggleStructure("skin") },
       { id: "neuro", label: "Vasos", icon: Waypoints, active: neuro, onPress: toggleNeuro },
       { id: "focus", label: "Foco", icon: ScanEye, active: viewMode === "surgical", onPress: () => setViewMode((mode) => (mode === "surgical" ? "anatomical" : "surgical")) },
-      { id: "arm", label: "Braço", icon: PersonStanding, active: posePicker || Boolean(armPose), onPress: () => setPosePicker((open) => !open) },
+      {
+        id: "arm",
+        label: "Braço",
+        icon: PersonStanding,
+        active: posePicker || Boolean(armPose),
+        onPress: () => {
+          setBreastPicker(false);
+          setPosePicker((open) => !open);
+        },
+      },
+      {
+        id: "breast",
+        label: "Mama",
+        icon: CircleDot,
+        active: breastPicker || Boolean(breast),
+        onPress: () => {
+          setPosePicker(false);
+          setBreastPicker((open) => !open);
+        },
+      },
       { id: "reset", label: "Centro", icon: RotateCcw, onPress: () => setResetSignal((value) => value + 1) },
     ];
     return (
@@ -503,7 +541,7 @@ export default function Home() {
         onLibrary={() => setLibraryOpen(true)}
         onAbout={() => setAboutOpen(true)}
         renderViewer={(insets) => viewer(true, insets)}
-        poseLabel={poseSettled && poseSettled !== view.pose ? armPoseById.get(poseSettled)?.short : null}
+        poseLabel={[poseSettled && poseSettled !== view.pose ? armPoseById.get(poseSettled)?.short : null, breastSettled && breastSettled !== view.breast ? breastStateById.get(breastSettled)?.short : null].filter(Boolean).join(" · ") || null}
         renderFloating={
           posePicker
             ? (bottom) => (
@@ -519,7 +557,21 @@ export default function Home() {
                   onClose={() => setPosePicker(false)}
                 />
               )
-            : undefined
+            : breastPicker
+              ? (bottom) => (
+                  <BreastPicker
+                    variant="floating"
+                    bottom={bottom}
+                    state={breast}
+                    settled={breastSettled}
+                    onState={(id) => {
+                      chooseBreast(id);
+                      setSnap("peek");
+                    }}
+                    onClose={() => setBreastPicker(false)}
+                  />
+                )
+              : undefined
         }
         content={toolContent(tab)}
         overlays={
@@ -575,7 +627,10 @@ export default function Home() {
             onShowVessels={toggleNeuro}
             onSetViewMode={setViewMode}
           />
-          <PosePicker variant="inline" pose={armPose} settled={poseSettled} onPose={choosePose} />
+          <div className="grid grid-cols-2 gap-3">
+            <PosePicker variant="inline" pose={armPose} settled={poseSettled} onPose={choosePose} />
+            <BreastPicker variant="inline" state={breast} settled={breastSettled} onState={chooseBreast} />
+          </div>
           {viewer(false)}
           <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
             <div className="-mx-1 mb-3 flex gap-1 overflow-x-auto px-1" role="tablist">
