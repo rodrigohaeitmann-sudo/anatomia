@@ -112,6 +112,11 @@ export function StructureDetails({ structure, part = null, onPart, attachmentsSh
           </button>
         )}
       </div>
+      {info?.schematic && (
+        <p className="rounded-xl border border-amber-300/30 bg-amber-400/10 p-2 text-xs leading-snug text-amber-100">
+          <span className="font-bold">Estrutura esquemática.</span> Não vem de exame nem de atlas 3D: foi traçada pela literatura sobre marcos das malhas reais do modelo (costelas, vasos de origem, parede, pele, mamilo). Mostra o trajeto típico, não a anatomia de uma pessoa.
+        </p>
+      )}
       {parts.length > 0 && onPart && (
         <section>
           <h4 className="text-[11px] font-bold uppercase tracking-wide text-violet-300">Porções</h4>

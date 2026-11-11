@@ -311,6 +311,67 @@ export const anatomyDetails: Record<string, AnatomyDetail> = {
     innervation: "Principalmente o ramo cutâneo lateral do 4º nervo intercostal.",
     landmarks: ["Geralmente no 4º espaço intercostal, na linha hemiclavicular (varia com a ptose)"],
   },
+  // Estruturas esquemáticas (scripts/hybrid/build_breast_anatomy.py): traçadas pela literatura sobre marcos das malhas reais.
+  "internal-thoracic-perforators": {
+    summary: "Ramos perfurantes da artéria torácica interna que atravessam os espaços intercostais junto ao esterno e entram na mama pela borda medial (ramos mamários mediais). São a fonte arterial mais constante do complexo areolopapilar.",
+    course: "Saem do tronco atrás das cartilagens costais, cruzam o 2º, o 3º e o 4º espaços intercostais ao lado da borda esternal, perfuram o peitoral maior e correm no subcutâneo, obliquamente para baixo e para fora, até as bordas superomedial e medial da aréola.",
+    landmarks: ["O ramo do 2º espaço costuma ser o de maior calibre e chega à aréola por cima e por dentro", "São superficiais: no modelo foram traçados a 10 mm da pele na periferia e a 6 mm junto à aréola (valor de desenho, não medida)"],
+    surgical: ["Base vascular dos pedículos superomedial (2º–3º espaços) e medial (3º–4º espaços)", "O pedículo superior depende do ramo do 2º espaço e do plexo subdérmico: por isso tolera mal subidas longas e afinamento excessivo", "Ficam na ponte dérmica e no subcutâneo: desepitelizar preserva, ressecar em espessura total junto ao esterno secciona"],
+  },
+  "lateral-mammary-branches": {
+    summary: "Ramos mamários laterais da artéria torácica lateral: contornam a borda do peitoral maior e entram na mama pelo lado lateral.",
+    course: "A torácica lateral desce sobre o serrátil anterior, junto à borda lateral do peitoral menor. Os ramos mamários contornam a borda inferolateral do peitoral maior e seguem no subcutâneo até a borda lateral da aréola.",
+    surgical: ["Base vascular do pedículo lateral e contribuição dos pedículos central e inferior", "São seccionados na ressecção lateral das técnicas de pedículo medial e superomedial", "A fonte é inconstante: ver Variações"],
+  },
+  "intercostal-perforators": {
+    summary: "Perfurantes das artérias intercostais anteriores do 4º ao 6º espaços: entram pela face profunda da mama e chegam ao mamilo acompanhando o septo horizontal.",
+    course: "Atravessam o peitoral maior perto do meridiano da mama, entre o 4º espaço e o sulco inframamário, e seguem pelo septo de Würinger (camada caudal) até a região retroareolar.",
+    landmarks: ["No modelo foram traçadas 1,5–2 cm medialmente ao meridiano (valor de desenho)", "A do 6º espaço entra logo acima do sulco inframamário"],
+    surgical: ["Base vascular do pedículo inferior e do pedículo central (monte glandular)", "Por isso o pedículo inferior mantém base larga sobre a parede e não é descolado da fáscia peitoral", "São seccionadas quando a glândula é descolada da fáscia no polo inferior, como na ressecção em quilha do pedículo superior"],
+  },
+  "thoracoacromial-mammary-branch": {
+    summary: "Ramo do ramo peitoral da artéria toracoacromial que atravessa o peitoral maior e alcança a mama pela face profunda, na camada cranial do septo horizontal.",
+    course: "O ramo peitoral desce entre os peitorais. Na altura do 4º espaço intercostal, um ramo perfura o peitoral maior e corre sobre a face cranial do septo de Würinger até o mamilo, ao lado de um ramo da torácica lateral.",
+    surgical: ["Contribui para o pedículo central e para pedículos superiores que mantêm a glândula sobre a fáscia", "É seccionado quando a glândula é descolada da fáscia peitoral no polo superior"],
+  },
+  "horizontal-septum": {
+    summary: "Septo fibroso horizontal descrito por Würinger: sai da fáscia peitoral ao longo da 5ª costela e vai até o mamilo, separando a glândula em uma parte cranial e uma caudal. Conduz vasos e o principal nervo do mamilo.",
+    origin: "Fáscia peitoral, ao longo da 5ª costela, de medial a lateral.",
+    insertion: "Região retroareolar, na altura do meio do mamilo.",
+    vascularization: "Camada cranial: ramo da toracoacromial e um ramo da torácica lateral. Camada caudal: perfurantes das intercostais anteriores (4º–6º espaços).",
+    innervation: "O ramo profundo do ramo cutâneo lateral do 4º nervo intercostal acompanha o septo até o mamilo.",
+    landmarks: ["Nas bordas medial e lateral, o septo se espessa e continua para cima como os ligamentos verticais", "Na ptose o mamilo desce e o septo deixa de ser horizontal: no modelo ele acompanha a forma da mama"],
+    surgical: ["Base anatômica dos pedículos central e inferior e das técnicas baseadas no septo", "Serve de guia: dissecar acima ou abaixo dele preserva a camada vascular correspondente", "No modelo é uma lâmina lisa entre a 5ª costela e o mamilo; na dissecção é fina e irregular"],
+  },
+  "septum-ligaments": {
+    summary: "Ligamentos verticais medial e lateral: continuação das bordas do septo horizontal para cima. Com o septo, formam a tipoia que suspende a glândula.",
+    origin: "Medial: borda esternal, da 2ª à 5ª costela. Lateral: fáscia peitoral junto à borda lateral do peitoral menor.",
+    insertion: "Pele das bordas medial e lateral da mama; o lateral continua com a fáscia axilar.",
+    surgical: ["Definem os limites medial e lateral da mama", "Também conduzem vasos e nervos próprios (Würinger, 1998)", "No modelo acompanham os limites medidos do corpo adiposo; a espessura é de desenho"],
+  },
+  "inframammary-ligament": {
+    summary: "Ligamento do sulco inframamário (Bayati e Seckel): faixa de tecido conjuntivo da parede torácica à derme profunda do sulco. Sua existência como ligamento verdadeiro é discutida.",
+    origin: "Periósteo da 5ª costela medialmente; fáscia entre a 5ª e a 6ª costelas lateralmente.",
+    insertion: "Derme profunda do sulco inframamário.",
+    landmarks: ["No modelo foi traçado sobre o sulco medido na pele, que aqui fica na altura da 6ª–7ª costela"],
+    surgical: ["Fixa o sulco: é o ponto que não desce na ptose", "Rompê-lo na dissecção inferior da loja pode produzir a deformidade em dupla bolha", "As incisões horizontais do T invertido ficam sobre ele"],
+  },
+  "fourth-intercostal-lateral-branch": {
+    summary: "Ramo cutâneo lateral do 4º nervo intercostal: principal inervação sensitiva do mamilo e da aréola.",
+    course: "Emerge no 4º espaço intercostal perto da linha axilar média e perfura o serrátil anterior. O ramo profundo corre na fáscia peitoral até o meio da mama, vira para a frente e chega ao mamilo por trás, junto ao septo horizontal. Em uma minoria, o trajeto é superficial, pelo subcutâneo, até a borda lateral da aréola.",
+    innervation: "Mamilo, aréola e pele lateral da mama.",
+    surgical: ["Ressecções laterais e profundas junto à fáscia, na altura do 4º espaço, colocam o ramo profundo em risco", "Pedículos de espessura total com base na parede (inferior, central) tendem a preservá-lo", "Deixar uma camada de tecido sobre a fáscia peitoral protege o trajeto"],
+  },
+  "lateral-cutaneous-branches": {
+    summary: "Ramos cutâneos laterais do 3º e do 5º nervos intercostais: sensibilidade da pele lateral da mama, com contribuição ao complexo areolopapilar.",
+    course: "Emergem perto da linha axilar média, perfuram o serrátil anterior e seguem para a frente no subcutâneo.",
+    surgical: ["Somam-se ao ramo do 4º intercostal: a sensibilidade do complexo areolopapilar não depende de um único nervo"],
+  },
+  "anterior-cutaneous-branches": {
+    summary: "Ramos cutâneos anteriores do 3º ao 5º nervos intercostais: sensibilidade da pele medial da mama e da borda medial da aréola.",
+    course: "Emergem junto ao esterno, perto dos perfurantes da torácica interna, e correm superficialmente no subcutâneo para lateral, até a borda medial da aréola.",
+    surgical: ["Preservados nos pedículos medial e superomedial", "Por serem superficiais, ficam na ponte dérmica desepitelizada"],
+  },
   "contralateral-breast": { summary: "Mama contralateral (tecido adiposo, glândula e complexo areolopapilar) para referência de simetria." },
   "chest-wall": {
     summary: "Costelas, esterno (manúbrio, corpo, processo xifoide) e vértebras torácicas.",

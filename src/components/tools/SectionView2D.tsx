@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import type { SectionReport } from "@/components/AnatomyViewer";
-import { modelLandmarks as L, modelStructures, tissueColors, type Tissue } from "@/lib/modelConfig";
+import { meshColor, modelLandmarks as L, modelStructures } from "@/lib/modelConfig";
 import { filledTissues, pointInLoop } from "@/lib/sectioning";
 
 const labelOf = new Map(modelStructures.map((structure) => [structure.id, structure.label]));
@@ -51,9 +51,9 @@ export function SectionView2D({ report, selected, onSelect }: { report: SectionR
     context.fillRect(0, 0, size, size);
     if (!view || !transform) return;
     for (const loops of view.meshes) {
-      const { tissue, structure } = loops[0];
+      const { tissue, structure, meshName } = loops[0];
       const fill = filledTissues.has(tissue);
-      const colour = structure === selected ? "#fde68a" : tissueColors[tissue as Tissue] ?? "#cbd5e1";
+      const colour = structure === selected ? "#fde68a" : meshColor(meshName, tissue) ?? "#cbd5e1";
       const path = new Path2D();
       for (const loop of loops) {
         for (let i = 0; i < loop.points.length; i += 2) {

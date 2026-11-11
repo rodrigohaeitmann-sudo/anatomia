@@ -50,6 +50,28 @@ Gera `src/data/anatomyLayers.json` (metadados, pontos, linhas, medidas) e `publi
 | Marcação na pele | Bordas e pontos calculados nas malhas (borda livre do grande dorsal, borda inferolateral do peitoral maior, clavícula, margem medial da escápula, linha esternal, linha hemiclavicular, sulco inframamário, EIC) projetados na pele do HRA. |
 | Zonas de perfurantes | Faixas desenhadas com as distâncias da literatura (`src/data/literature.ts`) medidas ao longo do contorno da pele a partir das referências do modelo. São probabilísticas; nenhum vaso é modelado. |
 
+## Anatomia esquemática da mama
+
+```bash
+npm run anatomy:breast   # decode_model.mjs → build_breast_anatomy.py (~1 min; `-- --figures DIR` grava renders de conferência)
+```
+
+Gera `src/data/breastAnatomy.json`: 10 estruturas que as fontes não trazem e que diferenciam os pedículos da mamoplastia. São as únicas estruturas do app que não vêm de segmentação; aparecem com a fonte "Esquemático (literatura)" e com aviso na ficha.
+
+| Estrutura | Regra do traçado | Referência |
+|---|---|---|
+| Perfurantes da torácica interna (2º–4º espaços) | Do tronco real, pelo meio do espaço intercostal ao lado da borda esternal, através do peitoral maior; depois no subcutâneo (10 → 6 mm da pele) até as bordas superomedial e medial da aréola | van Deventer 2004; O'Dey et al. 2007 |
+| Ramos mamários laterais | Do tronco real da torácica lateral, contornando a borda medida do peitoral maior; subcutâneo até a borda lateral da aréola | idem |
+| Perfurantes intercostais anteriores (4º–6º espaços) | Do espaço intercostal, 1,5–2 cm medial ao meridiano, através da parede; seguem o septo até a região retroareolar | Würinger et al. 1998 |
+| Ramo mamário da toracoacromial | Da ponta do ramo peitoral real, sob o peitoral maior até o 4º espaço; perfura e segue a face cranial do septo | Würinger et al. 1998 |
+| Septo horizontal | Lâmina da parede, ao longo da linha medida da 5ª costela, até 9 mm atrás do mamilo | Würinger et al. 1998 |
+| Ligamentos medial e lateral | Lâminas verticais nos limites medidos do corpo adiposo, da parede à derme, do septo até a 2ª/3ª costela | Würinger et al. 1998 |
+| Ligamento do sulco inframamário | Faixa da parede (9 mm acima) à derme, ao longo do sulco medido na pele | Bayati & Seckel 1995 |
+| Ramo cutâneo lateral do 4º intercostal | Emerge no 4º espaço perto da linha axilar média; ramo profundo sobre a parede (fáscia) até o meio da mama e daí ao mamilo junto ao septo; ramo superficial pelo subcutâneo | Schlenz et al. 2000 |
+| Ramos cutâneos laterais (3º, 5º) e anteriores (3º–5º) | Dos espaços correspondentes, pelo subcutâneo, até a pele lateral/medial e a borda da aréola | Schlenz et al. 2000 |
+
+Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior, parede (envoltória externa de músculos, costelas e cartilagens), pele, aréola, mamilo e sulco são **medidos nas malhas**; profundidades no subcutâneo, calibres (ampliados 1,35× para leitura) e espessuras são valores de desenho. O script confere que todo trajeto fica sob a pele e fora dos ossos. No app, `src/lib/breastAnatomy.ts` constrói tubos e lâminas e os reconstrói em cada estado da mama a partir da linha de centro deformada.
+
 ## Posições do membro superior
 
 ```bash

@@ -6,7 +6,8 @@ import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
-import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides } from "@/lib/breastStates";
+import { buildSchematicMeshes, schematicMeshNames, sheetVertices, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
+import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
 import { meanEdgeLength, subdivideRegion } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
@@ -169,9 +170,9 @@ const proximityTissues = new Set<Tissue>(["muscle", "fat", "fascia", "bone", "ca
 export const superficialForCut = new Set(["skin", "breast-fat", "breast-ligaments", "contralateral-breast", "pectoral-fascia", "deltoid-fascia", "thoracolumbar-fascia"]);
 const stepWindowStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
 
-function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; solid: boolean; vertexColors: boolean }) {
-  const color = new THREE.Color(opts.vertexColors ? "#ffffff" : opts.override ?? tissueColors[tissue]);
-  let opacity = opts.solid ? 1 : tissueOpacity[tissue] ?? 1;
+function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; solid: boolean; vertexColors: boolean; base?: string; baseOpacity?: number }) {
+  const color = new THREE.Color(opts.vertexColors ? "#ffffff" : opts.override ?? opts.base ?? tissueColors[tissue]);
+  let opacity = opts.solid ? 1 : opts.baseOpacity ?? tissueOpacity[tissue] ?? 1;
   if (opts.translucent) opacity = Math.min(opacity, 0.3);
   const faded = opts.viewMode === "surgical" && !opts.active && !opts.selected && !opts.override && !opts.emphasis;
   if (faded) {
@@ -209,6 +210,8 @@ export function HybridModel(props: Props) {
   const gltf = useGLTF(modelPath, false, true);
   const scene = useMemo(() => {
     const clone = gltf.scene.clone(true);
+    // schematic structures (literature): built here, in model space, and treated as any other mesh from now on
+    for (const mesh of buildSchematicMeshes(mm, lowPower ? 6 : 8)) clone.add(mesh);
     // Geometries are shared with the cached glTF. Morph targets left by a previous mount (resetting the
     // camera remounts the canvas) would be drawn by meshes that have no influences yet: start clean and
     // let the viewer prepare the current arm pose and breast state again.
@@ -216,7 +219,7 @@ export function HybridModel(props: Props) {
       if (isMesh(object) && (object.geometry.morphAttributes.position || object.geometry.morphAttributes.normal)) clearMorphTargets(object);
     });
     return clone;
-  }, [gltf.scene]);
+  }, [gltf.scene, lowPower]);
   // false once this scene is gone: asynchronous work must not touch the (shared) geometries any more
   const alive = useRef(true);
   useEffect(() => {
@@ -326,7 +329,9 @@ export function HybridModel(props: Props) {
         const sides = await loadBreastSides();
         const v = new THREE.Vector3();
         state.meshes = [];
-        for (const [name, which] of breastMeshSides) {
+        // the schematic structures belong to the operated breast and follow it
+        const schematic = schematicMeshNames.map((name) => [name, ["op"]] as [string, BreastSideId[]]);
+        for (const [name, which] of [...breastMeshSides, ...schematic]) {
           for (const mesh of meshesByName.get(name) ?? []) {
             if (!alive.current) return;
             const known = breastMorphs.get(mesh.geometry);
@@ -334,6 +339,28 @@ export function HybridModel(props: Props) {
               if (known) {
                 setMorphTargets(mesh, known);
                 state.meshes.push(mesh);
+              }
+              continue;
+            }
+            const tube = mesh.userData.tube as TubeSpec | undefined;
+            const sheet = mesh.userData.sheet as SheetSpec | undefined;
+            const skeleton = tube?.points ?? sheet?.points;
+            if (skeleton) {
+              // vessels, nerves and septa keep their calibre and thickness: the map carries the centre line (or the
+              // mid-surface) and the mesh is rebuilt around it
+              const rebuild = (points: Float32Array) => (tube ? tubeVertices(points, tube.radii, tube.sides) : sheetVertices(points, sheet!.size, sheet!.thickness));
+              const shifts = breastDisplacements(sides, which, skeleton);
+              if (shifts) {
+                const rest = rebuild(skeleton);
+                const frames = shifts.map((shift) => {
+                  const posed = rebuild(skeleton.map((value, i) => value + shift[i]));
+                  for (let i = 0; i < posed.length; i++) posed[i] -= rest[i];
+                  return posed;
+                });
+                breastMorphs.set(mesh.geometry, setMorphTargets(mesh, frames));
+                state.meshes.push(mesh);
+              } else {
+                breastMorphs.set(mesh.geometry, null);
               }
               continue;
             }
@@ -525,8 +552,10 @@ export function HybridModel(props: Props) {
         translucent: Boolean(translucent?.has(record.structure)),
         solid: Boolean(solid?.has(record.structure)),
         vertexColors: painted,
+        base: record.color,
+        baseOpacity: record.opacity,
       };
-      const key = `${record.tissue}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${opts.solid}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
+      const key = `${record.tissue}|${record.color ?? ""}|${record.opacity ?? ""}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${opts.solid}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
       let material = cache.get(key);
       if (!material) {
         material = makeMaterial(record.tissue, opts);

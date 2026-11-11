@@ -31,6 +31,12 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 - Licença: CC BY-SA 4.0. Atribuição solicitada: "Z-Anatomy - The open source atlas of anatomy - CC-BY-SA 4.0" e "BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan".
 - Modificações: transformação de similaridade para o referencial do BodyParts3D (RMS de 2,0 mm), reflexão global e compressão meshopt. Marcos e áreas de fixação: cada osso do Z-Anatomy foi ajustado ao osso correspondente do BodyParts3D (similaridade global e ajuste rígido por osso; erro mediano de 0,1 a 1,4 mm) e os pontos/áreas foram projetados na superfície do osso do modelo, simplificados e quantizados. A classificação origem/inserção e alguns nomes de partes (trapézio ascendente/descendente) foram corrigidos pela posição. Não foram usados componentes do Z-Anatomy com licença não comercial.
 
+## Camada esquemática da mama (este projeto)
+
+- Uso: perfurantes da torácica interna, ramos mamários da torácica lateral, perfurantes intercostais anteriores, ramo mamário da toracoacromial, septo horizontal de Würinger, ligamentos medial e lateral, ligamento do sulco inframamário, ramos cutâneos dos nervos intercostais para o complexo areolopapilar (`src/data/breastAnatomy.json`).
+- Origem: não vêm de exame nem de atlas 3D. São linhas de centro e lâminas traçadas por `scripts/hybrid/build_breast_anatomy.py` com regras tiradas da literatura (Würinger et al. 1998; Schlenz et al. 2000; van Deventer 2004; O'Dey et al. 2007; Bayati & Seckel 1995), ancoradas em marcos medidos nas malhas das fontes acima. No aplicativo aparecem com a fonte "Esquemático (literatura)" e com aviso na ficha.
+- Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
+
 ## Licença da obra derivada
 
 Como incorpora material CC BY-SA, o modelo combinado é distribuído sob **CC BY-SA 4.0**, com as atribuições acima. O código do aplicativo continua sob a licença do repositório.

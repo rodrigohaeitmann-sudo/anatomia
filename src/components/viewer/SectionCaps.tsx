@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { tissueColors, type Tissue } from "@/lib/modelConfig";
+import { meshColor, type Tissue } from "@/lib/modelConfig";
 import { filledTissues, shapesFor, type SectionLoop, type SectionResult } from "@/lib/sectioning";
 import { mm } from "./shared";
 
@@ -26,7 +26,7 @@ export function SectionCaps({ section, planeNormal, selected }: { section: Secti
     ranked.forEach((loops, rank) => {
       const tissue = loops[0].tissue as Tissue;
       const isSelected = loops[0].structure === selected;
-      const color = new THREE.Color(isSelected ? "#fde68a" : tissueColors[tissue] ?? "#cbd5e1");
+      const color = new THREE.Color(isSelected ? "#fde68a" : meshColor(loops[0].meshName, tissue) ?? "#cbd5e1");
       if (filledTissues.has(tissue)) {
         const material = new THREE.MeshBasicMaterial({ color: color.clone().multiplyScalar(0.92), side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 - rank });
         for (const { outer, holes } of shapesFor(loops)) {

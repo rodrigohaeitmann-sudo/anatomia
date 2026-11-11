@@ -30,7 +30,7 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
           <section>
             <h3 className="mb-1 text-[11px] font-bold uppercase tracking-wide text-emerald-300">Modelo</h3>
             <p>
-              Modelo híbrido feminino com {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} milhões de triângulos: pele e mamas do Visible Human Female (HRA/NIH); esqueleto, músculos, vasos e nervos do BodyParts3D 4.3 (DBCLS); grande dorsal do BodyParts3D 3.0; linfonodos e fáscias do Z-Anatomy. Nenhuma estrutura anatômica é desenhada à mão.
+              Modelo híbrido feminino com {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} milhões de triângulos: pele e mamas do Visible Human Female (HRA/NIH); esqueleto, músculos, vasos e nervos do BodyParts3D 4.3 (DBCLS); grande dorsal do BodyParts3D 3.0; linfonodos e fáscias do Z-Anatomy. As malhas vêm de exames e atlas publicados. A exceção, marcada como esquemática, são os ramos vasculares e nervosos que entram na mama, o septo de Würinger e seus ligamentos: foram traçados pela literatura sobre marcos das malhas reais.
             </p>
           </section>
           <section>
