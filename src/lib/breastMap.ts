@@ -1,5 +1,5 @@
 /**
- * Breast chart and ptosis map, evaluated on the device.
+ * Breast chart and ptosis/hypertrophy map, evaluated on the device.
  *
  * Mirror of scripts/hybrid/build_breast.py (see docs/plano-mamoplastia.md): the pipeline measures the
  * chart on the model's own skin and breast meshes and ships it as a small parametric model
@@ -35,15 +35,19 @@ export type BreastSideData = {
   meshes: string[];
 };
 
-export type BreastStateData = { id: string; label: string; short: string; descent: number; hinge: number; description: string };
+/** Growth of the mound in a state: factors for depth, width about the nipple meridian and length below the fold; `hang` thins the pouch as it hangs. */
+export type BreastGrowth = { depth: number; width: number; length: number; hang: number };
+
+export type BreastStateData = { id: string; label: string; short: string; descent: number; tilt: number; growth: BreastGrowth; description: string };
 
 export type BreastModelParams = {
   unitsPerMm: number;
   rref: number;
   cell: number;
   taperMm: number;
-  flow: { shear: number; rise: number; decel: number[]; lmin: number; stepMm: number };
-  hinge: { rise: number; hold: number; end: number; gmax: number; ramp: number };
+  flow: { shear: number; shearFold: number; shearBlend: number[]; rise: number; decel: number[]; lmin: number; stepMm: number };
+  tilt: { reach: number; fade: number[]; stepMm: number };
+  growth: { shear: number; blend: number; hangMm: number };
   states: BreastStateData[];
 };
 
@@ -55,7 +59,6 @@ const dsmoothstep = (t: number) => {
   const x = t < 0 ? 0 : t > 1 ? 1 : t;
   return 6 * x * (1 - x);
 };
-const RAD = Math.PI / 180;
 
 /** One breast: chart, base surface and the state maps. */
 export class BreastSide {
@@ -108,87 +111,62 @@ export class BreastSide {
     return smoothstep((u - lo) / this.p.taperMm) * smoothstep((hi - u) / this.p.taperMm);
   }
 
-  // ---- ptosis flow (incompressible, attached to the wall) -----------------------------------------------
+  // ---- flows (incompressible in the chart, attached to the wall) ----------------------------------------
   private va = 0;
   private vd = 0;
-  private velocity(a: number, d: number, s: number, top: number) {
-    const { shear, rise, decel, lmin } = this.p.flow;
-    const t = d <= 0 ? 0 : d >= shear ? 1 : d / shear;
-    const wp = t * t * (3 - 2 * t);
-    const w = d < shear ? shear * (t * t * t - 0.5 * t * t * t * t) : 0.5 * shear + (d - shear);
+
+  /** Ptosis: the tissue descends along the wall beyond a shear layer (thin over the fascia, thick around the fold). */
+  private descend(a: number, d: number, s: number, top: number) {
+    const { shear, shearFold, shearBlend, rise, decel, lmin } = this.p.flow;
+    const x = (a - shearBlend[0]) / (shearBlend[1] - shearBlend[0]);
+    const delta = shearFold + (shear - shearFold) * smoothstep(x);
+    const ddelta = ((shear - shearFold) * dsmoothstep(x)) / (shearBlend[1] - shearBlend[0]);
+    const t = d <= 0 ? 0 : d / delta;
+    const tc = t < 1 ? t : 1;
+    const profile = tc * tc * (3 - 2 * tc);
+    const integral = t < 1 ? tc * tc * tc - 0.5 * tc * tc * tc * tc : 0.5 + (t - 1);
     const up = smoothstep((top - a) / rise);
     const dup = -dsmoothstep((top - a) / rise) / rise;
-    const x = (a - decel[0]) / (decel[1] - decel[0]);
-    const down = lmin + (1 - lmin) * smoothstep(x);
-    const ddown = ((1 - lmin) * dsmoothstep(x)) / (decel[1] - decel[0]);
-    this.va = -s * wp * up * down;
-    this.vd = s * w * (dup * down + up * ddown);
+    const y = (a - decel[0]) / (decel[1] - decel[0]);
+    const down = lmin + (1 - lmin) * smoothstep(y);
+    const ddown = ((1 - lmin) * dsmoothstep(y)) / (decel[1] - decel[0]);
+    const drive = up * down;
+    const ddrive = dup * down + up * ddown;
+    this.va = -s * drive * profile;
+    this.vd = s * (ddrive * delta * integral + drive * ddelta * (integral - t * profile));
   }
 
-  private advance(a: number, d: number, amp: number, top: number, fromMm: number, toMm: number) {
-    const steps = Math.ceil((toMm - fromMm) / this.p.flow.stepMm);
-    if (steps > 0) {
-      const s = (toMm - fromMm) * amp;
-      const h = 1 / steps;
-      for (let n = 0; n < steps; n++) {
-        this.velocity(a, d, s, top);
-        const k1a = this.va, k1d = this.vd;
-        this.velocity(a + 0.5 * h * k1a, d + 0.5 * h * k1d, s, top);
-        const k2a = this.va, k2d = this.vd;
-        this.velocity(a + 0.5 * h * k2a, d + 0.5 * h * k2d, s, top);
-        const k3a = this.va, k3d = this.vd;
-        this.velocity(a + h * k3a, d + h * k3d, s, top);
-        a += (h * (k1a + 2 * k2a + 2 * k3a + this.va)) / 6;
-        d = Math.max(d + (h * (k1d + 2 * k2d + 2 * k3d + this.vd)) / 6, 0);
-      }
+  /** Tilt (major ptosis): below the fold the tissue descends the more the farther it is from the wall. */
+  private tilt(a: number, d: number, k: number) {
+    const { reach, fade } = this.p.tilt;
+    const x = (a - fade[0]) / (fade[1] - fade[0]);
+    const m = 1 - smoothstep(x);
+    const dm = -dsmoothstep(x) / (fade[1] - fade[0]);
+    const t = (d > 0 ? d : 0) / reach;
+    this.va = (-k * m * reach * t * t) / (1 + t * t);
+    this.vd = k * dm * reach * reach * (t - Math.atan(t));
+  }
+
+  /** RK4 over unit time of one of the two fields; the result is left in oa/od. */
+  private integrate(tilting: boolean, a: number, d: number, s: number, top: number, steps: number) {
+    const h = 1 / steps;
+    for (let n = 0; n < steps; n++) {
+      if (tilting) this.tilt(a, d, s);
+      else this.descend(a, d, s, top);
+      const k1a = this.va, k1d = this.vd;
+      if (tilting) this.tilt(a + 0.5 * h * k1a, d + 0.5 * h * k1d, s);
+      else this.descend(a + 0.5 * h * k1a, d + 0.5 * h * k1d, s, top);
+      const k2a = this.va, k2d = this.vd;
+      if (tilting) this.tilt(a + 0.5 * h * k2a, d + 0.5 * h * k2d, s);
+      else this.descend(a + 0.5 * h * k2a, d + 0.5 * h * k2d, s, top);
+      const k3a = this.va, k3d = this.vd;
+      if (tilting) this.tilt(a + h * k3a, d + h * k3d, s);
+      else this.descend(a + h * k3a, d + h * k3d, s, top);
+      a += (h * (k1a + 2 * k2a + 2 * k3a + this.va)) / 6;
+      d = Math.max(d + (h * (k1d + 2 * k2d + 2 * k3d + this.vd)) / 6, 0);
     }
     this.oa = a;
     this.od = d;
-  }
-
-  /** C1 monotone 0 -> 1 ramp with quadratic ends: value in rv, slope in rs. */
-  private rv = 0;
-  private rs = 0;
-  private ramp(t: number) {
-    const e = this.p.hinge.ramp;
-    const x = t < 0 ? 0 : t > 1 ? 1 : t;
-    const k = 1 / (1 - e);
-    if (x < e) {
-      this.rv = (k * x * x) / (2 * e);
-      this.rs = (k * x) / e;
-    } else if (x > 1 - e) {
-      this.rv = 1 - (k * (1 - x) * (1 - x)) / (2 * e);
-      this.rs = (k * (1 - x)) / e;
-    } else {
-      this.rv = k * (x - e / 2);
-      this.rs = k;
-    }
-  }
-
-  /** Polar warp about the fold (major ptosis): the pouch swings against the abdominal wall. */
-  private warp(a: number, d: number, amp: number, peakDeg: number) {
-    const { rise, hold, end, gmax } = this.p.hinge;
-    const a1 = rise * RAD, a2 = hold * RAD, a3 = end * RAD;
-    const rho = Math.hypot(a, d);
-    const alpha = Math.atan2(d, a);
-    let delta: number, slope: number;
-    if (alpha < a1) {
-      this.ramp(alpha / a1);
-      delta = this.rv;
-      slope = this.rs / a1;
-    } else if (alpha < a2) {
-      delta = 1;
-      slope = 0;
-    } else {
-      this.ramp((a3 - alpha) / (a3 - a2));
-      delta = this.rv;
-      slope = -this.rs / (a3 - a2);
-    }
-    const k = peakDeg * RAD * amp;
-    const alpha2 = alpha + delta * k;
-    const rho2 = rho * Math.min(1 / Math.sqrt(Math.max(1 + slope * k, 0.05)), gmax);
-    this.oa = rho2 * Math.cos(alpha2);
-    this.od = rho2 * Math.sin(alpha2);
   }
 
   // ---- public ---------------------------------------------------------------------------------------
@@ -198,9 +176,12 @@ export class BreastSide {
    */
   displacements(positions: ArrayLike<number>, count = positions.length / 3): Float32Array[] | null {
     const { s, xc, zc, y0 } = this.data;
-    const { unitsPerMm, rref, states } = this.p;
+    const { unitsPerMm, rref, states, flow, growth } = this.p;
+    const tiltReach = this.p.tilt.reach;
+    const tiltStep = this.p.tilt.stepMm;
     const hingeCurve = this.data.hinge;
     const topCurve = this.data.top;
+    const um = this.data.nippleChart[0];
     let out: Float32Array[] | null = null;
     for (let i = 0; i < count; i++) {
       const x = positions[i * 3] / unitsPerMm;
@@ -216,25 +197,42 @@ export class BreastSide {
       if (depth <= 0) continue;
       const hinge = this.curve(hingeCurve, u);
       const top = this.curve(topCurve, u) - hinge;
-      const theta = u / rref;
-      const sin = Math.sin(theta);
-      const cos = Math.cos(theta);
+      // the descent of every state continues the previous one; tilt and growth are applied on top of it
       let a = v - hinge;
       let d = depth;
       let travelled = 0;
       if (!out) out = states.map(() => new Float32Array(count * 3));
       for (let k = 0; k < states.length; k++) {
-        this.advance(a, d, amp, top, travelled, states[k].descent);
-        a = this.oa;
-        d = this.od;
-        travelled = states[k].descent;
-        if (states[k].hinge) this.warp(a, d, amp, states[k].hinge);
-        const v2 = hinge + this.oa;
-        const r2 = this.baseAt(u, v2) + this.od;
+        const state = states[k];
+        const descent = Math.ceil(Math.abs(state.descent - travelled) / flow.stepMm);
+        if (descent > 0) {
+          this.integrate(false, a, d, (state.descent - travelled) * amp, top, descent);
+          a = this.oa;
+          d = this.od;
+          travelled = state.descent;
+        }
+        let a2 = a;
+        let d2 = d;
+        const tilting = Math.ceil((Math.abs(state.tilt) * tiltReach) / tiltStep);
+        if (tilting > 0) {
+          this.integrate(true, a, d, state.tilt * amp, top, tilting);
+          a2 = this.oa;
+          d2 = this.od;
+        }
+        // hypertrophy: thicker, wider about the meridian, longer below the fold; the pendulous pouch hangs thinner
+        const g = state.growth;
+        const superficial = smoothstep(d2 / growth.shear) * amp;
+        const below = smoothstep((growth.blend - a2) / (2 * growth.blend));
+        const u2 = u + (g.width - 1) * superficial * (u - um);
+        a2 += (g.length - 1) * superficial * below * a2;
+        d2 *= (1 + (g.depth - 1) * amp) * (1 - g.hang * amp * smoothstep(-a2 / growth.hangMm));
+        const v2 = hinge + a2;
+        const r2 = this.baseAt(u2, v2) + d2;
+        const theta = u2 / rref;
         const target = out[k];
-        target[i * 3] = (xc - s * r2 * sin) * unitsPerMm - positions[i * 3];
+        target[i * 3] = (xc - s * r2 * Math.sin(theta)) * unitsPerMm - positions[i * 3];
         target[i * 3 + 1] = (v2 + y0) * unitsPerMm - positions[i * 3 + 1];
-        target[i * 3 + 2] = (zc + r2 * cos) * unitsPerMm - positions[i * 3 + 2];
+        target[i * 3 + 2] = (zc + r2 * Math.cos(theta)) * unitsPerMm - positions[i * 3 + 2];
       }
     }
     return out;

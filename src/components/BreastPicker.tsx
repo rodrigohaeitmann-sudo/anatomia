@@ -4,6 +4,8 @@ import { CircleDot, X } from "lucide-react";
 import { breastStateById, breastStates, measurementsOf, type BreastMeasurement } from "@/lib/breastStates";
 
 const cm = (mm: number) => (mm / 10).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+/** Volume of the mound, to the nearest 10 mL, with the gain over the breast as scanned. */
+export const breastVolume = (m: BreastMeasurement) => `≈ ${Math.round(m.volumeMl / 10) * 10} mL${m.volumeGainPct > 0 ? ` (+${m.volumeGainPct}%)` : ""}`;
 
 /** Clinical measurements of a breast state, as measured on the deformed model (build_breast.py). */
 export function breastSummary(m: BreastMeasurement) {
@@ -12,6 +14,7 @@ export function breastSummary(m: BreastMeasurement) {
     { label: "Mamilo", value: level < 3 ? "na altura do sulco" : `${level} mm ${m.nippleToFoldMm > 0 ? "acima" : "abaixo"} do sulco` },
     { label: "Fúrcula–mamilo", value: `${cm(m.notchToNippleMm)} cm` },
     { label: "Mamilo–sulco", value: `${cm(m.nippleToFoldSkinMm)} cm` },
+    { label: "Volume", value: breastVolume(m) },
     { label: "Regnault", value: m.regnault },
   ];
 }
@@ -25,7 +28,7 @@ type Props = {
   onClose?: () => void;
 };
 
-/** Breast shape: as scanned, or one of the ptosis grades (skin and every breast structure are deformed). */
+/** Breast shape: as scanned, or one of the ptosis grades with its hypertrophy (skin and every breast structure are deformed). */
 export function BreastPicker({ state, settled, onState, variant, bottom = 0, onClose }: Props) {
   const active = state ? breastStateById.get(state) : undefined;
   const floating = variant === "floating";
@@ -56,7 +59,8 @@ export function BreastPicker({ state, settled, onState, variant, bottom = 0, onC
         {chip(null, "Sem ptose")}
         {breastStates.map((item) => chip(item.id, item.short))}
       </div>
-      <p className={`mt-2 text-xs leading-snug text-slate-300 ${floating ? "line-clamp-2" : ""}`}>
+      <p className={`mt-2 text-xs leading-snug text-slate-300 ${floating ? "line-clamp-3" : ""}`}>
+        {active && <span className="font-semibold text-slate-100">{active.label}. </span>}
         {active ? active.description : "Mama como no exame de origem (Visible Human Female): mamilo acima do sulco inframamário."}
       </p>
       {shown && (
@@ -70,7 +74,7 @@ export function BreastPicker({ state, settled, onState, variant, bottom = 0, onC
           ))}
         </p>
       )}
-      {active && !floating && <p className="mt-1.5 text-[11px] text-slate-500">Pele, gordura, glândula, ductos e ligamentos são deformados pelo mesmo mapa; a parede torácica não se move. Modelo geométrico, não é simulação física.</p>}
+      {active && !floating && <p className="mt-1.5 text-[11px] text-slate-500">Pele, gordura, glândula, ductos e ligamentos são deformados pelo mesmo mapa; a parede torácica não se move. Cada grau traz a hipertrofia que costuma acompanhá-lo. Modelo geométrico, não é simulação física.</p>}
     </>
   );
   if (variant === "inline") return <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3">{body}</div>;

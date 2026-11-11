@@ -1,5 +1,5 @@
 /**
- * Breast states (ptosis grades) of the hybrid model. The chart and the measurements come from
+ * Breast states (ptosis grades with their hypertrophy) of the hybrid model. The chart and the measurements come from
  * scripts/hybrid/build_breast.py; the deformation itself is evaluated here, on the device, by
  * src/lib/breastMap.ts (a few kB of parameters instead of megabytes of per-vertex deltas).
  */
@@ -21,6 +21,9 @@ export type BreastMeasurement = {
   projectionMm: number;
   nipple: [number, number, number];
   regnault: string;
+  /** volume of the mound in front of the trunk surface, and its gain over the breast as scanned */
+  volumeMl: number;
+  volumeGainPct: number;
 };
 
 const raw = data as unknown as BreastModelParams & {

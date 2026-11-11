@@ -70,7 +70,7 @@ Um estado é um mapa `repouso → estado`. O pipeline mede a carta e escolhe os 
 
 | | Deltas por vértice (como as posições do braço) | Mapa paramétrico (adotado) |
 |---|---|---|
-| Tamanho da ptose (3 graus, 2 mamas) | ≈ 8,6 MB (estimado: desktop + celular) | 76 kB no total |
+| Tamanho da ptose (3 graus, 2 mamas) | ≈ 8,6 MB (estimado: desktop + celular) | 87 kB no total |
 | Cada técnica nova | ≈ +1,7 MB por estado | alguns kB |
 | Rótulos, marcações, peças | exigiriam dados próprios por estado | passam pela mesma função |
 | Custo | download | cálculo uma vez por sessão: o mapa leva ≈ 1 s no modelo de desktop (386 mil vértices) e ≈ 0,4 s no de celular (136 mil), medidos em Node; somam-se as normais |
@@ -81,11 +81,17 @@ As duas implementações (Python e TypeScript) são comparadas por vetores de te
 
 Mapa de fluxo de um campo de velocidade **incompressível e preso à parede**, no semiplano (altura `a` acima do sulco, profundidade `d`) de cada meridiano, com função de corrente `ψ = −S·W(d)·L(a)`:
 
-- o tecido desce, e quanto mais fundo, menos (camada de cisalhamento de 18 mm junto à parede: é o deslizamento no espaço retromamário);
+- o tecido desce, e quanto mais fundo, menos. A camada de cisalhamento junto à parede é fina sobre a fáscia (7 mm: o monte desliza inteiro no espaço retromamário) e espessa junto ao sulco (20 mm: ali o tecido é preso e o polo inferior estica aos poucos);
 - afina onde a descida acelera (polo superior) e se acumula onde ela freia (abaixo do sulco): o monte esvazia para uma bolsa pendente;
-- por ser um fluxo, o mapa preserva o volume na carta e **não pode dobrar a malha nem atravessar a parede** (von Funck et al., 2006).
+- por ser um fluxo, o mapa preserva a área na carta e **não pode dobrar a malha nem atravessar a parede** (von Funck et al., 2006).
 
-A ptose acentuada soma um giro polar em torno do sulco: a bolsa encosta na parede abdominal e o mamilo chega ao contorno mais baixo. Os graus não são escolhidos pelo nome: o pipeline mede o resultado (mamilo em relação ao sulco e ao contorno inferior) e classifica.
+A ptose acentuada soma um segundo fluxo do mesmo tipo, a **inclinação**: abaixo do sulco, o tecido desce tanto mais quanto mais longe está da parede (o polo inferior é preso ao sulco e o resto da bolsa o ultrapassa). O eixo da mama passa a apontar para baixo e o mamilo chega ao contorno mais baixo. Os graus não são escolhidos pelo nome: o pipeline mede o resultado (mamilo em relação ao sulco e ao contorno inferior) e classifica.
+
+### Hipertrofia
+
+Ptose quase nunca vem sozinha: cada grau traz a hipertrofia que costuma acompanhá-lo (leve, moderada, acentuada). É um crescimento aplicado depois dos fluxos, com quatro fatores por estado: espessura (`depth`), largura em torno do meridiano do mamilo (`width`), comprimento abaixo do sulco (`length`) e o quanto a bolsa afina ao pender (`hang`: a mama pendente fica junto à parede abdominal em vez de se projetar). O volume de cada estado é **medido** pelo jacobiano do mapa inteiro, sobre o monte à frente da superfície-base, e aparece no seletor e nas vistas.
+
+Duas escolhas ficaram registradas no caminho: a parede do fluxo é a superfície-base (o tronco sem o monte), não a fáscia, porque com a parede na fáscia o polo superior afundava até o músculo e deixava um degrau em volta da mama; e a inclinação substituiu tanto o giro polar em torno do sulco (que espremia tecido parede abaixo) quanto um rolamento do conteúdo da bolsa (que criava um degrau no topo).
 
 ### Peças cirúrgicas (a criar)
 
@@ -111,7 +117,7 @@ Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa ci
 | # | Fase | Entrega | Situação |
 |---|---|---|---|
 | 0 | Avaliação do app e do modelo | Este documento; medidas da mama; correção do reset de câmera | feito |
-| 1 | **Mama ptótica** | Carta dos dois lados; ptose graus I–III; seletor **Forma da mama**; pack **Ptose mamária** (7 vistas); medidas clínicas; marcações e zonas acompanham a mama | feito |
+| 1 | **Mama ptótica** | Carta dos dois lados; ptose graus I–III com hipertrofia leve, moderada e acentuada; seletor **Forma da mama**; pack **Ptose mamária** (7 vistas); medidas clínicas; marcações e zonas acompanham a mama | feito |
 | 2 | **Marcação pré-operatória** | Linha média, meridiano, sulco, ponto A; padrões: T invertido (Wise/Pitanguy), vertical (Lejour/Lassus/Hall-Findlay), periareolar; pontos B, C, D, E; medidas na ficha | piloto fora do app (Wise) |
 | 3 | **Pedículos e ressecções em 3D** | Volumes de pedículo (7 tipos) e de ressecção por técnica; cor por peça na glândula real; peso estimado; ficha de cada pedículo | piloto fora do app (6 pedículos, 2 ressecções) |
 | 4 | **Remanejamento e resultado** | Sequência por etapas (marcação → desepitelização → ressecção → transposição → fechamento dos pilares → pele); mapa do pós-operatório; cicatrizes | planejado |
@@ -121,7 +127,7 @@ Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa ci
 
 ## Fase 1: o que foi feito
 
-- `scripts/hybrid/build_breast.py` (`npm run breast:hybrid`): carta, superfície-base, sulco, parâmetros dos estados, medidas e vetores de teste → `src/data/breastModel.json` (8 kB) e `public/models/hybrid/breast-chart.bin` (68 kB).
+- `scripts/hybrid/build_breast.py` (`npm run breast:hybrid`): carta, superfície-base, sulco, parâmetros dos estados, medidas e vetores de teste → `src/data/breastModel.json` (9 kB) e `public/models/hybrid/breast-chart.bin` (78 kB).
 - `src/lib/breastMap.ts`: o mapa, sem dependências; `src/lib/breastStates.ts`: carga e utilidades; `scripts/hybrid/check_breast_map.mjs`: confere TypeScript × Python.
 - `HybridModel.tsx`: canal de *morph targets* da mama, independente do canal do braço; guardado por geometria (volta na hora após um reset de câmera).
 - `src/lib/subdivide.ts`: no modelo de celular, a pele sobre a mama (triângulos de ~7 mm) é refinada antes do cálculo, porque a ptose estica o polo superior até três vezes.
@@ -130,12 +136,12 @@ Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa ci
 
 ### Medidas no modelo (mama operada; a contralateral difere em até 1 cm)
 
-| Estado | Mamilo × sulco | Contorno inferior × sulco | Fúrcula–mamilo | Mamilo–sulco (pele) | Classificação medida |
-|---|---|---|---|---|---|
-| Sem ptose | 51 mm acima | 0 | 22,6 cm | 7,2 cm | sem ptose |
-| Ptose I | 1 mm acima | 37 mm abaixo | 27,3 cm | 9,6 cm | grau I |
-| Ptose II | 26 mm abaixo | 58 mm abaixo | 30,7 cm | 11,7 cm | grau II |
-| Ptose III | 86 mm abaixo | 99 mm abaixo | 35,4 cm | 12,6 cm | grau III |
+| Estado | Mamilo × sulco | Contorno inferior × sulco | Fúrcula–mamilo | Mamilo–sulco (pele) | Projeção | Volume do monte | Classificação medida |
+|---|---|---|---|---|---|---|---|
+| Sem ptose | 51 mm acima | 0 | 22,6 cm | 7,2 cm | 55 mm | 430 mL | sem ptose |
+| Ptose I, hipertrofia leve | 1 mm acima | 38 mm abaixo | 28,3 cm | 10,5 cm | 68 mm | 530 mL (+24%) | grau I |
+| Ptose II, hipertrofia moderada | 26 mm abaixo | 62 mm abaixo | 32,1 cm | 13,6 cm | 84 mm | 650 mL (+52%) | grau II |
+| Ptose III, hipertrofia acentuada | 89 mm abaixo | 101 mm abaixo | 37,0 cm | 14,5 cm | 60 mm | 890 mL (+110%) | grau III |
 
 Critério usado (Regnault, 1976): grau I, mamilo na altura do sulco (±1 cm); grau II, abaixo do sulco e acima do contorno inferior; grau III, abaixo do sulco e no contorno mais baixo (até 2 cm dele).
 

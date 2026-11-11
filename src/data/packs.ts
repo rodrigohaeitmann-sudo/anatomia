@@ -67,7 +67,8 @@ const breastFacts = (state: string | null) => {
   const m = measurementsOf(state);
   const level = Math.round(Math.abs(m.nippleToFoldMm));
   const nipple = level < 3 ? "mamilo na altura do sulco" : `mamilo ${level} mm ${m.nippleToFoldMm > 0 ? "acima" : "abaixo"} do sulco`;
-  return `${nipple}, fúrcula–mamilo ${cm(m.notchToNippleMm)} cm, mamilo–sulco ${cm(m.nippleToFoldSkinMm)} cm`;
+  const volume = `volume ≈ ${Math.round(m.volumeMl / 10) * 10} mL${m.volumeGainPct > 0 ? ` (+${m.volumeGainPct}%)` : ""}`;
+  return `${nipple}, fúrcula–mamilo ${cm(m.notchToNippleMm)} cm, mamilo–sulco ${cm(m.nippleToFoldSkinMm)} cm, ${volume}`;
 };
 // Surface views: opaque skin with the nipple-areola complex on it. Profiles leave the far nipple out:
 // at eye level it would show beside the near breast.
@@ -173,7 +174,7 @@ export const packGroups: PackGroup[] = [
       {
         id: "ptose-mamaria",
         title: "Ptose mamária",
-        summary: "Do perfil sem ptose aos graus I–III de Regnault: o que desce, o que estica e o que continua preso à parede. A forma muda em qualquer vista pelo seletor Forma da mama.",
+        summary: "Do perfil sem ptose aos graus I–III de Regnault, cada um com a hipertrofia que costuma acompanhá-lo: o que desce, o que cresce e o que continua preso à parede. A forma muda em qualquer vista pelo seletor Forma da mama.",
         views: [
           {
             id: "sem-ptose",
@@ -192,13 +193,13 @@ export const packGroups: PackGroup[] = [
               "O sulco é uma zona de aderência dermofascial: é o ponto fixo sobre o qual a mama pende",
             ],
           },
-          ptosisProfile(0, ["Grau I: mamilo na altura do sulco (até 1 cm), acima do contorno inferior", "Pseudoptose é diferente: o mamilo fica acima do sulco e só o polo inferior desce"]),
-          ptosisProfile(1, ["Grau II: mamilo 1–3 cm abaixo do sulco, ainda acima do contorno inferior", "A distância fúrcula–mamilo e o segmento mamilo–sulco definem a pele a ressecar e a subida do complexo areolopapilar"]),
-          ptosisProfile(2, ["Grau III: mamilo mais de 3 cm abaixo do sulco, no contorno mais baixo, apontando para baixo", "Subidas longas do complexo areolopapilar exigem pedículo mais confiável ou enxerto livre de aréola"]),
+          ptosisProfile(0, ["Grau I: mamilo na altura do sulco (até 1 cm), acima do contorno inferior", "Hipertrofia leve: a mama já pesa mais e o polo inferior ultrapassa o sulco", "Pseudoptose é diferente: o mamilo fica acima do sulco e só o polo inferior desce"]),
+          ptosisProfile(1, ["Grau II: mamilo 1–3 cm abaixo do sulco, ainda acima do contorno inferior", "Hipertrofia moderada: é o quadro mais comum de quem procura a mamoplastia redutora", "A distância fúrcula–mamilo e o segmento mamilo–sulco definem a pele a ressecar e a subida do complexo areolopapilar"]),
+          ptosisProfile(2, ["Grau III: mamilo mais de 3 cm abaixo do sulco, no contorno mais baixo, apontando para baixo", "Hipertrofia acentuada: mama pendente, larga na base e pesada; o eixo da mama aponta para baixo", "Subidas longas do complexo areolopapilar exigem pedículo mais confiável ou enxerto livre de aréola"]),
           {
             id: "frente",
             title: "Frente",
-            description: "As duas mamas com ptose moderada: polo superior esvaziado e bolsa pendente sobre o sulco, que passa a ficar oculto.",
+            description: "As duas mamas com ptose grau II e hipertrofia moderada: polo superior esvaziado e bolsa pendente sobre o sulco, que passa a ficar oculto.",
             structures: ptosisSurface,
             solid: ["skin"],
             orientation: "anterior",
@@ -209,7 +210,7 @@ export const packGroups: PackGroup[] = [
               { structure: "skin", near: "nipple", nearOffsetMm: [0, 60, -25], text: "Polo superior esvaziado" },
               { structure: "skin", near: "nipple", nearOffsetMm: [0, -32, -8], text: "Polo inferior pendente" },
             ],
-            relations: [`No modelo: ${breastFacts("ptose-2")}`, "A base da mama (pegada sobre o tórax) não muda: muda a distribuição do volume dentro do envelope de pele"],
+            relations: [`No modelo: ${breastFacts("ptose-2")}`, "A base da mama (pegada sobre o tórax) continua no lugar: o volume, agora maior, acumula-se no polo inferior e alarga a mama"],
           },
           {
             id: "por-dentro",
@@ -229,14 +230,14 @@ export const packGroups: PackGroup[] = [
             ],
             relations: [
               "O plano de deslizamento é o espaço retromamário, entre a fáscia superficial profunda e a fáscia peitoral",
-              "O tecido junto à parede quase não se desloca; o superficial desce mais (camada de cisalhamento de ~2 cm no modelo)",
-              "Modelo geométrico: mesmo mapa aplicado à pele e a todas as estruturas reais da mama, com volume preservado",
+              "O tecido junto à parede quase não se desloca; o superficial desce mais (no modelo, camada de cisalhamento de 0,7 cm sobre a fáscia e 2 cm junto ao sulco)",
+              "Modelo geométrico: o mesmo mapa é aplicado à pele e a todas as estruturas reais da mama; o deslizamento conserva o volume e a hipertrofia é um crescimento somado a ele",
             ],
           },
           {
             id: "corte-sagital",
             title: "Corte sagital",
-            description: "Plano sagital pelo meridiano da mama com ptose moderada: polo superior fino, polo inferior espesso e pendente à frente da parede abdominal.",
+            description: "Plano sagital pelo meridiano da mama com ptose grau II e hipertrofia moderada: polo superior fino, polo inferior espesso e pendente à frente da parede abdominal.",
             structures: ["skin", ...breastParts, "pectoral-fascia", "pectoralis-major", "pectoralis-minor", "intercostal-muscles", ...thoracicCage],
             orientation: "lateral",
             anchor: "nipple",
