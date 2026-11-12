@@ -9,7 +9,7 @@ import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
 
-export type ViewOrientation = "anterior" | "anterolateral" | "frontal" | "lateral" | "profile" | "axillary" | "posterior" | "posterolateral";
+export type ViewOrientation = "anterior" | "anterolateral" | "frontal" | "inferior" | "lateral" | "profile" | "axillary" | "posterior" | "posterolateral";
 
 /** A point: nearest vertex of `structure` to `near` (landmark key, "landmark.index" or structure id), plus an optional offset in mm. */
 export type AnchoredPoint = { structure: string; near: string; nearOffsetMm?: [number, number, number]; offsetMm?: [number, number, number] };
@@ -57,7 +57,7 @@ export type PackView = {
    * Moving between such views animates the tissue from one frame to the other (`instant`: the view shows its frame at
    * once, for views that hide the pieces); `replayFrom` is where "Rever" starts (default: the frame before; null: no replay).
    */
-  surgery?: { technique: string; frame: number; replayFrom?: number | null; instant?: boolean };
+  surgery?: { technique: string; frame: number; replayFrom?: number | null; instant?: boolean; caption?: string };
   /** colours given to structures in this view (e.g. the skin to be removed, the de-epithelialised dermis) */
   tint?: Record<string, string>;
   /** structures drawn see-through in this view (the skin, to show the pieces under it) */

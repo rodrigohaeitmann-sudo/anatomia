@@ -1,8 +1,8 @@
 /**
  * Reduction mammaplasty step by step (src/data/mammaplastySteps.json and public/models/hybrid/mammaplasty-<key>.bin,
- * written by scripts/hybrid/build_mammaplasty_steps.py): skin, pieces, nipple-areola complex and scars of every
- * technique at five key frames (marking, incision, resection, transposition, closure). The viewer plays them as morph
- * targets: frame 0 is the geometry, frames 1-4 are deltas from it.
+ * written by scripts/hybrid/build_mammaplasty_steps.py): skin, pieces, areola, the vessels and nerves the pedicle keeps,
+ * sutures, measurements and scars of every technique at its key frames (marking, incision, resection, transposition and
+ * the stages of the closure). The viewer plays them as morph targets: frame 0 is the geometry, the others are deltas.
  */
 import data from "@/data/mammaplastySteps.json";
 
@@ -19,12 +19,18 @@ type TechniqueData = {
   points: Record<string, [number, number, number]>;
   measurements: { before: StepMeasurements; after: StepMeasurements };
   pillarsMl: Record<string, number>;
+  /** key frames of this technique */
+  frames: { id: string; label: string }[];
+  /** marking and result: areola before and after (areolotome), rise of the nipple, B-C, vertical scar (mm) */
+  measures: { areolaNowMm: number; areolaNewMm: number; ascensionMm: number; bcMm?: number; verticalScarMm?: number; areolaResultMm: number };
+  /** schematic branches the pedicle keeps (src/data/breastAnatomy.json mesh names) */
+  branches: { artery: string[]; nerve: string[] };
 };
 
 const techniques = data.techniques as unknown as Record<string, TechniqueData>;
 
-export const stepFrames = data.frames as { id: string; label: string }[];
-export const stepFrameCount = stepFrames.length;
+/** Key frames of a technique (its schedule: the closure has its own stages in every technique). */
+export const stepFramesOf = (key: string) => techniques[key]?.frames ?? [];
 export const stepHole = data.hole as [number, number][];
 /** technique of every step mesh */
 export const stepMeshTechnique = new Map<string, string>();
@@ -35,6 +41,10 @@ export const stepPoints: Record<string, [number, number, number]> = {};
 Object.entries(techniques).forEach(([key, item]) => Object.entries(item.points).forEach(([name, point]) => (stepPoints[`step:${key}:${name}`] = point)));
 export const stepMeasurements = (key: string) => techniques[key].measurements;
 export const stepPillarVolumes = (key: string) => techniques[key].pillarsMl;
+export const stepMeasures = (key: string) => techniques[key].measures;
+export const stepBranches = (key: string) => techniques[key].branches;
+/** Structures of the step-by-step sequence of a technique (listed with the anatomy while one of its views is open). */
+export const stepStructuresOf = (key: string) => Object.keys(data.structures).filter((id) => id.endsWith(`-${key}`));
 
 export type StepGeometry = { positions: Float32Array[]; index: Uint16Array };
 
@@ -68,7 +78,7 @@ export function loadSteps(key: string): Promise<Map<string, StepGeometry>> {
           }
           const index = new Uint16Array(buffer.slice(offset, offset + mesh.triangles * 6));
           const positions: Float32Array[] = [];
-          for (let k = 0; k < stepFrameCount; k++) {
+          for (let k = 0; k < item.frames.length; k++) {
             const before = mesh.frames.filter((frame) => frame <= k);
             positions.push(stored.get(before.length ? before[before.length - 1] : mesh.frames[0])!);
           }

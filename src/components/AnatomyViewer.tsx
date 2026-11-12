@@ -16,7 +16,7 @@ import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { boneMatrices, posedLandmark } from "@/lib/armPoses";
 import type { BreastSide } from "@/lib/breastMap";
 import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
-import { stepFrameCount, stepFrames } from "@/lib/mammaplastySteps";
+import { stepFramesOf } from "@/lib/mammaplastySteps";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
@@ -91,6 +91,8 @@ const orientations: Record<ViewOrientation, { yaw: number; offset: Landmark }> =
   anterolateral: { yaw: 0.08, offset: [-3.6, 2.05, 4.2] },
   // in front of the operated breast, a little to its side, at the height of the nipple (shape and lower pole)
   frontal: { yaw: -0.15, offset: [-2.6, 0.45, 5.2] },
+  // from in front and below the operated breast: the lower pole, the fold and the sutures of an inverted T
+  inferior: { yaw: -0.15, offset: [-2.3, -2.3, 4.8] },
   lateral: { yaw: 2.23, offset: [2.9, 1.7, 3.7] },
   // true profile at eye level (the nipple is read against the inframammary fold: no looking down on it)
   profile: { yaw: 2.23, offset: [3.0, 0.15, 3.83] },
@@ -294,8 +296,9 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   const distance = (view.distance ?? (space ? 0.8 : 1)) * (mobile && view.surgery ? 1.45 : 1);
   const frame = useMemo(() => framing(orientation, anchor, focusAnchor ? 0.55 : distance), [orientation, anchor, focusAnchor, distance]);
   const rotationMatrix = useMemo(() => new THREE.Matrix4().makeRotationFromEuler(frame.rotation), [frame.rotation]);
-  // the steps of one surgical technique share the camera: the tissue moves, the point of view the user chose stays
-  const cameraSignature = `${view.surgery ? `passos:${view.surgery.technique}` : viewKey}|${space?.id ?? ""}|${focus?.nonce ?? ""}|${resetSignal}`;
+  // the steps of one surgical technique seen from the same side share the camera: the tissue moves, the point of view
+  // the user chose stays
+  const cameraSignature = `${view.surgery ? `passos:${view.surgery.technique}:${view.orientation}` : viewKey}|${space?.id ?? ""}|${focus?.nonce ?? ""}|${resetSignal}`;
 
   // ---- clipping planes (defined in model space, applied in world space) --------------------------
   const cutWorld = useRef(new THREE.Plane()).current;
@@ -738,9 +741,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
           className={`absolute z-10 flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 py-1 pl-3 pr-1 text-xs text-slate-200 shadow-lg backdrop-blur ${mobile ? "left-3" : "right-3 top-3"}`}
           style={mobile ? { top: (insets?.top ?? 0) + 10 } : undefined}
         >
-          <span>
-            Passo {surgery.frame + 1}/{stepFrameCount} · <span className="font-semibold text-white">{stepFrames[surgery.frame]?.label}</span>
-          </span>
+          <span className="font-semibold text-white">{surgery.caption ?? stepFramesOf(surgery.technique)[surgery.frame]?.label}</span>
           {canReplay && (
             <button
               type="button"

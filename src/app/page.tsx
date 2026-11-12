@@ -22,6 +22,7 @@ import { BreastPicker } from "@/components/BreastPicker";
 import { PosePicker } from "@/components/PosePicker";
 import { armPoseById } from "@/lib/armPoses";
 import { breastStateById } from "@/lib/breastStates";
+import { stepStructuresOf } from "@/lib/mammaplastySteps";
 import { mm, resolvePoint } from "@/components/viewer/shared";
 import { ViewerToolbar } from "@/components/ViewerToolbar";
 import { allPacks, type PackView } from "@/data/packs";
@@ -113,6 +114,8 @@ export default function Home() {
   const viewKey = `${pack.id}/${view.id}`;
   // the step-by-step sequences are drawn on the breast they were planned on
   const breastLock = view.surgery ? "Nos passos da cirurgia a mama fica como foi planejada: ptose grau II com hipertrofia moderada." : undefined;
+  // the pieces, vessels and sutures of the technique on screen can be shown or hidden like any structure
+  const stepStructures = useMemo(() => (view.surgery ? stepStructuresOf(view.surgery.technique) : []), [view.surgery]);
   const modelPath = lowPower ? hybridTorsoModel.modelPath.replace(/\.glb$/, "-mobile.glb") : hybridTorsoModel.modelPath;
   const space = useMemo(() => surgicalSpaces.find((item) => item.id === dissection.space) ?? null, [dissection.space]);
   const entries = useMemo(() => viewAnnotations(view, space), [view, space]);
@@ -421,7 +424,7 @@ export default function Home() {
         />
       );
     if (id === "pack") return <PackInfoPanel groupTitle={group.title} pack={pack} view={view} viewIndex={viewIndex} selected={selected} onSelect={openDetails} legend={{ entries, activePin, onPick: pickLegend }} />;
-    if (id === "structures") return <StructureToggleList visibility={visibility} onToggle={toggleStructure} embedded={Boolean(compact)} />;
+    if (id === "structures") return <StructureToggleList visibility={visibility} onToggle={toggleStructure} embedded={Boolean(compact)} steps={stepStructures} />;
     if (id === "cut") return <CutPanel cut={cut} onChange={setCut} report={section} selected={selected} onSelect={(structure) => (structure ? openDetails(structure) : setSelected(null))} />;
     if (id === "dissection") return <DissectionPanel dissection={dissection} onChange={setDissection} />;
     return (
@@ -616,7 +619,7 @@ export default function Home() {
       <div className="mx-auto grid max-w-7xl grid-cols-[280px_minmax(0,1fr)_360px] gap-4">
         <div className="space-y-4">
           <PackNavigator activePackId={pack.id} onSelect={openPack} />
-          <StructureToggleList visibility={visibility} onToggle={toggleStructure} />
+          <StructureToggleList visibility={visibility} onToggle={toggleStructure} steps={stepStructures} />
         </div>
         <section className="min-w-0 space-y-3">
           <ViewSwitcher pack={pack} activeIndex={viewIndex} onSelect={setViewIndex} />

@@ -8,7 +8,7 @@ import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
 import { buildSchematicMeshes, readPlanBin, schematicMeshNames, sheetVertices, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
 import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
-import { loadSteps, stepFrameCount, stepHole } from "@/lib/mammaplastySteps";
+import { loadSteps, stepFramesOf, stepHole } from "@/lib/mammaplastySteps";
 import { meanEdgeLength, subdivideRegion } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
@@ -443,7 +443,7 @@ export function HybridModel(props: Props) {
   const surgery = useRef<{ key: string | null; meshes: THREE.Mesh[]; request: number; level: number }>({ key: null, meshes: [], request: 0, level: 0 });
   const setSurgeryLevel = (level: number) => {
     surgery.current.level = level;
-    const influences = levelInfluences(level, stepFrameCount - 1);
+    const influences = levelInfluences(level, Math.max(stepFramesOf(surgery.current.key ?? "").length - 1, 0));
     for (const mesh of surgery.current.meshes) {
       const target = mesh.morphTargetInfluences;
       if (target) for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
