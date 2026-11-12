@@ -26,10 +26,12 @@ type Props = {
   variant: "floating" | "inline";
   bottom?: number;
   onClose?: () => void;
+  /** why the shape cannot be changed in this view (the step-by-step sequences are drawn on one state) */
+  locked?: string;
 };
 
 /** Breast shape: as scanned, or one of the ptosis grades with its hypertrophy (skin and every breast structure are deformed). */
-export function BreastPicker({ state, settled, onState, variant, bottom = 0, onClose }: Props) {
+export function BreastPicker({ state, settled, onState, variant, bottom = 0, onClose, locked }: Props) {
   const active = state ? breastStateById.get(state) : undefined;
   const floating = variant === "floating";
   const shown = settled === state ? measurementsOf(state) : null;
@@ -39,7 +41,8 @@ export function BreastPicker({ state, settled, onState, variant, bottom = 0, onC
       type="button"
       onClick={() => onState(id)}
       aria-pressed={state === id}
-      className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${state === id ? "border-transparent bg-white text-slate-950" : "border-white/10 bg-white/5 text-slate-200"}`}
+      disabled={Boolean(locked) && state !== id}
+      className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition disabled:opacity-40 ${state === id ? "border-transparent bg-white text-slate-950" : "border-white/10 bg-white/5 text-slate-200"}`}
     >
       {label}
     </button>
@@ -59,6 +62,7 @@ export function BreastPicker({ state, settled, onState, variant, bottom = 0, onC
         {chip(null, "Sem ptose")}
         {breastStates.map((item) => chip(item.id, item.short))}
       </div>
+      {locked && <p className="mt-2 text-xs font-semibold leading-snug text-pink-200">{locked}</p>}
       <p className={`mt-2 text-xs leading-snug text-slate-300 ${floating ? "line-clamp-3" : ""}`}>
         {active && <span className="font-semibold text-slate-100">{active.label}. </span>}
         {active ? active.description : "Mama como no exame de origem (Visible Human Female): mamilo acima do sulco inframamário."}

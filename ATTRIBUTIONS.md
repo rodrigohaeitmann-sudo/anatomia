@@ -39,7 +39,7 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 
 ## Planos cirúrgicos (este projeto)
 
-- Uso: marcações pré-operatórias, pedículos e ressecções da mamoplastia redutora (`src/data/mammaplasty.json`, `public/models/hybrid/mammaplasty.bin`).
+- Uso: marcações pré-operatórias, pedículos e ressecções da mamoplastia redutora (`src/data/mammaplasty.json`, `public/models/hybrid/mammaplasty.bin`) e os passos com o resultado esperado (`src/data/mammaplastySteps.json`, `public/models/hybrid/mammaplasty-<técnica>.bin`, gerados por `scripts/hybrid/build_mammaplasty_steps.py`: pele, peças, complexo areolopapilar e cicatrizes em cinco quadros-chave).
 - Origem: gerados por `scripts/hybrid/build_mammaplasty.py` sobre a pele e a mama do HRA deformadas pelo mapa da mama. As peças são porções do volume da mama do modelo; as linhas seguem sua pele. Técnicas pelas descrições originais (Pitanguy 1967; Wise 1956; Robbins 1977; Courtiss & Goldwyn 1977; Hall-Findlay 1999), com dimensões propostas neste projeto. No aplicativo aparecem com a fonte "Plano cirúrgico (este projeto)" e com aviso na ficha.
 - Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
 

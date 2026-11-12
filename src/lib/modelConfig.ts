@@ -1,6 +1,7 @@
 import breastAnatomy from "@/data/breastAnatomy.json";
 import hybridTorsoManifest from "@/data/hybridTorsoManifest.json";
 import mammaplasty from "@/data/mammaplasty.json";
+import mammaplastySteps from "@/data/mammaplastySteps.json";
 
 export type Tissue =
   | "skin"
@@ -36,6 +37,8 @@ export type ModelStructureConfig = {
   schematic: boolean;
   /** marking or piece of a surgical plan (src/data/mammaplasty.json) */
   plan: boolean;
+  /** false for the meshes of the step-by-step sequences, which only their views show */
+  listed: boolean;
 };
 
 export type ModelMeshRecord = {
@@ -109,11 +112,13 @@ export const tissueOpacity: Partial<Record<Tissue, number>> = {
 export const schematicSource = breastAnatomy.source;
 /** Source name of markings and pieces of the surgical plans (scripts/hybrid/build_mammaplasty.py). */
 export const planSource = mammaplasty.source;
-export const modelMeshes = [...hybridTorsoManifest.meshes, ...breastAnatomy.meshes, ...mammaplasty.meshes] as ModelMeshRecord[];
+export const modelMeshes = [...hybridTorsoManifest.meshes, ...breastAnatomy.meshes, ...mammaplasty.meshes, ...mammaplastySteps.meshes] as ModelMeshRecord[];
+/** structures of the step-by-step sequences: shown by their views, not listed with the anatomy */
+const stepStructures = new Set(Object.keys(mammaplastySteps.structures));
 export const modelLandmarks = hybridTorsoManifest.landmarks as unknown as ModelLandmarks;
 export const hybridTorsoModel = hybridTorsoManifest;
 
-const manifestStructures = { ...hybridTorsoManifest.structures, ...breastAnatomy.structures, ...mammaplasty.structures } as unknown as Record<string, ManifestStructure>;
+const manifestStructures = { ...hybridTorsoManifest.structures, ...breastAnatomy.structures, ...mammaplasty.structures, ...mammaplastySteps.structures } as unknown as Record<string, ManifestStructure>;
 const meshByName = new Map(modelMeshes.map((mesh) => [mesh.name, mesh]));
 
 function dominantTissue(meshNames: string[]): Tissue {
@@ -139,6 +144,7 @@ export const modelStructures: ModelStructureConfig[] = Object.entries(manifestSt
   sources: [...new Set(structure.meshNames.map((name) => meshByName.get(name)?.source).filter((source): source is string => Boolean(source)))],
   schematic: structure.meshNames.every((name) => meshByName.get(name)?.source === schematicSource),
   plan: structure.meshNames.every((name) => meshByName.get(name)?.source === planSource),
+  listed: !stepStructures.has(id),
 }));
 
 export const structureGroups = [...new Set(modelStructures.map((structure) => structure.group))];

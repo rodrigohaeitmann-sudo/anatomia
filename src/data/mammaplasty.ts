@@ -8,6 +8,7 @@ import anatomy from "@/data/breastAnatomy.json";
 import type { AnatomyDetail } from "@/data/anatomyDetails";
 import data from "@/data/mammaplasty.json";
 import type { Pack, PackLabel, PackView } from "@/data/packs";
+import { stepMeasurements, stepPillarVolumes, type StepMeasurements } from "@/lib/mammaplastySteps";
 
 type Measurements = {
   notchToAMm: number;
@@ -195,6 +196,232 @@ function views(key: TechniqueId, points: string[]): PackView[] {
     },
   ];
 }
+
+// ---- step by step: what leaves and where the rest goes (src/data/mammaplastySteps.json) ----------------------
+type StepText = {
+  /** what is cut and de-epithelialised */
+  incision: string;
+  /** what leaves the breast */
+  resection: string;
+  /** how the nipple-areola complex reaches point A */
+  transposition: string;
+  /** how the rest closes over it */
+  closure: string;
+  /** scars, in order of the scar meshes */
+  scars: string[];
+  pillar: "Pilar" | "Retalho";
+  notes: { incision: string[]; resection: string[]; transposition: string[]; closure: string[]; result: string[] };
+};
+const stepText: Record<TechniqueId, StepText> = {
+  pitanguy: {
+    incision: "Incisão sobre toda a marcação. A pele entre os ramos e acima de B e C, onde fica o pedículo superior, é só desepitelizada: a derme fica e leva o plexo subdérmico ao complexo areolopapilar.",
+    resection: "Sai em bloco a pele do polo inferior entre os ramos, até o sulco, junto com a quilha: o tecido central sob o pedículo e as cunhas sob os retalhos medial e lateral.",
+    transposition: "O complexo areolopapilar sobe com o pedículo superior até o ponto A. A derme desepitelizada se dobra sob o novo sítio da aréola.",
+    closure: "Os pilares medial e lateral giram para o centro e se encontram abaixo da aréola (sutura vertical); suas bordas inferiores, B–D e C–E, são suturadas na incisão do sulco (sutura horizontal). O pedículo fica coberto pelos pilares e pela pele.",
+    scars: ["Cicatriz periareolar", "Cicatriz vertical", "Cicatriz no sulco"],
+    pillar: "Pilar",
+    notes: {
+      incision: ["A incisão do sulco vai de D a E; os ramos A–B e A–C desenham o cone", "Na prática, B e C são confirmados pinçando a pele antes de incisar"],
+      resection: ["A quilha tira a base glandular atrás do complexo areolopapilar: os ramos profundos não chegam mais ao mamilo", "O que fica: o pedículo superior e os pilares medial e lateral"],
+      transposition: ["A subida é curta (o ponto A fica na projeção do sulco): o pedículo dobra sem tensão", "Pedículos espessos e subidas longas toleram mal a dobra"],
+      closure: ["Os pilares formam o cone e dão a projeção", "A pele que sobra nos ramos horizontais é distribuída ao longo do sulco"],
+      result: ["Cicatriz em T invertido com a periareolar", "O polo inferior encurta: a distância mamilo–sulco cai"],
+    },
+  },
+  wise: {
+    incision: "Incisão em toda a marcação, em volta da fechadura e dos ramos. O pedículo inferior, do complexo areolopapilar ao sulco, é desepitelizado: a derme fica sobre ele.",
+    resection: "Saem a pele dentro do padrão (a fechadura e os triângulos medial e lateral, fora do pedículo) e a ressecção em ferradura: o tecido medial, lateral e superior ao pedículo e as cunhas sob os retalhos.",
+    transposition: "O pedículo inferior, preso ao sulco e à parede, leva o complexo areolopapilar para cima até a fechadura, em volta do ponto A.",
+    closure: "Os retalhos medial e lateral (pele com a glândula que ficou sob ela) descem e se fecham sobre o pedículo: encontram-se na linha vertical, da fechadura ao sulco, e suas bordas inferiores são suturadas ao longo do sulco. A aréola é suturada na fechadura.",
+    scars: ["Cicatriz periareolar", "Cicatriz vertical", "Cicatriz no sulco"],
+    pillar: "Retalho",
+    notes: {
+      incision: ["A base do pedículo fica no sulco, com a largura da marcação", "A soma dos ramos horizontais é maior que a incisão do sulco: o excesso é distribuído na sutura"],
+      resection: ["O pedículo fica no centro e a ressecção o contorna", "O pedículo inferior é o maior dos três: carrega o polo inferior e a irrigação profunda pelo septo"],
+      transposition: ["A raiz do pedículo não se move: sobem o complexo areolopapilar e a parte alta do pedículo", "Os perfurantes intercostais e o ramo da toracoacromial entram pela base"],
+      closure: ["Os retalhos cobrem o pedículo como uma capa e dão a forma", "O pedículo fica sepultado sob os retalhos"],
+      result: ["Cicatriz em T invertido com a periareolar", "O volume do pedículo fica no polo inferior: a projeção é mantida"],
+    },
+  },
+  vertical: {
+    incision: "Incisão em volta da cúpula e dos ramos. O pedículo superomedial, com base na metade medial da cúpula e no começo do ramo medial, é desepitelizado.",
+    resection: "Saem a pele do padrão abaixo da cúpula (fora do pedículo) e a ressecção inferior e lateral: o polo inferior e o tecido sob o pilar lateral.",
+    transposition: "O pedículo superomedial gira sobre a base e leva o complexo areolopapilar até a cúpula, no ponto A.",
+    closure: "Os pilares medial e lateral são suturados entre si abaixo da aréola: estreitam a base e projetam a mama. A pele é fechada na linha vertical, que termina acima do sulco; a cúpula envolve a aréola.",
+    scars: ["Cicatriz periareolar", "Cicatriz vertical"],
+    pillar: "Pilar",
+    notes: {
+      incision: ["O perímetro da cúpula corresponde ao da nova aréola", "Os ramos terminam acima do sulco: não há incisão horizontal"],
+      resection: ["Os ramos laterais (torácica lateral, cutâneos laterais superficiais) saem com a peça", "O que fica: o pedículo superomedial e os pilares"],
+      transposition: ["É uma rotação, não uma dobra: a base fica medial e alta", "Perfurantes da torácica interna do 2º e 3º espaços entram pela base"],
+      closure: ["A sutura dos pilares, não a da pele, sustenta a forma", "A pele que sobra na parte baixa da cicatriz vertical se acomoda em semanas"],
+      result: ["Cicatriz periareolar e vertical, sem cicatriz no sulco", "O polo inferior esvaziado encurta a distância mamilo–sulco"],
+    },
+  },
+};
+
+const tints = { excised: "#e9a27f", dermis: "#d97a82" };
+const signed = (mm: number) => `${cm(Math.abs(mm))} cm ${mm >= 0 ? "acima" : "abaixo"} do sulco`;
+/** Before and after, measured on the model as a tape would. */
+const beforeAfter = (m: { before: StepMeasurements; after: StepMeasurements }) => [
+  `Mamilo: ${signed(m.before.nippleToFoldMm)} → ${signed(m.after.nippleToFoldMm)}`,
+  `Fúrcula–mamilo: ${cm(m.before.notchToNippleMm)} → ${cm(m.after.notchToNippleMm)} cm`,
+  `Mamilo–sulco sobre a pele: ${cm(m.before.nippleToFoldSkinMm)} → ${cm(m.after.nippleToFoldSkinMm)} cm`,
+  `Projeção: ${cm(m.before.projectionMm)} → ${cm(m.after.projectionMm)} cm; volume ≈ ${Math.round(m.before.volumeMl / 10) * 10} → ${Math.round(m.after.volumeMl / 10) * 10} mL`,
+];
+const stepNote = "Modelo geométrico em pé, não simulação física: a pele que fica se fecha nas linhas de sutura e a mama assume a forma da nova posição, sem edema, retração ou acomodação";
+
+function stepViews(key: TechniqueId, points: string[]): PackView[] {
+  const t = techniques[key];
+  const m = t.measurements;
+  const s = stepText[key];
+  const result = stepMeasurements(key);
+  const pillarsMl = stepPillarVolumes(key);
+  const id = (part: string) => `mamo-step-${part}-${key}`;
+  const skin = id("skin");
+  const excised = id("excised");
+  const dermis = id("dermis");
+  const pedicle = id("pedicle");
+  const resection = id("resection");
+  const medial = id("pillar-medial");
+  const lateral = id("pillar-lateral");
+  const nac = id("nac");
+  const scars = id("scars");
+  const marking = `mamo-marking-${key}`;
+  const skinParts = [skin, excised, dermis];
+  const pieces = [pedicle, resection, medial, lateral];
+  const label = (structure: string, piece: string, text: string): PackLabel => ({ structure, near: `step:${key}:${piece}`, text });
+  const pillarLabels = [label(medial, "pillar-medial", `${s.pillar} medial (${pillarsMl.medial} mL)`), label(lateral, "pillar-lateral", `${s.pillar} lateral (${pillarsMl.lateral} mL)`)];
+  // one camera for the whole sequence (see AnatomyViewer): the tissue moves, the point of view stays
+  const common = { orientation: "frontal" as const, anchor: `step:${key}:centre`, distance: 0.55, breast: planState, follow: false };
+  const removed = `Sai: ${m.resectionMl} mL de tecido (cerca de ${m.resectionG} g, ${m.resectionPct}% do monte) e a pele do padrão`;
+  return [
+    {
+      ...common,
+      id: `${key}-passo-marcacao`,
+      title: "1. Marcação",
+      description: `${text[key].markingSummary} Nesta sequência, cada passo anima o tecido a partir do anterior.`,
+      structures: ["skin", "contralateral-breast", ...skinParts, nac, marking],
+      solid: ["skin", ...skinParts],
+      labels: pointLabels(key, points),
+      surgery: { technique: key, frame: 0 },
+      relations: [...measures(key), ...text[key].markingSteps, "A paciente está em pé, como na marcação"],
+    },
+    {
+      ...common,
+      id: `${key}-passo-incisao`,
+      title: "2. Incisão",
+      description: s.incision,
+      structures: ["skin", "contralateral-breast", ...skinParts, nac, marking],
+      solid: ["skin", ...skinParts],
+      tint: { [excised]: tints.excised, [dermis]: tints.dermis },
+      labels: [label(excised, "excised", "Pele a ressecar"), label(dermis, "dermis", "Derme desepitelizada (sobre o pedículo)")],
+      surgery: { technique: key, frame: 1, replayFrom: null },
+      relations: [`Pele laranja: sai com a peça. Pele rosada: perde só a epiderme e fica sobre o pedículo ${t.pedicle}`, ...s.notes.incision],
+    },
+    {
+      ...common,
+      id: `${key}-passo-resseccao`,
+      title: "3. Ressecção",
+      description: s.resection,
+      structures: ["skin", "contralateral-breast", ...skinParts, nac, ...pieces],
+      translucent: [skin],
+      tint: { [excised]: tints.excised, [dermis]: tints.dermis },
+      focus: [resection, excised],
+      labels: [label(resection, "resection", `Ressecção ${t.resection}: ${m.resectionMl} mL`), label(excised, "excised", "Pele ressecada"), label(pedicle, "pedicle", `Pedículo ${t.pedicle} (${m.pedicleMl} mL)`), ...pillarLabels],
+      surgery: { technique: key, frame: 2 },
+      relations: [removed, `Fica: o pedículo ${t.pedicle} (verde, ${m.pedicleMl} mL) e os ${s.pillar === "Pilar" ? "pilares" : "retalhos"} medial (${pillarsMl.medial} mL) e lateral (${pillarsMl.lateral} mL)`, ...s.notes.resection],
+    },
+    {
+      ...common,
+      id: `${key}-passo-transposicao`,
+      title: "4. Transposição",
+      description: s.transposition,
+      structures: ["skin", "contralateral-breast", ...skinParts, nac, ...pieces],
+      translucent: [skin, excised, resection],
+      tint: { [excised]: tints.excised, [dermis]: tints.dermis },
+      focus: [pedicle, nac],
+      labels: [label(nac, "nac", `Complexo areolopapilar: sobe ${cm(m.nippleRiseMm)} cm até A`), label(pedicle, "pedicle", `Pedículo ${t.pedicle}`)],
+      surgery: { technique: key, frame: 3 },
+      relations: [`O mamilo sobe ${cm(m.nippleRiseMm)} cm sobre a pele, até o ponto A (fúrcula–A: ${cm(m.notchToAMm)} cm)`, ...s.notes.transposition],
+    },
+    {
+      ...common,
+      id: `${key}-passo-fechamento`,
+      title: "5. Fechamento",
+      description: s.closure,
+      structures: ["skin", "contralateral-breast", ...skinParts, nac, ...pieces],
+      translucent: [skin, excised, resection],
+      tint: { [excised]: tints.excised, [dermis]: tints.dermis },
+      focus: [medial, lateral],
+      labels: [...pillarLabels, label(pedicle, "pedicle", `Pedículo ${t.pedicle}, sepultado`)],
+      surgery: { technique: key, frame: 4 },
+      relations: [...s.notes.closure, `${s.pillar === "Pilar" ? "Pilares" : "Retalhos"}: medial ${pillarsMl.medial} mL, lateral ${pillarsMl.lateral} mL`, stepNote],
+    },
+    {
+      ...common,
+      id: `${key}-passo-resultado`,
+      title: "6. Resultado esperado",
+      description: `Mama operada em pé, com as cicatrizes da técnica: ${s.scars.map((item) => item.toLowerCase().replace("cicatriz ", "")).join(", ")}. A outra mama segue como antes, para comparar.`,
+      structures: ["skin", "contralateral-breast", skin, nac, scars],
+      solid: ["skin", skin],
+      labels: [...s.scars.map((text, index) => label(scars, `scar-${index}`, text)), label(nac, "nac", "Mamilo no ponto A")],
+      // only skin, nipple and scars: shown at once (the closure, view 5, is where the tissue moves)
+      surgery: { technique: key, frame: 4, replayFrom: null, instant: true },
+      relations: [...beforeAfter(result), ...s.notes.result, stepNote],
+    },
+  ];
+}
+
+// cards of the step pieces (tap on the model)
+(Object.keys(techniques) as TechniqueId[]).forEach((key) => {
+  const t = techniques[key];
+  const m = t.measurements;
+  const s = stepText[key];
+  const pillarsMl = stepPillarVolumes(key);
+  const after = stepMeasurements(key).after;
+  const flaps = s.pillar === "Pilar" ? "pilares" : "retalhos";
+  planDetails[`mamo-step-skin-${key}`] = {
+    summary: "Pele que fica: no fechamento, suas bordas se encontram nas linhas de sutura e ela recobre a nova forma da mama. Em volta, uma faixa de 15 mm leva a pele operada até a pele que não muda.",
+    surgical: [s.closure, stepNote],
+  };
+  planDetails[`mamo-step-excised-${key}`] = {
+    summary: `Pele ressecada: a pele dentro do padrão de ${t.label}, fora do pedículo. Sai com a peça.`,
+    surgical: [s.resection],
+  };
+  planDetails[`mamo-step-dermis-${key}`] = {
+    summary: `Derme desepitelizada sobre o pedículo ${t.pedicle}: perde a epiderme e fica, levando o plexo subdérmico ao complexo areolopapilar. No fechamento fica sob a pele.`,
+    surgical: [s.incision],
+  };
+  planDetails[`mamo-step-pedicle-${key}`] = { ...planDetails[`mamo-pedicle-${key}`], surgical: [s.transposition, ...(planDetails[`mamo-pedicle-${key}`].surgical ?? [])] };
+  planDetails[`mamo-step-resection-${key}`] = planDetails[`mamo-resection-${key}`];
+  for (const side of ["medial", "lateral"] as const) {
+    planDetails[`mamo-step-pillar-${side}-${key}`] = {
+      summary: `${s.pillar} ${side}: o tecido que fica sob a pele ${side} do padrão, com ${pillarsMl[side]} mL no modelo. No fechamento vai para o centro, abaixo da aréola.`,
+      surgical: [s.closure],
+    };
+  }
+  planDetails[`mamo-step-nac-${key}`] = {
+    summary: `Complexo areolopapilar: sobe ${cm(m.nippleRiseMm)} cm sobre a pele com o pedículo ${t.pedicle} e chega ao ponto A. No resultado, o mamilo fica ${cm(after.nippleToFoldMm)} cm acima do sulco.`,
+    surgical: [s.transposition],
+  };
+  planDetails[`mamo-step-scars-${key}`] = {
+    summary: `Cicatrizes do resultado esperado: ${s.scars.map((item) => item.toLowerCase().replace("cicatriz ", "")).join(", ")}.`,
+    surgical: [...s.notes.result, `Os ${flaps} e a pele se fecham sem tensão no modelo; na paciente, a cicatriz amadurece em meses`],
+  };
+});
+
+/** One pack per technique: from the marking to the expected result, every step animated from the one before. */
+export const mammaplastyStepPacks: Pack[] = (["pitanguy", "wise", "vertical"] as TechniqueId[]).map((key) => {
+  const t = techniques[key];
+  const points = key === "vertical" ? ["A", "T", "M", "L", "F"] : ["A", "B", "C", "D", "E"];
+  return {
+    id: `mamoplastia-${key}-passo-a-passo`,
+    title: `${t.label}: passo a passo`,
+    summary: `Da marcação ao resultado esperado, com a paciente em pé: o que é ressecado, para onde vão o complexo areolopapilar, o pedículo ${t.pedicle} e os ${stepText[key].pillar === "Pilar" ? "pilares" : "retalhos"}, e como a pele se fecha. Cada passo é animado a partir do anterior; "Rever" repete a animação.`,
+    views: stepViews(key, points),
+  };
+});
 
 export const mammaplastyPack: Pack = {
   id: "mamoplastia-redutora",

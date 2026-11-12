@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContactShadows, Html, OrbitControls, useProgress } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
+import { Play } from "lucide-react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { PackView, ViewOrientation } from "@/data/packs";
@@ -15,6 +16,7 @@ import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { boneMatrices, posedLandmark } from "@/lib/armPoses";
 import type { BreastSide } from "@/lib/breastMap";
 import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
+import { stepFrameCount, stepFrames } from "@/lib/mammaplastySteps";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
@@ -73,6 +75,9 @@ const POSE_MS = 950;
 /** animation time per breast level (one ptosis grade), and its ceiling */
 const BREAST_MS = 700;
 const BREAST_MAX_MS = 1500;
+/** animation time per key frame of a step-by-step sequence, and its ceiling */
+const SURGERY_MS = 1500;
+const SURGERY_MAX_MS = 4500;
 const emptyAnchors = new Map<string, Landmark>();
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -84,6 +89,8 @@ const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 
 const orientations: Record<ViewOrientation, { yaw: number; offset: Landmark }> = {
   anterior: { yaw: -0.15, offset: [-3.6, 2.05, 4.2] },
   anterolateral: { yaw: 0.08, offset: [-3.6, 2.05, 4.2] },
+  // in front of the operated breast, a little to its side, at the height of the nipple (shape and lower pole)
+  frontal: { yaw: -0.15, offset: [-2.6, 0.45, 5.2] },
   lateral: { yaw: 2.23, offset: [2.9, 1.7, 3.7] },
   // true profile at eye level (the nipple is read against the inframammary fold: no looking down on it)
   profile: { yaw: 2.23, offset: [3.0, 0.15, 3.83] },
@@ -260,10 +267,10 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   const forced = useMemo(() => new Set(space ? [...space.walls.flatMap((wall) => wall.structures), ...space.contents] : []), [space]);
   const visible = useCallback((id: string) => (Boolean(visibility[id]) || forced.has(id)) && !hidden.has(id), [visibility, hidden, forced]);
   const highlight = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, string>(Object.entries(view.tint ?? {}));
     space?.walls.forEach((wall, index) => wall.structures.forEach((id) => map.set(id, wallColors[index % wallColors.length])));
     return map;
-  }, [space]);
+  }, [space, view.tint]);
   const emphasised = useMemo(() => new Set([...(space?.contents ?? []), ...(view.focus ?? [])]), [space, view.focus]);
   const activeStructures = useMemo(() => new Set(view.focus ?? []), [view.focus]);
   const entries = useMemo(() => new Map(viewAnnotations(view, space).map((entry) => [entry.key, entry])), [view, space]);
@@ -283,9 +290,12 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   const orientation = view.orientation;
   const focusAnchor = focus ? (focus.point ?? handle?.snap(focus.structure, structureById.get(focus.structure)?.labelAnchor ?? L.breastCenter) ?? structureById.get(focus.structure)?.labelAnchor) : undefined;
   const anchor = focusAnchor ?? (view.anchor ? resolvePoint(view.anchor) : undefined) ?? (space ? resolvePoint(space.centre) : undefined) ?? L.breastCenter;
-  const frame = useMemo(() => framing(orientation, anchor, focusAnchor ? 0.55 : view.distance ?? (space ? 0.8 : 1)), [orientation, anchor, focusAnchor, view.distance, space]);
+  // a step-by-step sequence shows the whole breast and the specimen beside it: phones (narrow canvas) step back
+  const distance = (view.distance ?? (space ? 0.8 : 1)) * (mobile && view.surgery ? 1.45 : 1);
+  const frame = useMemo(() => framing(orientation, anchor, focusAnchor ? 0.55 : distance), [orientation, anchor, focusAnchor, distance]);
   const rotationMatrix = useMemo(() => new THREE.Matrix4().makeRotationFromEuler(frame.rotation), [frame.rotation]);
-  const cameraSignature = `${viewKey}|${space?.id ?? ""}|${focus?.nonce ?? ""}|${resetSignal}`;
+  // the steps of one surgical technique share the camera: the tissue moves, the point of view the user chose stays
+  const cameraSignature = `${view.surgery ? `passos:${view.surgery.technique}` : viewKey}|${space?.id ?? ""}|${focus?.nonce ?? ""}|${resetSignal}`;
 
   // ---- clipping planes (defined in model space, applied in world space) --------------------------
   const cutWorld = useRef(new THREE.Plane()).current;
@@ -410,7 +420,8 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         await handle.prepareBreast();
         if (!live()) return;
         const from = run.level;
-        const duration = fresh ? 0 : Math.min(BREAST_MAX_MS, BREAST_MS * Math.abs(target - from));
+        // the step-by-step sequences are drawn on one breast state: it is put on at once
+        const duration = fresh || view.surgery ? 0 : Math.min(BREAST_MAX_MS, BREAST_MS * Math.abs(target - from));
         await new Promise<void>((resolve) => {
           const start = performance.now();
           const step = (now: number) => {
@@ -440,7 +451,84 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     },
     [],
   );
-  const animating = poseAnimating || breastAnimating;
+  // ---- step-by-step sequence (reduction mammaplasty): animate the key frame, on the breast it was planned on ---
+  const surgery = view.surgery ?? null;
+  const [surgeryAnimating, setSurgeryAnimating] = useState(false);
+  const [replay, setReplay] = useState(0);
+  const surgeryRun = useRef<{ technique: string | null; level: number; goal: string; token: number; root: THREE.Object3D | null; replay: number }>({ technique: null, level: 0, goal: "", token: 0, root: null, replay: 0 });
+  useEffect(() => {
+    if (!handle) return;
+    handleRef.current = handle;
+    const run = surgeryRun.current;
+    if (run.root !== handle.root) {
+      // a model mounted anew has no sequence on: it is put on again at once
+      run.root = handle.root;
+      run.technique = null;
+      run.level = 0;
+      run.goal = "";
+    }
+    if (!surgery) {
+      if (run.goal) {
+        run.token += 1;
+        run.goal = "";
+        setSurgeryAnimating(false);
+      }
+      void handle.setSkinHole(false);
+      return;
+    }
+    const replaying = replay !== run.replay;
+    run.replay = replay;
+    const goal = `${surgery.technique}:${surgery.frame}`;
+    // already there, or on the way
+    if (!replaying && run.goal === goal) return;
+    run.goal = goal;
+    const token = ++run.token;
+    const live = () => run.token === token;
+    (async () => {
+      setSurgeryAnimating(true);
+      try {
+        await handle.prepareBreast();
+        if (!live()) return;
+        await handle.prepareSurgery(surgery.technique);
+        if (!live()) return;
+        await handle.setSkinHole(true);
+        if (!live()) return;
+        // another technique starts at its frame; a replay starts where the view says
+        let from = run.technique === surgery.technique && !surgery.instant ? run.level : surgery.frame;
+        if (replaying) from = surgery.replayFrom ?? Math.max(0, surgery.frame - 1);
+        run.technique = surgery.technique;
+        const to = surgery.frame;
+        const duration = Math.min(SURGERY_MAX_MS, SURGERY_MS * Math.abs(to - from));
+        await new Promise<void>((resolve) => {
+          const start = performance.now();
+          const step = (now: number) => {
+            if (!live()) return resolve();
+            const k = duration ? Math.min(1, (now - start) / duration) : 1;
+            run.level = from + (to - from) * ease(k);
+            handleRef.current?.setSurgeryLevel(run.level);
+            if (k < 1) requestAnimationFrame(step);
+            else resolve();
+          };
+          requestAnimationFrame(step);
+        });
+      } catch {
+        // steps not downloaded (offline before the first visit): try again with the next change
+        run.goal = "";
+      }
+      if (!live()) return;
+      setSurgeryAnimating(false);
+      handleRef.current?.refresh();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surgery?.technique, surgery?.frame, replay, handle]);
+  useEffect(
+    () => () => {
+      surgeryRun.current.token += 1;
+    },
+    [],
+  );
+  const canReplay = Boolean(surgery && surgery.replayFrom !== null && surgery.frame > 0);
+  const animating = poseAnimating || breastAnimating || surgeryAnimating;
   // the chart itself, to carry loose overlay points (skin markings, perforator zones) with the breast
   const [breastSides, setBreastSides] = useState<Record<BreastSideId, BreastSide> | null>(null);
   useEffect(() => {
@@ -498,7 +586,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     const names = part && "meshNames" in part ? (part as { meshNames: string[] }).meshNames : [];
     return names.length ? new Set(names) : null;
   }, [selectedPart]);
-  const translucent = useMemo(() => new Set(attachmentFocus ? [attachmentFocus] : []), [attachmentFocus]);
+  const translucent = useMemo(() => new Set([...(attachmentFocus ? [attachmentFocus] : []), ...(view.translucent ?? [])]), [attachmentFocus, view.translucent]);
   const solid = useMemo(() => new Set(view.solid ?? []), [view.solid]);
   // skin markings and perforator zones are drawn on the trunk skin, which does not follow the arm (anatomical
   // position only) but does carry the breast: in a breast state their points go through the same map
@@ -644,6 +732,27 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
           height={shellSize.height}
           insets={insets ?? { top: 0, bottom: 0 }}
         />
+      )}
+      {surgery && (
+        <div
+          className={`absolute z-10 flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 py-1 pl-3 pr-1 text-xs text-slate-200 shadow-lg backdrop-blur ${mobile ? "left-3" : "right-3 top-3"}`}
+          style={mobile ? { top: (insets?.top ?? 0) + 10 } : undefined}
+        >
+          <span>
+            Passo {surgery.frame + 1}/{stepFrameCount} · <span className="font-semibold text-white">{stepFrames[surgery.frame]?.label}</span>
+          </span>
+          {canReplay && (
+            <button
+              type="button"
+              onClick={() => setReplay((value) => value + 1)}
+              disabled={surgeryAnimating}
+              className="flex items-center gap-1 rounded-full bg-pink-500/25 px-2.5 py-1 font-semibold text-pink-100 transition enabled:active:bg-pink-500/40 disabled:opacity-50"
+              aria-label="Rever a animação deste passo"
+            >
+              <Play size={12} /> Rever
+            </button>
+          )}
+        </div>
       )}
       {!mobile && (
         <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-white/10 bg-slate-950/75 p-2 text-[11px] text-slate-300 backdrop-blur sm:p-3 sm:text-xs">

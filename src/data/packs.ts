@@ -4,12 +4,12 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
-import { mammaplastyPack } from "@/data/mammaplasty";
+import { mammaplastyPack, mammaplastyStepPacks } from "@/data/mammaplasty";
 import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
 
-export type ViewOrientation = "anterior" | "anterolateral" | "lateral" | "profile" | "axillary" | "posterior" | "posterolateral";
+export type ViewOrientation = "anterior" | "anterolateral" | "frontal" | "lateral" | "profile" | "axillary" | "posterior" | "posterolateral";
 
 /** A point: nearest vertex of `structure` to `near` (landmark key, "landmark.index" or structure id), plus an optional offset in mm. */
 export type AnchoredPoint = { structure: string; near: string; nearOffsetMm?: [number, number, number]; offsetMm?: [number, number, number] };
@@ -52,6 +52,16 @@ export type PackView = {
   solid?: string[];
   /** false: the camera stays where it is when the arm pose or the breast state changes (default: it follows the anchor) */
   follow?: boolean;
+  /**
+   * step of a reduction mammaplasty (src/data/mammaplastySteps.json): technique and key frame, 0 = marking ... 4 = closure.
+   * Moving between such views animates the tissue from one frame to the other (`instant`: the view shows its frame at
+   * once, for views that hide the pieces); `replayFrom` is where "Rever" starts (default: the frame before; null: no replay).
+   */
+  surgery?: { technique: string; frame: number; replayFrom?: number | null; instant?: boolean };
+  /** colours given to structures in this view (e.g. the skin to be removed, the de-epithelialised dermis) */
+  tint?: Record<string, string>;
+  /** structures drawn see-through in this view (the skin, to show the pieces under it) */
+  translucent?: string[];
 };
 
 export type Pack = { id: string; title: string; summary: string; views: PackView[] };
@@ -256,6 +266,7 @@ export const packGroups: PackGroup[] = [
         ],
       },
       mammaplastyPack,
+      ...mammaplastyStepPacks,
       {
         id: "vascular-mama",
         title: "Irrigação e inervação da mama",
