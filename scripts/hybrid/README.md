@@ -98,7 +98,7 @@ python3 scripts/hybrid/build_mammaplasty_steps.py                 # ~1 min; últ
 python3 scripts/hybrid/build_mammaplasty_steps.py --figures DIR   # renders dos quadros e do resultado, para conferência (requer matplotlib)
 ```
 
-Gera `src/data/mammaplastySteps.json` (quadros, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas antes e depois) e `public/models/hybrid/mammaplasty-<técnica>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro.
+Gera `src/data/mammaplastySteps.json` (os quadros de cada técnica, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas da marcação e medidas antes e depois, vasos e nervos do pedículo) e `public/models/hybrid/mammaplasty-<técnica>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro. Os quadros de cada técnica e quanto cada grupo de suturas fecha em cada um estão em `SCHEDULES`, no topo do script.
 
 | Etapa | Como (`mammaplasty_result.py`) |
 |---|---|
@@ -107,7 +107,12 @@ Gera `src/data/mammaplastySteps.json` (quadros, contorno da área operada na car
 | Fechamento | Destinos nas bordas de sutura (ramos na linha vertical, ramos horizontais no sulco, abertura da aréola em volta de A); harmônico (valor médio) perto das bordas e polar em volta do mamilo, misturados de 30 a 55 mm (`Closure`) |
 | Forma do resultado | Novo estado do mapa da mama: descida que deixa o mamilo 20 mm acima do sulco e crescimento até o volume que restou (`result_state`, por bissecção) |
 | Tecido profundo | Pedículo e pilares seguem a pele por um campo harmônico; o pedículo fica 15 mm sob a pele, menos sob a aréola |
-| Quadros-chave | 0 marcação, 1 incisão (mesma geometria), 2 ressecção (pele e peça saem 30 mm para a frente, 65 mm medial, 95 mm para baixo), 3 transposição (complexo areolopapilar e pedículo na posição final, com giro no caminho), 4 fechamento = resultado; cicatrizes como tubos sobre a pele final |
+| Quadros-chave | Marcação, incisão (mesma geometria), ressecção (pele e peça saem 30 mm para a frente, 65 mm medial, 95 mm para baixo), transposição (complexo areolopapilar e pedículo na posição final, com giro no caminho) e as etapas do fechamento de cada técnica; cicatrizes como tubos sobre a pele final |
+| Etapas do fechamento | Cada etapa dá a fração fechada de cada grupo (ponto em T, vertical, sulco, aréola, pontos profundos) e a da pele em geral; a diferença nas linhas é espalhada por um mapa harmônico sobre a pele que fica (`staged_skin`) |
+| Pontos | Pares tirados do fechamento: fração a fração nos ramos verticais, ramo horizontal com o ponto do sulco aonde vai, B e C com o meio do sulco, abertura com a borda da aréola no mesmo ângulo, pilares onde se tocam no resultado; fios e bordas seguem as pontas em todos os quadros (`sutures`) |
+| Aréola | Disco de 5,6 cm na pele em pé com o areolótomo de 4,2 cm; o anel externo segue a derme do pedículo, o disco interno vai ao círculo da carta que o resultado mostra com 4,2 cm (`Technique.areola_radius`) |
+| Vasos e nervos | Os ramos que o pedículo conserva (regra de `build_mammaplasty.neurovascular`): o trecho dentro do pedículo segue o pedículo, o resto segue o tecido em volta, a origem na parede fica (`neurovascular_tracks`) |
+| Pitanguy | Pele dos retalhos fechada sobre a aréola (um disco preso à borda da derme), marcação do círculo no vértice do cone e abertura; o complexo areolopapilar espera 4 mm abaixo até ser exteriorizado |
 | Medidas | Mamilo × sulco, fúrcula–mamilo e mamilo–sulco sobre a pele do resultado, projeção, volume do monte |
 
 O script imprime, por técnica, quantos triângulos do fechamento invertem (só lascas degeneradas no sulco), quanto o contorno se afasta da pele em pé e as medidas antes e depois.
