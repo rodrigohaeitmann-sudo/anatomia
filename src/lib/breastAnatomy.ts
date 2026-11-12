@@ -4,7 +4,9 @@
  *  - schematic breast anatomy (src/data/breastAnatomy.json, scripts/hybrid/build_breast_anatomy.py): arteries
  *    that enter the breast, nerves of the nipple-areola complex, the horizontal septum and its ligaments;
  *  - surgical plans (src/data/mammaplasty.json + mammaplasty.bin, scripts/hybrid/build_mammaplasty.py):
- *    pre-operative markings (pen lines) and the pedicle and resection of every technique.
+ *    pre-operative markings (pen lines) and the pedicle and resection of every technique;
+ *  - the step-by-step sequences (src/lib/mammaplastySteps.ts): empty meshes here, filled by the viewer with the
+ *    key frames of a technique when one of its views opens.
  *
  * Centre lines and mid-surfaces are carried by the breast map and the tube or slab is rebuilt around them,
  * so vessels and pen lines keep their calibre when the breast changes shape. Pieces are closed meshes whose
@@ -13,6 +15,7 @@
 import * as THREE from "three";
 import data from "@/data/breastAnatomy.json";
 import plans from "@/data/mammaplasty.json";
+import { stepMeshNames } from "@/lib/mammaplastySteps";
 
 type TubeData = { kind: "tube"; points: number[]; radiusMm: number[] };
 type SheetData = { kind: "sheet"; size: number[]; points: number[]; thicknessMm: number };
@@ -167,9 +170,12 @@ function sheetIndex(nu: number, nv: number) {
 // geometries are shared by every mount of the model, like those of the glTF (one set per tube resolution)
 const cache = new Map<string, { geometry: THREE.BufferGeometry; tube?: TubeSpec; sheet?: SheetSpec }>();
 
+/** Geometries of the step meshes, shared by every mount (filled once per technique). */
+const stepCache = new Map<string, THREE.BufferGeometry>();
+
 /**
  * One mesh per generated part, in model space, named as in the manifests (`sides`: tube resolution;
- * `planBin`: contents of mammaplasty.bin, for the pieces).
+ * `planBin`: contents of mammaplasty.bin, for the pieces; the step meshes start empty).
  */
 export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBin: ArrayBuffer): THREE.Mesh[] {
   const meshes = schematicMeshNames.map((name) => {
@@ -208,5 +214,19 @@ export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBin:
     if (entry.sheet) mesh.userData.sheet = entry.sheet;
     return mesh;
   });
+  // the step-by-step sequences: an empty triangle until their technique is opened (HybridModel.prepareSurgery)
+  for (const name of stepMeshNames) {
+    let geometry = stepCache.get(name);
+    if (!geometry) {
+      geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(9), 3));
+      geometry.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(9), 3));
+      geometry.setIndex([0, 1, 2]);
+      stepCache.set(name, geometry);
+    }
+    const mesh = new THREE.Mesh(geometry);
+    mesh.name = name;
+    meshes.push(mesh);
+  }
   return meshes.filter((mesh): mesh is THREE.Mesh => mesh !== null);
 }

@@ -8,6 +8,7 @@ import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
 import { buildSchematicMeshes, readPlanBin, schematicMeshNames, sheetVertices, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
 import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
+import { loadSteps, stepFrameCount, stepHole } from "@/lib/mammaplastySteps";
 import { meanEdgeLength, subdivideRegion } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
@@ -27,6 +28,12 @@ export type ModelHandle = {
   prepareBreast: () => Promise<void>;
   /** 0 = breast as scanned, k = k-th breast state; fractions blend neighbouring states */
   setBreastLevel: (level: number) => void;
+  /** fills the step-by-step meshes of a technique (src/lib/mammaplastySteps.ts) and attaches their key frames as morph targets */
+  prepareSurgery: (technique: string) => Promise<void>;
+  /** 0 = marking, k = k-th key frame of the prepared technique; fractions blend neighbouring frames */
+  setSurgeryLevel: (level: number) => void;
+  /** opens the trunk skin over the operated breast, where the skin of the step-by-step sequence takes its place (after prepareBreast) */
+  setSkinHole: (on: boolean) => Promise<void>;
   /** rebuilds anchors (snapper) and section targets after the geometry moved */
   refresh: () => void;
 };
@@ -101,6 +108,22 @@ function setMorphTargets(mesh: THREE.Mesh, deltas: Float32Array[] | MorphSet): M
 
 /** Breast morph targets per (shared) geometry: computed once, put back at once when the canvas is mounted anew. */
 const breastMorphs = new WeakMap<THREE.BufferGeometry, MorphSet | null>();
+/** Key frames of the step meshes, per (shared) geometry, likewise. */
+const stepMorphs = new WeakMap<THREE.BufferGeometry, MorphSet>();
+/** Trunk skin with and without the triangles over the operated breast (step-by-step views), per geometry. */
+const skinHoles = new WeakMap<THREE.BufferGeometry, { full: THREE.BufferAttribute; open: THREE.BufferAttribute }>();
+
+/** Even-odd test of a point against a polygon. */
+function insidePolygon(x: number, y: number, polygon: [number, number][]) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+const holeBox = stepHole.reduce((box, [u, v]) => [Math.min(box[0], u), Math.min(box[1], v), Math.max(box[2], u), Math.max(box[3], v)], [Infinity, Infinity, -Infinity, -Infinity]);
 
 function clearMorphTargets(mesh: THREE.Mesh) {
   delete mesh.geometry.morphAttributes.position;
@@ -218,7 +241,11 @@ export function HybridModel(props: Props) {
     // camera remounts the canvas) would be drawn by meshes that have no influences yet: start clean and
     // let the viewer prepare the current arm pose and breast state again.
     clone.traverse((object) => {
-      if (isMesh(object) && (object.geometry.morphAttributes.position || object.geometry.morphAttributes.normal)) clearMorphTargets(object);
+      if (!isMesh(object)) return;
+      if (object.geometry.morphAttributes.position || object.geometry.morphAttributes.normal) clearMorphTargets(object);
+      // the trunk skin is whole again until a step-by-step view opens it
+      const hole = skinHoles.get(object.geometry);
+      if (hole && object.geometry.index !== hole.full) object.geometry.setIndex(hole.full);
     });
     return clone;
   }, [gltf.scene, lowPower, planBin]);
@@ -229,6 +256,7 @@ export function HybridModel(props: Props) {
     // a new scene (other model file) starts without morph targets: forget what was prepared for the old one
     pose.current = { id: null, meshes: [], request: pose.current.request + 1 };
     breast.current = { meshes: [], pending: null, level: 0 };
+    surgery.current = { key: null, meshes: [], request: surgery.current.request + 1, level: 0 };
     return () => {
       alive.current = false;
     };
@@ -410,6 +438,85 @@ export function HybridModel(props: Props) {
     }
     return state.pending;
   };
+
+  // ---- step-by-step sequences: key frames written by build_mammaplasty_steps.py ----------------------------
+  const surgery = useRef<{ key: string | null; meshes: THREE.Mesh[]; request: number; level: number }>({ key: null, meshes: [], request: 0, level: 0 });
+  const setSurgeryLevel = (level: number) => {
+    surgery.current.level = level;
+    const influences = levelInfluences(level, stepFrameCount - 1);
+    for (const mesh of surgery.current.meshes) {
+      const target = mesh.morphTargetInfluences;
+      if (target) for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
+    }
+    invalidate();
+  };
+  const prepareSurgery = async (technique: string) => {
+    const state = surgery.current;
+    const request = ++state.request;
+    if (state.key === technique) return;
+    const steps = await loadSteps(technique);
+    // the latest request wins, and a model unmounted meanwhile must not touch the shared geometries
+    if (request !== surgery.current.request || !alive.current) return;
+    const meshes: THREE.Mesh[] = [];
+    steps.forEach((step, name) => {
+      for (const mesh of meshesByName.get(name) ?? []) {
+        const geometry = mesh.geometry;
+        const known = stepMorphs.get(geometry);
+        if (known) {
+          setMorphTargets(mesh, known);
+        } else {
+          // the steps are drawn in model space, as the other generated meshes: frame 0 is the geometry
+          const base = step.positions[0];
+          geometry.setAttribute("position", new THREE.BufferAttribute(base, 3));
+          geometry.setAttribute("normal", new THREE.BufferAttribute(vertexNormals(base, step.index, base.length / 3), 3));
+          geometry.setIndex(new THREE.BufferAttribute(step.index, 1));
+          const deltas = step.positions.slice(1).map((frame) => frame.map((value, i) => value - base[i]));
+          stepMorphs.set(geometry, setMorphTargets(mesh, deltas));
+        }
+        meshes.push(mesh);
+      }
+    });
+    state.key = technique;
+    state.meshes = meshes;
+    setSurgeryLevel(state.level);
+  };
+  const setSkinHole = async (on: boolean) => {
+    let changed = false;
+    for (const mesh of meshesByName.get(breastSkinMesh) ?? []) {
+      const geometry = mesh.geometry;
+      let hole = skinHoles.get(geometry);
+      if (hole && geometry.index !== hole.full && geometry.index !== hole.open) hole = undefined;
+      if (!hole) {
+        if (!on || !geometry.index) continue;
+        const side = (await loadBreastSides()).op;
+        if (!alive.current) return;
+        // a triangle goes when its three corners (rest pose) fall inside the outline of the patch, drawn in the chart
+        // of the operated breast slightly inside the patch: the skin that stays then overlaps the patch, never leaves a gap
+        const full = geometry.index;
+        const index = full.array;
+        const attribute = geometry.attributes.position;
+        const toModel = restMatrix(mesh);
+        const p = new THREE.Vector3();
+        const within = new Uint8Array(attribute.count);
+        for (let i = 0; i < attribute.count; i++) {
+          p.fromBufferAttribute(attribute, i).applyMatrix4(toModel);
+          const [u, v, depth] = side.chart(p.x, p.y, p.z);
+          within[i] = depth > -30 && u > holeBox[0] && u < holeBox[2] && v > holeBox[1] && v < holeBox[3] && insidePolygon(u, v, stepHole) ? 1 : 0;
+        }
+        const kept: number[] = [];
+        for (let f = 0; f < index.length; f += 3) if (!(within[index[f]] && within[index[f + 1]] && within[index[f + 2]])) kept.push(index[f], index[f + 1], index[f + 2]);
+        const array = index instanceof Uint32Array ? Uint32Array.from(kept) : Uint16Array.from(kept);
+        hole = { full, open: new THREE.BufferAttribute(array, 1) };
+        skinHoles.set(geometry, hole);
+      }
+      const index = on ? hole.open : hole.full;
+      if (geometry.index !== index) {
+        geometry.setIndex(index);
+        changed = true;
+      }
+    }
+    if (changed) invalidate();
+  };
   const handle = (): ModelHandle => ({
     snap: buildSnapper(scene),
     sliceTargets: () => sliceTargets(scene, visible, planes),
@@ -418,6 +525,9 @@ export function HybridModel(props: Props) {
     setPoseFraction,
     prepareBreast,
     setBreastLevel,
+    prepareSurgery,
+    setSurgeryLevel,
+    setSkinHole,
     refresh: () => onReady(handle()),
   });
 

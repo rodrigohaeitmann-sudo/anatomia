@@ -89,7 +89,28 @@ Gera `src/data/mammaplasty.json` (linhas das marcações, pontos nomeados, medid
 | Volume e peso | Volume da malha na mama em pé × 0,95 g/mL |
 | Conserva × secciona | Cada vaso e nervo de `breastAnatomy.json` é seguido até o mamilo: seccionado se passa pela peça ressecada ou se cruza a linha da marcação ainda superficial, fora da base do pedículo |
 
-As dimensões (aréola, ramos, ângulo, bases, espessuras, tecido deixado sobre a fáscia) estão no topo do script e são propostas a confirmar com o especialista. `pilot_mammaplasty.py` guarda a carta da pele em pé e o renderizador de conferência usados aqui; seu `main()` é o piloto original das fases 2 e 3.
+As dimensões (aréola, ramos, ângulo, bases, espessuras, tecido deixado sobre a fáscia) estão no topo do script e foram aceitas na revisão. `pilot_mammaplasty.py` guarda a carta da pele em pé e o renderizador de conferência usados aqui; seu `main()` é o piloto original das fases 2 e 3.
+
+## Mamoplastia redutora: passo a passo e resultado
+
+```bash
+python3 scripts/hybrid/build_mammaplasty_steps.py                 # ~1 min; último passo de `npm run mammaplasty:hybrid`
+python3 scripts/hybrid/build_mammaplasty_steps.py --figures DIR   # renders dos quadros e do resultado, para conferência (requer matplotlib)
+```
+
+Gera `src/data/mammaplastySteps.json` (quadros, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas antes e depois) e `public/models/hybrid/mammaplasty-<técnica>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro.
+
+| Etapa | Como (`mammaplasty_result.py`) |
+|---|---|
+| Carta de trabalho | A pele da mama operada na carta em repouso, isotrópica em torno do mamilo: ((u − u<sub>m</sub>)·κ, v), κ = raio da pele no mamilo / 170 (`Rest`) |
+| Malha | Delaunay conforme sobre a área toda (contorno da mama + saia de 15 mm), com as linhas da marcação como arestas; triângulos rotulados: fica, ressecada, derme do pedículo, aréola (`SkinPatch`) |
+| Fechamento | Destinos nas bordas de sutura (ramos na linha vertical, ramos horizontais no sulco, abertura da aréola em volta de A); harmônico (valor médio) perto das bordas e polar em volta do mamilo, misturados de 30 a 55 mm (`Closure`) |
+| Forma do resultado | Novo estado do mapa da mama: descida que deixa o mamilo 20 mm acima do sulco e crescimento até o volume que restou (`result_state`, por bissecção) |
+| Tecido profundo | Pedículo e pilares seguem a pele por um campo harmônico; o pedículo fica 15 mm sob a pele, menos sob a aréola |
+| Quadros-chave | 0 marcação, 1 incisão (mesma geometria), 2 ressecção (pele e peça saem 30 mm para a frente, 65 mm medial, 95 mm para baixo), 3 transposição (complexo areolopapilar e pedículo na posição final, com giro no caminho), 4 fechamento = resultado; cicatrizes como tubos sobre a pele final |
+| Medidas | Mamilo × sulco, fúrcula–mamilo e mamilo–sulco sobre a pele do resultado, projeção, volume do monte |
+
+O script imprime, por técnica, quantos triângulos do fechamento invertem (só lascas degeneradas no sulco), quanto o contorno se afasta da pele em pé e as medidas antes e depois.
 
 ## Posições do membro superior
 

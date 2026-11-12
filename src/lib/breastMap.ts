@@ -170,6 +170,17 @@ export class BreastSide {
   }
 
   // ---- public ---------------------------------------------------------------------------------------
+  /** Chart coordinates (mm) of a rest point given in model units: u (lateral +), v (height above the nipple), depth in front of the base. */
+  chart(x: number, y: number, z: number): [number, number, number] {
+    const { s, xc, zc, y0 } = this.data;
+    const { unitsPerMm, rref } = this.p;
+    const dx = -s * (x / unitsPerMm - xc);
+    const dz = z / unitsPerMm - zc;
+    const u = rref * Math.atan2(dx, dz);
+    const v = y / unitsPerMm - y0;
+    return [u, v, Math.hypot(dx, dz) - this.baseAt(u, v)];
+  }
+
   /**
    * Displacement of `count` points in every state. `positions`: xyz in model units (rest positions).
    * Returns one Float32Array (xyz deltas, model units) per state, or null when no point of the set moves.

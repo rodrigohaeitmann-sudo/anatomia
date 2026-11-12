@@ -111,6 +111,8 @@ export default function Home() {
   const { group, pack } = useMemo(() => allPacks.find((entry) => entry.pack.id === packId) ?? allPacks[0], [packId]);
   const view = pack.views[viewIndex] ?? pack.views[0];
   const viewKey = `${pack.id}/${view.id}`;
+  // the step-by-step sequences are drawn on the breast they were planned on
+  const breastLock = view.surgery ? "Nos passos da cirurgia a mama fica como foi planejada: ptose grau II com hipertrofia moderada." : undefined;
   const modelPath = lowPower ? hybridTorsoModel.modelPath.replace(/\.glb$/, "-mobile.glb") : hybridTorsoModel.modelPath;
   const space = useMemo(() => surgicalSpaces.find((item) => item.id === dissection.space) ?? null, [dissection.space]);
   const entries = useMemo(() => viewAnnotations(view, space), [view, space]);
@@ -564,6 +566,7 @@ export default function Home() {
                     bottom={bottom}
                     state={breast}
                     settled={breastSettled}
+                    locked={breastLock}
                     onState={(id) => {
                       chooseBreast(id);
                       setSnap("peek");
@@ -629,7 +632,7 @@ export default function Home() {
           />
           <div className="grid grid-cols-2 gap-3">
             <PosePicker variant="inline" pose={armPose} settled={poseSettled} onPose={choosePose} />
-            <BreastPicker variant="inline" state={breast} settled={breastSettled} onState={chooseBreast} />
+            <BreastPicker variant="inline" state={breast} settled={breastSettled} onState={chooseBreast} locked={breastLock} />
           </div>
           {viewer(false)}
           <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">

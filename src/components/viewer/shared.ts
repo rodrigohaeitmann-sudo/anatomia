@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { planPoints } from "@/data/mammaplasty";
+import { stepPoints } from "@/lib/mammaplastySteps";
 import { modelLandmarks as L, modelMeshes, modelStructures, type Landmark, type ModelLandmarks } from "@/lib/modelConfig";
 
 export const meshRecordByName = new Map(modelMeshes.map((mesh) => [mesh.name, mesh]));
@@ -45,6 +46,7 @@ const derived: Record<string, () => Landmark> = {
 export function resolvePoint(key: string): Landmark | undefined {
   if (derived[key]) return derived[key]();
   if (planPoints[key]) return planPoints[key].rest;
+  if (stepPoints[key]) return stepPoints[key];
   const [name, index] = key.split(".");
   const value = (L as unknown as Record<string, unknown>)[name];
   if (Array.isArray(value)) {
