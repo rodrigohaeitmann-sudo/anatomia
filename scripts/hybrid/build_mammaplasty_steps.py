@@ -92,10 +92,12 @@ LINE_GROUPS = {
 }
 AREOLA_NOW = 56.0  # mm, the areola of this case on the standing skin, stretched by the hypertrophy
 AREOLA_NEW = bm.AREOLA_D  # mm, the areolotome: diameter of the new areola
-INSET = 4.0  # mm: in Pitanguy's technique the nipple-areola complex waits under the closed skin until it is let out
+INSET = 9.0  # mm: in Pitanguy's technique the nipple-areola complex (its nipple stands 7.5 mm proud) and the pedicle
+# under it wait this deep under the closed skin until the areola is opened
 STITCH_STEP = 8.0  # mm between two stitches of a suture line
 T_RADIUS = 10.0  # mm of the lines round B and C that the key stitch closes
-NIPPLE_ABOVE_FOLD = 20.0  # mm, the new nipple in the standing result
+PILLAR = 50.0  # mm, the vertical pillar of the result: lower border of the areola to the fold, on the skin (4.5-6 cm)
+NIPPLE_ABOVE_FOLD = 15.0  # mm, the new nipple in the standing result: a little above point A, the projection of the fold
 SKIRT = 15.0  # mm of trunk skin round the breast outline over which the result fades into the skin that stays
 AREOLA_R = 13.2  # mm, the areola of the model in the rest chart (its radius on the skin)
 BURY = bm.FLAP_THICKNESS  # the pedicle goes this deep under the flaps, except under the areola
@@ -107,7 +109,7 @@ OUT_OFFSET = {"radial": 30.0, "medial": 65.0, "down": 95.0}
 COLORS = {
     "skin": "#e7b8a0", "excised": "#e9a27f", "dermis": "#d97a82", "nac": "#9b5a47", "areola-ring": "#b07a64",
     "pedicle": "#3fae6b", "resection": "#e08a2e", "pillar-medial": "#4f7fd6", "pillar-lateral": "#9a6fd6", "scar": "#7d2f32",
-    "marking": "#2536a8", "measure": "#f59e0b", "artery": "#d32f2f", "nerve": "#f5d547",
+    "marking": "#2536a8", "measure": "#f59e0b", "artery": "#d32f2f", "nerve": "#f5d547", "artery-cut": "#8d3b3b", "nerve-cut": "#a8944a",
 }
 # one colour per suture: the two edges that meet and the stitches between them
 SEAM_COLORS = {"T": "#f97316", "vertical": "#facc15", "fold-medial": "#22d3ee", "fold-lateral": "#a3e635", "areola": "#f472b6", "deep": "#818cf8"}
@@ -161,7 +163,7 @@ class Technique:
         self.breast = st.b
         self.ch = st.b.ch
         self.removed_ml = item["resection"].volume
-        self.result = mr.result_state(self.breast, mound_ml - self.removed_ml, NIPPLE_ABOVE_FOLD)
+        self.result, self.nipple_above_fold = self.solve_result(mound_ml - self.removed_ml)
         # the new areola: the circle of the rest chart that the result shapes into an areola of the areolotome's size;
         # the opening of the pattern is sutured round it
         self.areola_r = self.areola_radius(AREOLA_NEW)
@@ -172,6 +174,41 @@ class Technique:
         rho = np.hypot(*rest.iso(item["pedicle"].rest[:, :2]).T)
         self.reach = max(float(np.percentile(rho, 98)), self.areola_r + 10)  # how far the pedicle reaches from the nipple
         self.field = self.displacement_field()
+
+    def nipple_to_fold(self, result: dict) -> float:
+        """Skin length from the nipple down the meridian to the fold in a state of the breast (mm)."""
+        st = self.st
+        fold_v = float(np.interp(st.um, st.us, st.V[:, -1]))
+        v = np.linspace(0, fold_v, 80)
+        u = np.full(80, st.um)
+        return float(bb.polyline_length(self.ch.to_model(mr.state_map(self.breast, np.c_[u, v, st.skin_r(u, v)], result))))
+
+    def solve_result(self, volume_ml: float) -> tuple[dict, float]:
+        """The result state with the remaining volume, the nipple NIPPLE_ABOVE_FOLD above the fold and a vertical pillar
+        (nipple to fold on the skin, less the radius of the new areola) of PILLAR: the length of the lower pole is solved
+        for it (secant)."""
+        target = PILLAR + AREOLA_NEW / 2
+        g0, g1 = 1.0, 0.8
+        l0 = self.nipple_to_fold(mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g0))
+        result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g1)
+        l1 = self.nipple_to_fold(result)
+        for _ in range(6):
+            if abs(l1 - target) < 0.4 or abs(l1 - l0) < 1e-6:
+                break
+            g0, g1, l0 = g1, float(np.clip(g1 + (target - l1) * (g1 - g0) / (l1 - l0), 0.4, 1.0)), l1
+            result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g1)
+            l1 = self.nipple_to_fold(result)
+        return result, NIPPLE_ABOVE_FOLD
+
+    def inset(self, q: np.ndarray) -> np.ndarray:
+        """Pitanguy: rest chart points pushed in under the new areola, where the closed skin covers the nipple-areola
+        complex until the areola is opened (identity elsewhere and in the other techniques)."""
+        if self.key != "pitanguy":
+            return q
+        rho = np.hypot(*self.rest.iso(q[:, :2]).T)
+        out = q.copy()
+        out[:, 2] -= INSET * (1 - smooth01((rho - self.areola_r) / 22.0))
+        return out
 
     def areola_radius(self, diameter: float) -> float:
         """Radius (isotropic rest chart) of the circle round the nipple that the result shows `diameter` mm across."""
@@ -685,43 +722,84 @@ def suture_mesh(stitches: list, edges: list, frame_count: int) -> tuple[list[np.
 # --------------------------------------------------------------------------------------------------
 # vessels and nerves of the pedicle
 # --------------------------------------------------------------------------------------------------
-def neurovascular_tracks(tech: Technique, item: dict, names: list[str], anatomy: dict, schedule: list) -> list[tuple[str, str, list, np.ndarray]]:
-    """The branches a pedicle keeps, followed through the key frames: the part inside the pedicle goes where the pedicle
-    goes (folded in the transposition, buried in the closure), the rest goes with the tissue round it, and the origin
-    on the chest wall stays put."""
-    st, ch, breast = tech.st, tech.ch, tech.breast
+def neurovascular_tracks(tech: Technique, item: dict, pillar_pieces: dict, anatomy: dict, report: dict, schedule: list, out_dir: np.ndarray, pedicle_frames) -> list[dict]:
+    """Every schematic branch (src/data/breastAnatomy.json) through the key frames, as the tissue it runs in goes. The parts
+    in the resection, or under the excised skin and superficial, leave with the specimen and are gone once it is put aside;
+    the part in the pedicle goes where the pedicle goes (folded in the transposition, buried in the closure); the parts in
+    the pillars, and in the rest of the breast, follow them; the origin on the chest wall stays put. A branch is cut where
+    it passes from removed tissue into tissue that stays. Returns one record per piece of branch."""
+    st, ch, breast, front = tech.st, tech.ch, tech.breast, tech.front
+    key = tech.key
     ids = [fid for fid, _, _ in schedule]
-    t3 = ids.index("transposicao")
+    fr = [f for _, _, f in schedule]
+    t2, t3 = ids.index("resseccao"), ids.index("transposicao")
     tissue_of = {m["name"]: m["tissue"] for m in anatomy["meshes"]}
+
+    def smooth(x: np.ndarray, width: int = 7) -> np.ndarray:
+        pad = width // 2
+        return np.convolve(np.pad(x, pad, mode="edge"), np.ones(width) / width, mode="valid")
+
     out = []
-    for name in names:
-        geometry = anatomy["geometry"][name]
+    for name, geometry in anatomy["geometry"].items():
+        if geometry["kind"] != "tube":
+            continue
+        kept = not (report[name][key]["insideMm"] >= 4.0 or report[name][key]["incisions"] > 0)
         pts = resample(np.array(geometry["points"]).reshape(-1, 3) / MM, 1.5)
         q = ch.to_chart(pts)
-        inside = item["pedicle"].contains(st.to_state(q)).astype(float)
-        m = smooth01(np.convolve(np.pad(inside, 4, mode="edge"), np.ones(9) / 9, mode="valid") * 1.6)
+        standing = st.to_state(q)
+        uv = standing[:, :2]
+        in_pattern = shapely.contains_xy(item["pattern"], uv[:, 0], uv[:, 1])
+        on_pedicle = shapely.contains_xy(item["footprint"].buffer(1.0), uv[:, 0], uv[:, 1])
+        superficial = standing[:, 2] >= front.top(uv) - bm.FLAP_THICKNESS
+        removed = item["resection"].contains(standing) | (in_pattern & superficial & ~on_pedicle)
+        m_ped = smooth(item["pedicle"].contains(standing).astype(float))
+        m_pil = {side: smooth(piece.contains(standing).astype(float)) for side, piece in pillar_pieces.items()}
+        total = m_ped + sum(m_pil.values())
+        scale = np.where(total > 1, 1 / np.maximum(total, 1e-9), 1.0)
+        m_ped = m_ped * scale
+        m_pil = {side: value * scale for side, value in m_pil.items()}
+        m_stay = np.clip(1 - m_ped - sum(m_pil.values()), 0, 1)
         anchor = smooth01((q[:, 2] - breast.base(q[:, 0], q[:, 1])) / 8.0)
         k0 = ch.to_model(bb.deform(breast, q)[st.k])
-        flat = tech.final(q, "pedicle", buried=False)
+        # where each tissue takes the point (Pitanguy: the pedicle under the areola waits deeper until it is opened)
+        q_in = tech.inset(q)
+        swing = tech.swing(q, k0, tech.final(q, "pedicle", buried=False))
+        swing_in = tech.swing(q, k0, tech.final(q_in, "pedicle", buried=False))
         buried = tech.final(q, "pedicle", buried=True)
-        swing = tech.swing(q, k0, flat)
-        stay = tech.final(q, "stay")
-        centre = []
-        for i, (_, _, f) in enumerate(schedule):
+        buried_in = tech.final(q_in, "pedicle", buried=True)
+        later = tech.final(q, "stay")
+        frames = []
+        for i, f in enumerate(fr):
             if i < t3:
-                centre.append(k0)
-            elif i == t3:
-                centre.append(k0 + (anchor * m)[:, None] * (swing - k0))
-            else:
-                g = f["global"]
-                ped = swing + g * (buried - swing)
-                sty = k0 + g * (stay - k0)
-                centre.append(k0 + anchor[:, None] * (m[:, None] * (ped - k0) + (1 - m)[:, None] * (sty - k0)))
+                frames.append(k0)
+                continue
+            waiting = key == "pitanguy" and t3 < i and ids[i] != "abertura"
+            sw, bu = (swing_in, buried_in) if waiting else (swing, buried)
+            ped = sw if i == t3 else sw + f["global"] * (bu - sw)
+            move = m_ped[:, None] * (ped - k0)
+            if i > t3:
+                move += sum(m_pil[side][:, None] * f["deep"] * (later - k0) for side in m_pil)
+                move += m_stay[:, None] * f["global"] * (later - k0)
+            frames.append(k0 + anchor[:, None] * move)
         radii = np.linspace(geometry["radiusMm"][0], geometry["radiusMm"][1], len(pts)) * 0.8
-        first = tube_mesh(centre[0], radii, 6)
-        normal0 = first[0][0] - centre[0][0]
-        frames = [tube_mesh(c, radii, 6, normal0=normal0)[0] for c in centre]
-        out.append((name, tissue_of[name], frames, first[1]))
+        # pieces of the branch: runs of removed or remaining tissue (the cut is the gap between two runs)
+        bounds = np.r_[0, np.nonzero(removed[1:] != removed[:-1])[0] + 1, len(pts)]
+        for run, (a, b) in enumerate(zip(bounds[:-1], bounds[1:])):
+            if b - a < 2:
+                continue
+            gone = bool(removed[a])
+            if gone:
+                # with the specimen: out at the resection, then gathered to a point once the specimen is put aside
+                centre = (k0[a:b] + out_dir).mean(0)
+                piece_frames = [k0[a:b] if i < t2 else (k0[a:b] + out_dir if i <= t3 else np.repeat(centre[None], b - a, 0)) for i in range(len(fr))]
+            else:
+                piece_frames = [frame[a:b] for frame in frames]
+            first = tube_mesh(piece_frames[0], radii[a:b], 6)
+            normal0 = first[0][0] - piece_frames[0][0]
+            out.append({
+                "name": f"{name}_{run}", "branch": name, "tissue": tissue_of[name], "kept": kept, "removed": gone,
+                "frames": [tube_mesh(frame, radii[a:b], 6, normal0=normal0)[0] for frame in piece_frames], "faces": first[1],
+            })
     return out
 
 
@@ -740,8 +818,8 @@ KINDS = {
     "areola-ring": "Aréola excedente ({label})",
     "areolotome": "Areolótomo: nova aréola ({label})",
     "measures": "Medidas da marcação ({label})",
-    "arteries": "Artérias do pedículo {pedicle}",
-    "nerves": "Nervos do pedículo {pedicle}",
+    "arteries": "Artérias da mama ({label})",
+    "nerves": "Nervos da mama ({label})",
     "sutures": "Suturas ({label})",
     "sutures-areola": "Sutura da aréola ({label})",
     "disc": "Pele sobre a aréola ({label})",
@@ -765,11 +843,27 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     w = Writer(nf)
     sid = lambda kind: f"mamo-step-{kind}-{key}"  # noqa: E731
 
-    def pedicle_like(k0, swing, buried):
-        return [k0 if i < t3 else swing if i == t3 else swing + fr[i]["global"] * (buried - swing) for i in range(nf)]
+    def waiting(i: int) -> bool:
+        """Pitanguy: once the flaps start to close over them, the areola and the pedicle under it wait deeper, under the
+        skin, until the opening."""
+        return key == "pitanguy" and i > t3 and ids[i] != "abertura"
 
-    def nac_like(k0, final, inset):
-        return [k0 if i < t3 else (inset if inset is not None and ids[i] != "abertura" else final) for i in range(nf)]
+    def pedicle_like(q, k0):
+        """Pedicle tissue (rest chart q, first frame k0): swung in the transposition, buried as the closure goes."""
+        flat, buried = tech.final(q, "pedicle", buried=False), tech.final(q, "pedicle", buried=True)
+        q_in = tech.inset(q)
+        flat_in, buried_in = tech.final(q_in, "pedicle", buried=False), tech.final(q_in, "pedicle", buried=True)
+        swing, swing_in = tech.swing(q, k0, flat), tech.swing(q, k0, flat_in)
+        out = []
+        for i in range(nf):
+            sw, bu = (swing_in, buried_in) if waiting(i) else (swing, buried)
+            out.append(k0 if i < t3 else sw if i == t3 else sw + fr[i]["global"] * (bu - sw))
+        return out
+
+    def nac_like(q, k0, final):
+        """Skin of the areola (rest chart q): at its place from the transposition on (Pitanguy: deeper until opened)."""
+        inside = tech.skin_final(tech.inset(q))
+        return [k0 if i < t3 else (inside if waiting(i) else final) for i in range(nf)]
 
     def removed(k0, shift):
         return [k0 if i < t2 else k0 + shift for i in range(nf)]
@@ -793,17 +887,14 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     print(f"   contorno: o resultado se afasta até {float(np.linalg.norm(stay_final[rim_ids] - k0[rim_ids], axis=1).max()):.1f} mm da pele em pé; a saia de {SKIRT:.0f} mm absorve")
     skin = staged_skin(tech, k0, stay_final, schedule)
     w.add(f"mamo_{key}_step_skin", sid("skin"), "Pele que fica", COLORS["skin"], 1.0, "skin", patch.faces("stay", "skirt"), skin)
-    inset = (lambda q: tech.skin_final(q - np.array([0.0, 0.0, INSET]))) if key == "pitanguy" else None
     nac_final = tech.skin_final(patch.rest_chart)
-    w.add(f"mamo_{key}_step_nac_skin", sid("skin"), "Pele sob a aréola", COLORS["skin"], 1.0, "skin", patch.faces("nac"), nac_like(k0, nac_final, inset(patch.rest_chart) if inset else None))
+    w.add(f"mamo_{key}_step_nac_skin", sid("skin"), "Pele sob a aréola", COLORS["skin"], 1.0, "skin", patch.faces("nac"), nac_like(patch.rest_chart, k0, nac_final))
     out_dir = out_direction(ch, k0[np.unique(patch.faces("excised"))].mean(0), st)
     # skin coloured: the views of the incision onwards tint them (excised skin, de-epithelialised dermis)
     w.add(f"mamo_{key}_step_excised", sid("excised"), "Pele ressecada", COLORS["skin"], 1.0, "skin", patch.faces("excised"), removed(k0, out_dir))
-    dermis_flat = tech.final(patch.rest_chart, "pedicle", buried=False)
-    dermis_buried = tech.final(patch.rest_chart, "pedicle", buried=True)
     # the dermis lies on the pedicle: a little off its surface, or the two would flicker into each other
     dermis_faces = patch.faces("dermis")
-    w.add(f"mamo_{key}_step_dermis", sid("dermis"), "Derme desepitelizada do pedículo", COLORS["skin"], 1.0, "skin", dermis_faces, [outward(f, dermis_faces, 0.8) for f in pedicle_like(k0, tech.swing(patch.rest_chart, k0, dermis_flat), dermis_buried)])
+    w.add(f"mamo_{key}_step_dermis", sid("dermis"), "Derme desepitelizada do pedículo", COLORS["skin"], 1.0, "skin", dermis_faces, [outward(f, dermis_faces, 0.8) for f in pedicle_like(patch.rest_chart, k0)])
 
     # ---- the areola: the areolotome marks the new one on the larger areola of the case ----------------------------
     nipple = st.chart_of_rest(st.um, 0.0)
@@ -823,7 +914,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     uv = rest.uv(final_iso)
     disc_chart = np.c_[uv, st.skin_r(uv[:, 0], uv[:, 1]) + lift_areola]
     disc_final = tech.skin_final(disc_chart)
-    disc = nac_like(disc_k0, disc_final, inset(disc_chart) if inset else None)
+    disc = nac_like(disc_chart, disc_k0, disc_final)
     disc_faces = polar_faces(6, n, centre=True)
     w.add(f"mamo_{key}_step_areola", sid("nac"), "Nova aréola", COLORS["nac"], 1.0, "areola", disc_faces, disc)
     rim = 1 + 5 * n + np.arange(n)
@@ -831,40 +922,42 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     ring_xs = grid[5:].reshape(-1, 2)
     q_ring = st.skin(ring_xs, lift_areola)
     ring_k0 = st.model(q_ring)
-    ring_flat = tech.final(q_ring, "pedicle", buried=False)
     ring_faces = polar_faces(4, n, centre=False)
     w.add(f"mamo_{key}_step_areola_ring", sid("areola-ring"), "Aréola além do areolótomo", COLORS["areola-ring"], 1.0, "areola", ring_faces,
-          [outward(f, ring_faces, 0.8) for f in pedicle_like(ring_k0, tech.swing(q_ring, ring_k0, ring_flat), tech.final(q_ring, "pedicle", buried=True))])
+          [outward(f, ring_faces, 0.8) for f in pedicle_like(q_ring, ring_k0)])
     tome = st.model(st.skin(grid[5], 0.6))
     v_, f_ = tube_mesh(np.vstack([tome, tome[:1]]), 0.5, 6)
     w.add(f"mamo_{key}_step_areolotome", sid("areolotome"), "Areolótomo", COLORS["marking"], 1.0, "marking", f_, static(v_))
     for name, pos, idx in nacs:
         q = ch.to_chart(pos)
         a = ch.to_model(bb.deform(breast, q)[st.k])
-        w.add(f"mamo_{key}_step_{name.split('_')[-2]}", sid("nac"), "Complexo areolopapilar", COLORS["nac"], 1.0, "areola", idx, nac_like(a, tech.skin_final(q), inset(q) if inset else None))
+        w.add(f"mamo_{key}_step_{name.split('_')[-2]}", sid("nac"), "Complexo areolopapilar", COLORS["nac"], 1.0, "areola", idx, nac_like(q, a, tech.skin_final(q)))
 
     # ---- pieces -------------------------------------------------------------------------------------------------
     ped, res = item["pedicle"], item["resection"]
     ped_k0 = ch.to_model(ped.standing)
-    ped_flat = tech.final(ped.rest, "pedicle", buried=False)
-    w.add(f"mamo_{key}_step_pedicle", sid("pedicle"), f"Pedículo {info['pedicle']}", COLORS["pedicle"], 0.9, "piece", ped.faces, pedicle_like(ped_k0, tech.swing(ped.rest, ped_k0, ped_flat), tech.final(ped.rest, "pedicle", buried=True)))
+    pedicle_frames = pedicle_like(ped.rest, ped_k0)
+    w.add(f"mamo_{key}_step_pedicle", sid("pedicle"), f"Pedículo {info['pedicle']}", COLORS["pedicle"], 0.9, "piece", ped.faces, pedicle_frames)
     res_k0 = ch.to_model(res.standing)
     w.add(f"mamo_{key}_step_resection", sid("resection"), f"Ressecção {info['resection']}", COLORS["resection"], 0.9, "piece", res.faces, removed(res_k0, out_dir))
     volumes, pillar_frames = {}, {}
-    for side, piece in pillars(key, item, front, inverse, st).items():
+    pillar_pieces = pillars(key, item, front, inverse, st)
+    for side, piece in pillar_pieces.items():
         k0p = ch.to_model(piece.standing)
         finalp = tech.final(piece.rest, "pillar")
         pillar_frames[side] = [k0p + f["deep"] * (finalp - k0p) for f in fr]
         w.add(f"mamo_{key}_step_pillar_{side}", sid(f"pillar-{side}"), f"{pillar_word} {side}", COLORS[f"pillar-{side}"], 0.9, "piece", piece.faces, pillar_frames[side])
         volumes[side] = round(piece.volume)
 
-    # ---- vessels and nerves the pedicle keeps ---------------------------------------------------------------------
-    kept = sorted(name for name, value in report.items() if not (value[key]["insideMm"] >= 4.0 or value[key]["incisions"] > 0))
+    # ---- vessels and nerves of the breast, as the tissue they run in goes ---------------------------------------------
     branches = {"artery": [], "nerve": []}
-    for name, tissue, frames, faces in neurovascular_tracks(tech, item, kept, anatomy, schedule):
-        kind = "arteries" if tissue == "artery" else "nerves"
-        branches[tissue].append(name)
-        w.add(f"mamo_{key}_step_{name}", sid(kind), name, COLORS[tissue], 1.0, tissue, faces, frames)
+    for record in neurovascular_tracks(tech, item, pillar_pieces, anatomy, report, schedule, out_dir, pedicle_frames):
+        tissue = record["tissue"]
+        if record["kept"] and record["branch"] not in branches[tissue]:
+            branches[tissue].append(record["branch"])
+        # the branches the pedicle keeps are bright; the others, cut on the way to the nipple, darker
+        color = COLORS[tissue] if record["kept"] else COLORS[f"{tissue}-cut"]
+        w.add(f"mamo_{key}_step_{record['name']}", sid("arteries" if tissue == "artery" else "nerves"), record["branch"], color, 1.0, tissue, record["faces"], record["frames"])
 
     # ---- Pitanguy: the skin closes over the areola, which is marked and opened at the end ------------------------
     extra_points = {}
@@ -907,6 +1000,30 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
         a, b = stitches[len(stitches) // 2]
         extra_points[f"seam-{group}"] = [round(float(x) * MM, 5) for x in (a[0] + b[0]) / 2]
 
+    # ---- arrows: where things go in every step, drawn while it plays ---------------------------------------------------
+    arrows = []
+
+    def arrow(frame: int, a, b, color: str) -> None:
+        a, b = np.asarray(a, float), np.asarray(b, float)
+        if np.linalg.norm(b - a) >= 4.0:
+            arrows.append({"frame": frame, "from": [round(float(x) * MM, 5) for x in a], "to": [round(float(x) * MM, 5) for x in b], "color": color})
+
+    arrow(t2, res_k0.mean(0), res_k0.mean(0) + out_dir, COLORS["resection"])
+    arrow(t3, disc[t3 - 1][0], disc[t3][0], COLORS["nac"])
+    for i in range(t3 + 1, nf):
+        for side, frames_ in pillar_frames.items():
+            arrow(i, frames_[i - 1].mean(0), frames_[i].mean(0), COLORS[f"pillar-{side}"])
+        for group, (stitches, _) in seams.items():
+            if group == "deep":
+                continue
+            # the two edges of the middle stitch of a suture that closes in this stage, going to meet
+            a, b = stitches[len(stitches) // 2]
+            if np.linalg.norm(a[i - 1] - b[i - 1]) - np.linalg.norm(a[i] - b[i]) > 4.0:
+                arrow(i, a[i - 1], a[i], SEAM_COLORS[group])
+                arrow(i, b[i - 1], b[i], SEAM_COLORS[group])
+        if ids[i] == "abertura":
+            arrow(i, disc[i - 1][0], disc[i][0], COLORS["nac"])
+
     # ---- measurements of the marking ---------------------------------------------------------------------------------
     measures, values = [], {"areolaNowMm": AREOLA_NOW, "areolaNewMm": AREOLA_NEW}
     climb = np.c_[np.zeros(80), np.linspace(nipple[1], 0.0, 80)]
@@ -941,7 +1058,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
         if label == "Cicatriz vertical":
             values["verticalScarMm"] = round(float(bb.polyline_length(pts)), 1)
     values["areolaResultMm"] = round(float(np.linalg.norm(disc_final[rim[: n // 2]] - disc_final[rim[n // 2:]], axis=1).mean()), 1)
-    return tech, w, volumes, branches, extra_points, values
+    return tech, w, volumes, branches, extra_points, values, arrows
 
 
 def radial_of(ch, point: np.ndarray) -> np.ndarray:
@@ -970,11 +1087,12 @@ def anchors(tech: Technique, writer: Writer) -> dict:
     out["areolotome"] = [round(float(x) * MM, 5) for x in tome[len(tome) // 4]]
     for side in ("medial", "lateral"):
         out[f"pillar-{side}"] = nearest(f"mamo_{key}_step_pillar_{side}")
-    for kind in ("arteries", "nerves"):
+    for kind, tissue in (("arteries", "artery"), ("nerves", "nerve")):
         meshes = [m for m in writer.meshes if m["structure"] == f"mamo-step-{kind}-{key}"]
-        if meshes:
-            p = meshes[0]["full"][0]
-            out[kind] = [round(float(x) * MM, 5) for x in p[int(len(p) * 0.7)]]
+        kept = [m for m in meshes if m["color"] == COLORS[tissue]] or meshes
+        if kept:
+            p = kept[0]["full"][0]
+            out[kind] = [round(float(x) * MM, 5) for x in p[int(len(p) * 0.8)]]
     # where the camera of the sequence looks: between the nipple before and after, 30 mm deep to the skin
     out["centre"] = [round(float(x) * MM, 5) for x in (disc[0][0] + disc[-1][0]) / 2 - np.array([0.0, 0.0, 30.0])]
     return out
@@ -999,9 +1117,10 @@ def main() -> None:
     figures_dir = Path(sys.argv[sys.argv.index("--figures") + 1]) if "--figures" in sys.argv else None
     for key, item in plan.items():
         info = bm.TECHNIQUES[key]
-        tech, writer, volumes, branches, extra_points, values = build(key, item, st, front, inverse, rest, mound_ml, nacs, anatomy, report, before, notch)
+        tech, writer, volumes, branches, extra_points, values, arrows = build(key, item, st, front, inverse, rest, mound_ml, nacs, anatomy, report, before, notch)
         records, box_ = writer.write(Path(str(OUT_BIN).format(key=key)))
         m = measure(tech, before, notch)
+        print(f"   mamilo {tech.nipple_above_fold} mm acima do sulco; polo inferior x{tech.result['growth']['length']} para um pilar vertical de {PILLAR / 10:.1f} cm")
         print(f"   antes {m['before']}\n   depois {m['after']}\n   medidas {values}")
         print(f"   vasos e nervos do pedículo: {branches}")
         # the content hash keeps the service worker (cache first) from serving an older binary with newer data
@@ -1009,7 +1128,7 @@ def main() -> None:
         techniques[key] = {
             "bin": f"models/hybrid/mammaplasty-{key}.bin?v={digest}", **box_,
             "frames": [{"id": fid, "label": label} for fid, label, _ in SCHEDULES[key]],
-            "result": tech.result, "measurements": m, "measures": values, "pillarsMl": volumes, "branches": branches,
+            "result": tech.result, "nippleAboveFoldMm": tech.nipple_above_fold, "measurements": m, "measures": values, "pillarsMl": volumes, "branches": branches, "arrows": arrows,
             "points": {**anchors(tech, writer), **extra_points},
             "meshes": records,
         }
@@ -1023,7 +1142,7 @@ def main() -> None:
     # where the skin of the trunk gives way to the patch of each technique (rest chart u, v of the operated side)
     hole = rest.uv(np.array(tech.patch.mesh_domain.buffer(-1.5).simplify(0.3).exterior.coords))
     out = {
-        "version": 2, "source": bm.SOURCE, "state": bm.STATE, "nippleAboveFoldMm": NIPPLE_ABOVE_FOLD,
+        "version": 3, "source": bm.SOURCE, "state": bm.STATE, "pillarMm": PILLAR,
         "hole": [[round(float(u), 2), round(float(v), 2)] for u, v in hole],
         "techniques": techniques, "structures": structures, "meshes": manifest,
     }

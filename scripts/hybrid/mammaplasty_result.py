@@ -76,14 +76,15 @@ def mound_volume(breast: bb.Breast, mapper) -> float:
     return float((dv * np.abs(np.linalg.det(jac))).sum()) / 1000
 
 
-def result_state(breast: bb.Breast, volume_ml: float, nipple_above_fold: float) -> dict:
-    """State (descent, growth) whose mound has `volume_ml` and whose nipple is `nipple_above_fold` mm above the fold."""
+def result_state(breast: bb.Breast, volume_ml: float, nipple_above_fold: float, length: float = 1.0) -> dict:
+    """State (descent, growth) whose mound has `volume_ml` and whose nipple is `nipple_above_fold` mm above the fold;
+    `length` scales the tissue below the fold (below 1: a shorter lower pole)."""
     ch = breast.ch
     fold_v = float(np.interp(ch.nipple[0], ch.us, breast.fold))
 
     def make(descent: float, k: float) -> dict:
-        # a reduced, lifted breast: fuller (depth, width) but no longer below the fold (length 1)
-        return {"descent": round(descent, 2), "tilt": 0.0, "growth": {"depth": round(1 + k, 4), "width": round(1 + 0.8 * k, 4), "length": 1.0, "hang": 0.0}}
+        # a reduced, lifted breast: fuller (depth, width), with the lower pole of the length asked for
+        return {"descent": round(descent, 2), "tilt": 0.0, "growth": {"depth": round(1 + k, 4), "width": round(1 + 0.8 * k, 4), "length": round(length, 4), "hang": 0.0}}
 
     def bisect(f, lo: float, hi: float, target: float, rising: bool) -> float:
         for _ in range(16):

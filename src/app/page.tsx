@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bone, CircleDot, PersonStanding, RotateCcw, Ruler, ScanEye, Scissors, Shirt, Tags, Waypoints } from "lucide-react";
-import { AnatomyViewer, type FocusRequest, type SectionReport } from "@/components/AnatomyViewer";
+import { AnatomyViewer, type FocusRequest, type SectionReport, type SkinMode } from "@/components/AnatomyViewer";
 import { AboutSheet } from "@/components/mobile/AboutSheet";
 import type { SheetSnap } from "@/components/mobile/BottomSheet";
 import { MobileShell, type MobileTab } from "@/components/mobile/MobileShell";
@@ -23,6 +23,7 @@ import { PosePicker } from "@/components/PosePicker";
 import { armPoseById } from "@/lib/armPoses";
 import { breastStateById } from "@/lib/breastStates";
 import { stepStructuresOf } from "@/lib/mammaplastySteps";
+import { listedInSteps } from "@/lib/surgeryVisibility";
 import { mm, resolvePoint } from "@/components/viewer/shared";
 import { ViewerToolbar } from "@/components/ViewerToolbar";
 import { allPacks, type PackView } from "@/data/packs";
@@ -105,6 +106,18 @@ export default function Home() {
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const quizHistory = useRef<QuizHistory>({});
+  // the user's choices in the steps of a surgery (structures shown or hidden, the skin) hold for every step of the
+  // technique, until they are undone or another technique is opened
+  type StepPrefs = { technique: string; overrides: Record<string, boolean>; skin: SkinMode };
+  const [stepPrefs, setStepPrefs] = useState<StepPrefs | null>(null);
+  const stepPrefsRef = useRef<StepPrefs | null>(null);
+  const rememberStep = (overrides: Record<string, boolean>, skin?: SkinMode) => {
+    const current = stepPrefsRef.current;
+    if (!current) return;
+    const next = { ...current, overrides: { ...current.overrides, ...overrides }, skin: skin ?? current.skin };
+    stepPrefsRef.current = next;
+    setStepPrefs(next);
+  };
   const review = useReview();
   const lowPower = useLowPower();
   const compact = useCompactLayout();
@@ -137,9 +150,13 @@ export default function Home() {
     }
   }, []);
 
-  // opening a view applies its complete state
+  // opening a view applies its complete state (in the steps of a surgery, with the user's choices for the technique)
   useEffect(() => {
-    setVisibility(visibilityFor(view));
+    const technique = view.surgery?.technique ?? null;
+    const prefs = technique ? (stepPrefsRef.current?.technique === technique ? stepPrefsRef.current : { technique, overrides: {}, skin: "auto" as SkinMode }) : null;
+    stepPrefsRef.current = prefs;
+    setStepPrefs(prefs);
+    setVisibility({ ...visibilityFor(view), ...(prefs?.overrides ?? {}) });
     setCut(cutFor(view));
     setDissection(dissectionFor(view));
     setFocus(null);
@@ -328,7 +345,15 @@ export default function Home() {
     [compact],
   );
   const handleSection = useCallback((report: SectionReport) => setSection(report), []);
-  const toggleStructure = (id: string) => setVisibility((current) => ({ ...current, [id]: !current[id] }));
+  const toggleStructure = (id: string) => {
+    // in the steps of a surgery the skin is the skin of the trunk and that of the steps together
+    const ids = view.surgery && id === "skin" ? ["skin", `mamo-step-skin-${view.surgery.technique}`, `mamo-step-disc-${view.surgery.technique}`] : [id];
+    const next = !visibility[id];
+    const changes = Object.fromEntries(ids.map((item) => [item, next]));
+    if (view.surgery) rememberStep(changes);
+    setVisibility((current) => ({ ...current, ...changes }));
+  };
+  const chooseSkinMode = (mode: SkinMode) => rememberStep({}, mode);
   const isolate = (structure: string) => setVisibility(Object.fromEntries(modelStructures.map((item) => [item.id, item.id === structure])));
   const openPack = (id: string, index = 0) => {
     setPackId(id);
@@ -337,6 +362,16 @@ export default function Home() {
     setSnap("peek");
   };
   const toggleNeuro = () => {
+    // in the steps of a surgery, the vessels and nerves are those that follow the operation
+    if (view.surgery) {
+      const ids = [`mamo-step-arteries-${view.surgery.technique}`, `mamo-step-nerves-${view.surgery.technique}`];
+      const next = !ids.every((id) => visibility[id]);
+      const changes = Object.fromEntries(ids.map((id) => [id, next]));
+      rememberStep(changes);
+      setVisibility((current) => ({ ...current, ...changes }));
+      setNeuro(next);
+      return;
+    }
     setNeuro((on) => {
       const next = !on;
       const shown = new Set(view.structures);
@@ -424,7 +459,7 @@ export default function Home() {
         />
       );
     if (id === "pack") return <PackInfoPanel groupTitle={group.title} pack={pack} view={view} viewIndex={viewIndex} selected={selected} onSelect={openDetails} legend={{ entries, activePin, onPick: pickLegend }} />;
-    if (id === "structures") return <StructureToggleList visibility={visibility} onToggle={toggleStructure} embedded={Boolean(compact)} steps={stepStructures} />;
+    if (id === "structures") return <StructureToggleList visibility={visibility} onToggle={toggleStructure} embedded={Boolean(compact)} steps={stepStructures} allow={view.surgery ? listedInSteps : undefined} />;
     if (id === "cut") return <CutPanel cut={cut} onChange={setCut} report={section} selected={selected} onSelect={(structure) => (structure ? openDetails(structure) : setSelected(null))} />;
     if (id === "dissection") return <DissectionPanel dissection={dissection} onChange={setDissection} />;
     return (
@@ -488,6 +523,8 @@ export default function Home() {
         onPoseSettled={handlePoseSettled}
         breast={breast}
         onBreastSettled={handleBreastSettled}
+        skinMode={view.surgery ? stepPrefs?.skin ?? "auto" : "auto"}
+        onSkinMode={view.surgery ? chooseSkinMode : undefined}
       />
     );
 
@@ -619,7 +656,7 @@ export default function Home() {
       <div className="mx-auto grid max-w-7xl grid-cols-[280px_minmax(0,1fr)_360px] gap-4">
         <div className="space-y-4">
           <PackNavigator activePackId={pack.id} onSelect={openPack} />
-          <StructureToggleList visibility={visibility} onToggle={toggleStructure} steps={stepStructures} />
+          <StructureToggleList visibility={visibility} onToggle={toggleStructure} steps={stepStructures} allow={view.surgery ? listedInSteps : undefined} />
         </div>
         <section className="min-w-0 space-y-3">
           <ViewSwitcher pack={pack} activeIndex={viewIndex} onSelect={setViewIndex} />
