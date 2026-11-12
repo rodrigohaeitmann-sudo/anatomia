@@ -113,7 +113,7 @@ Os vasos e nervos da camada esquemática são seguidos da origem ao mamilo. Um r
 
 ### Resultado
 
-O pós-operatório é feito em duas partes, como planejado: o **fechamento** (a pele que fica é levada às linhas de sutura na carta em repouso, e o pedículo e os pilares a acompanham) e a **reforma** (um estado novo da mesma família de mapas: o mamilo 2 cm acima do sulco e o volume que restou). Na carta em repouso o complexo areolopapilar praticamente "volta para casa", porque o repouso do modelo já é uma mama sem ptose. As etapas intermediárias são quadros-chave entre a mama marcada e o resultado; o app interpola entre eles. Detalhes na fase 4.
+O pós-operatório é feito em duas partes, como planejado: o **fechamento** (a pele que fica é levada às linhas de sutura na carta em repouso, e o pedículo e os pilares a acompanham) e a **reforma** (um estado novo da mesma família de mapas: o mamilo 1,5 cm acima do sulco, um pilar vertical de 5 cm e o volume que restou). Na carta em repouso o complexo areolopapilar praticamente "volta para casa", porque o repouso do modelo já é uma mama sem ptose. As etapas intermediárias são quadros-chave entre a mama marcada e o resultado; o app interpola entre eles. Detalhes na fase 4.
 
 Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa cinemático por um modelo físico simples (bolsa de pele inextensível com conteúdo incompressível sob gravidade), sem mudar nada no app: ele só consome posições.
 
@@ -224,7 +224,7 @@ Etapas do fechamento:
 
 ![Marcação, areolótomo, transposição com os vasos, fechamento e resultado das três técnicas, no app](img/mamoplastia-passo-a-passo.jpg)
 
-Passar de uma vista à seguinte anima o tecido do quadro-chave anterior ao novo (1,5 s por passo, até 4,5 s ao pular vários); o botão **Rever** repete a animação do passo. A marcação e o fechamento são vistos de baixo e de frente (o padrão e as suturas do T ficam na face inferior da mama pendente); ressecção, transposição e resultado, de frente, à altura do mamilo. Vistas da mesma técnica vistas do mesmo lado compartilham a câmera: quem gira o modelo continua vendo do mesmo jeito nos passos seguintes. A forma da mama fica travada em ptose grau II; no celular a câmera recua para caber a peça ressecada. No menu de estruturas, o grupo **Passo a passo: esta técnica** lista as peças da técnica aberta: as artérias do pedículo podem ser ocultadas ali, e os nervos que o pedículo conserva, ligados. Tocar numa peça abre a ficha dela.
+Passar de uma vista à seguinte anima o tecido do quadro-chave anterior ao novo (1,5 s por passo, até 4,5 s ao pular vários); o botão **Rever** repete a animação do passo. A marcação e o fechamento são vistos de baixo e de frente (o padrão e as suturas do T ficam na face inferior da mama pendente); ressecção, transposição e resultado, de frente, à altura do mamilo. Vistas da mesma técnica vistas do mesmo lado compartilham a câmera: quem gira o modelo continua vendo do mesmo jeito nos passos seguintes. A forma da mama fica travada em ptose grau II; no celular a câmera recua para caber a peça ressecada. No menu de estruturas, o grupo **Passo a passo: esta técnica** lista as peças da técnica aberta: as artérias e os nervos da mama, que acompanham a cirurgia, são ocultados ou ligados ali (ou no botão Vasos), e a escolha vale para os passos seguintes. Tocar numa peça abre a ficha dela.
 
 ### Como é calculado
 
@@ -235,10 +235,10 @@ Passar de uma vista à seguinte anima o tecido do quadro-chave anterior ao novo 
 3. **Fechamento.** As bordas de sutura recebem destinos: as bordas dos ramos se encontram na linha vertical, os ramos horizontais vão ao sulco e a abertura se fecha em volta da aréola. A pele que fica é resolvida como um mapa harmônico perto das bordas e um mapa polar em volta do mamilo, misturados pela distância ao mamilo (30 a 55 mm). Não sobra triângulo invertido, a não ser lascas degeneradas no próprio sulco.
 4. **Etapas.** Cada etapa diz quanto cada grupo de suturas já fechou (ponto em T, vertical, sulco, aréola, pontos profundos) e quanto a pele em geral andou. A pele anda essa fração em toda parte e, perto das linhas que fecham antes, um pouco mais: a diferença nas linhas é espalhada por um mapa harmônico sobre a pele que fica. As últimas etapas são o próprio resultado.
 5. **Pontos.** Os pares que se encontram são tirados do fechamento: fração a fração nos dois ramos verticais; cada ponto do ramo horizontal com o ponto do sulco aonde ele vai; B e C com o meio do sulco; cada ponto da abertura com o ponto da borda da aréola no mesmo ângulo; e, entre os pilares, os pontos que se tocam no resultado. Cada fio segue as suas duas pontas por todos os quadros.
-6. **Vasos e nervos.** Os ramos que o pedículo conserva (a regra da fase 3) são reamostrados a cada 1,5 mm; o trecho dentro do pedículo vai aonde o pedículo vai (dobra na transposição, sepultamento no fechamento), o resto segue o tecido em volta, e a origem na parede torácica não se move.
-7. **Forma do resultado.** A pele fechada é levada por um estado novo do mapa da mama: uma descida que põe o mamilo 2 cm acima do sulco e um crescimento que dá o volume que restou (o volume antes menos a peça). O tecido profundo segue a pele; o pedículo fica 15 mm sob a pele, menos sob a aréola. O contorno da área operada se afasta até 7,4 mm da pele em pé: a saia leva a diferença até a pele que não muda.
-8. **Pitanguy.** A pele dos retalhos fecha sobre a aréola como uma cortina presa à borda da derme do pedículo; o complexo areolopapilar espera 4 mm abaixo dela até a abertura, quando o disco é retirado e ele sobe à superfície.
-9. **Arquivos.** `src/data/mammaplastySteps.json` (58 kB: quadros de cada técnica, contorno da área operada na carta, estruturas, âncoras dos rótulos, medidas) e `public/models/hybrid/mammaplasty-<técnica>.bin` (540–700 kB: posições de cada malha nos quadros em que ela muda, em 16 bits, e índices), com o hash do conteúdo no endereço para o cache do app não servir um binário antigo. O app só baixa o binário de uma técnica quando uma de suas vistas abre.
+6. **Vasos e nervos.** Todos os ramos da camada esquemática são reamostrados a cada 1,5 mm e cada ponto recebe o destino do tecido em que está: peça ressecada (ou superficial sob a pele ressecada, fora do pedículo), pedículo, pilar medial, pilar lateral ou resto da mama. Os trechos removidos saem com a peça e se recolhem quando ela é posta de lado; entre um trecho removido e um que fica, o ramo é cortado. Nos trechos que ficam, o peso de cada tecido é suavizado ao longo do ramo; o pedículo se dobra na transposição e é sepultado no fechamento, os pilares e o resto da mama seguem as etapas, e a origem na parede torácica não se move. Os ramos que o pedículo conserva até o mamilo (a regra da fase 3) ficam em cor viva.
+7. **Forma do resultado.** A pele fechada é levada por um estado novo do mapa da mama: uma descida que põe o mamilo 1,5 cm acima do sulco, um polo inferior encurtado até o pilar vertical (da borda inferior da aréola ao sulco, sobre a pele) medir 5 cm, e um crescimento que dá o volume que restou (o volume antes menos a peça). O tecido profundo segue a pele; o pedículo fica 15 mm sob a pele, menos sob a aréola. O contorno da área operada se afasta até 6,5 mm da pele em pé: a saia leva a diferença até a pele que não muda.
+8. **Pitanguy.** A pele dos retalhos fecha sobre a aréola como uma cortina presa à borda da derme do pedículo. Quando os retalhos começam a cobri-lo, o complexo areolopapilar afunda 9 mm (o mamilo se projeta 7,5 mm) junto com o pedículo, a derme e os vasos sob ele, para continuar por cima do pedículo; na abertura, o disco é retirado e tudo sobe à superfície.
+9. **Arquivos.** `src/data/mammaplastySteps.json` (100 kB: quadros de cada técnica, contorno da área operada na carta, estruturas, âncoras dos rótulos, setas, medidas) e `public/models/hybrid/mammaplasty-<técnica>.bin` (660–900 kB: posições de cada malha nos quadros em que ela muda, em 16 bits, e índices), com o hash do conteúdo no endereço para o cache do app não servir um binário antigo. O app só baixa o binário de uma técnica quando uma de suas vistas abre.
 10. **No app.** As malhas dos passos começam vazias; ao abrir a técnica, `HybridModel.prepareSurgery` as preenche e anexa os quadros como *morph targets*, e `setSurgeryLevel` interpola. A pele do tronco perde, enquanto a vista estiver aberta, os triângulos que caem inteiros dentro da área operada (o teste é feito na carta da mama) e volta inteira ao sair.
 
 ### Medidas
@@ -247,16 +247,23 @@ Marcação (sobre a pele, em pé): ascensão do complexo areolopapilar 3,6 cm; B
 
 | | Antes (ptose II) | Pitanguy | Wise | Vertical |
 |---|---|---|---|---|
-| Mamilo × sulco | 2,6 cm abaixo | 2,0 cm acima | 2,0 cm acima | 2,0 cm acima |
-| Fúrcula–mamilo | 32,1 cm | 24,9 cm | 25,4 cm | 25,4 cm |
-| Mamilo–sulco sobre a pele | 13,6 cm | 8,3 cm | 8,6 cm | 8,7 cm |
-| Pilar vertical (aréola–sulco, na cicatriz) | — | 6,1 cm | 6,6 cm | 5,5 cm (até o fim da cicatriz) |
-| Aréola | 5,6 cm | 4,2 cm | 4,1 cm | 4,1 cm |
-| Projeção | 8,4 cm | 6,2 cm | 6,8 cm | 6,8 cm |
+| Mamilo × sulco | 2,6 cm abaixo | 1,5 cm acima | 1,5 cm acima | 1,5 cm acima |
+| Fúrcula–mamilo | 32,1 cm | 25,6 cm | 26,2 cm | 26,2 cm |
+| Mamilo–sulco sobre a pele | 13,6 cm | 7,1 cm | 7,5 cm | 7,6 cm |
+| Pilar vertical (aréola–sulco, na cicatriz) | — | 5,1 cm | 5,6 cm | 4,8 cm (até o fim da cicatriz) |
+| Aréola | 5,6 cm | 4,1 cm | 4,1 cm | 4,1 cm |
+| Projeção | 8,4 cm | 6,5 cm | 7,2 cm | 7,2 cm |
 | Volume | 647 mL | 465 mL | 537 mL | 541 mL |
 | Pilares ou retalhos (medial / lateral) | — | 34 / 48 mL | 22 / 32 mL | 23 / 39 mL |
 
-O mamilo 2 cm acima do sulco é a escolha do resultado (o ponto A fica na projeção do sulco e o polo superior sobe um pouco com a nova forma); fúrcula–mamilo e mamilo–sulco são medidos sobre a pele, como com a fita.
+O pilar vertical de 5 cm (faixa usual de 4,5 a 6 cm) e o mamilo 1,5 cm acima do sulco são as escolhas do resultado; para chegar ao pilar, o polo inferior é encurtado para 40–44% do comprimento que teria no mapa da mama (no Wise e na vertical o limite de 40% deixa o pilar em 5,6 e 4,8 cm). Fúrcula–mamilo e mamilo–sulco são medidos sobre a pele, como com a fita.
+
+### Transições, vasos e preferências
+
+- **Transições.** Ao trocar de passo, cada malha que muda de opacidade, de cor ou de visibilidade passa de um estado ao outro em 0,65 s (a pele opaca vira translúcida aos poucos, as peças aparecem e somem, as cores da incisão chegam); a câmera desliza em 0,9 s quando o ponto de vista muda; e **setas** mostram o movimento de cada passo enquanto ele acontece: a peça saindo, o complexo areolopapilar subindo, os pilares indo ao centro, as bordas de cada sutura indo se encontrar. Elas ficam um instante e somem.
+- **Vasos e nervos seguem o tecido.** Todos os ramos da camada esquemática acompanham a cirurgia, trecho a trecho: o que corre dentro da peça ressecada, ou superficial sob a pele ressecada, sai com a peça e some quando ela é posta de lado (o ramo fica cortado ali); o que corre no pedículo se dobra e é sepultado com ele; o que corre nos pilares e no resto da mama os acompanha; a origem na parede torácica não se move. Em cor viva, os ramos que o pedículo conserva até o mamilo; em cor escura, os cortados. As estruturas que não acompanham a cirurgia (glândula, gordura, ligamentos, o complexo areolopapilar do modelo, a camada esquemática estática, as peças da fase 3) não aparecem nos passos nem na lista.
+- **Pele opaca ou transparente.** Um botão junto ao nome do passo deixa a pele opaca ou transparente em qualquer passo.
+- **Preferências por técnica.** O que o usuário liga ou desliga (vasos, nervos, peças, a pele) e a escolha da pele valem para todos os passos da técnica, até serem desfeitos ou até outra técnica ser aberta.
 
 Vasos e nervos que acompanham cada pedículo (camada esquemática): Pitanguy, perfurantes da torácica interna do 2º e 3º espaços; Wise, perfurantes intercostais do 4º ao 6º espaço e o ramo da toracoacromial; vertical, os perfurantes da torácica interna (2º a 4º), os intercostais (4º a 6º) e o ramo da toracoacromial. Os nervos estão nas fichas.
 
@@ -272,6 +279,9 @@ Vasos e nervos que acompanham cada pedículo (camada esquemática): Pitanguy, pe
 8. **A pele em pé é anisotrópica.** Um círculo de 4,2 cm na pele em pé é uma elipse na carta em repouso (raio de 13,8 a 22,6 mm): a aréola é desenhada como disco próprio, redondo na marcação e redondo no resultado, e não como uma região da pele.
 9. **Suturas do T ficam embaixo.** Na mama pendente, o sulco e o ponto em T estão na face inferior: marcação e fechamento são vistos de baixo.
 10. **Superfícies coincidentes cintilam.** A derme sobre o pedículo e os pilares sob a pele fechada disputavam o mesmo lugar: a derme é afastada 0,8 mm e, com a pele opaca, as peças saem da vista.
+11. **O que afunda leva o que está embaixo.** No Pitanguy, o complexo areolopapilar afundado sob a pele fechada ficava atrás do pedículo, cujo topo continuava logo abaixo da pele. Pedículo, derme e vasos sob a aréola agora afundam junto, e só a partir do fechamento.
+12. **Subir o mamilo não encurta o polo inferior.** Com o comprimento do polo fixo, o pilar só chegava a 5 cm com o mamilo 3 cm acima do sulco; encurtar o polo inferior (com o mamilo 1,5 cm acima do sulco) dá o pilar sem deformar o perfil.
+13. **Trocar de aparência de uma vez é o que mais pesa.** As animações do tecido já eram suaves; o salto da pele de opaca para translúcida, das cores e da câmera é que quebrava a sequência.
 
 ## Fase 5: anatomia esquemática da mama
 
@@ -341,6 +351,7 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 - **Peças.** São cortes retos de frente para trás na mama em pé. A cirurgia corta em decúbito, com a mama em outra forma; a correspondência é aproximada. Não há afinamento do pedículo, descolamento de retalhos nem lipoaspiração. Os pesos dependem das dimensões propostas.
 - **Resultado esperado, não previsão.** O fechamento é resolvido na pele, sem tensão, sem orelhas de cachorro e sem o franzido no fim da cicatriz vertical; a forma é a da mama em pé logo depois, sem edema, sem acomodação do polo inferior nas semanas seguintes. A transposição é uma interpolação entre a posição inicial e a final (o pedículo gira no caminho), não a dobra física do tecido, e os vasos a acompanham do mesmo jeito. As etapas intermediárias do fechamento são interpolações guiadas pelas suturas, não estados de equilíbrio. A peça ressecada é afastada para baixo e para o lado só para ser vista.
 - **Aréola.** A aréola alargada de 5,6 cm é da sequência (a do modelo tem 3,5 cm na ptose II); fora dos passos, a aréola é a do modelo.
+- **Só o que acompanha a cirurgia aparece nos passos.** Glândula, gordura, ligamentos e a camada esquemática do modelo seguem apenas a forma da mama; nos passos ficam ocultos, e apenas a pele, as peças, a aréola, os vasos e os nervos da sequência acompanham a operação.
 - **Só a ptose grau II** tem os passos; a forma da mama fica travada nessas vistas.
 - **Camada esquemática.** Mostra trajetos típicos. A irrigação do complexo areolopapilar varia muito entre pessoas (a própria literatura diverge sobre a ordem das fontes), e o ligamento do sulco é contestado. O quadro "conserva × secciona" herda essas simplificações.
 - **Só o lado operado** tem marcação, peças e camada esquemática.
@@ -365,16 +376,21 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 | Medidas na marcação | Ascensão, A–B, A–C etc., pilar vertical e CAP | Rótulos com as medidas sobre a marcação; aréola antes e depois; pilar vertical no resultado |
 | Aréola no Pitanguy | Fechar sem espaço para ela e criar o espaço depois | Pele fechada sobre o complexo areolopapilar, marcação no vértice do cone, abertura e exteriorização |
 | Redução da aréola | Passo de marcação com areolótomo | Vista do areolótomo (4,2 cm) sobre a aréola alargada (5,6 cm); o anel de fora é desepitelizado |
+| Pilar vertical | Distância sulco–aréola, de 4,5 a 6 cm | Resultado com pilar de 5 cm (polo inferior encurtado; mamilo 1,5 cm acima do sulco) |
+| Fluidez entre os passos | Transições mais suaves e elementos de animação | Fades de opacidade e cor, câmera deslizando, setas do movimento de cada passo |
+| Sobreposições | Aréola atrás do pedículo no Pitanguy | Pedículo, derme e vasos afundam junto com a aréola sob a pele fechada |
+| Vasos após a ressecção | Devem seguir o remodelamento e a exérese | Todos os ramos seguem o tecido; o que está na peça sai com ela |
+| Pele nos passos transparentes | Poder deixá-la opaca | Botão de pele opaca/transparente em todos os passos |
+| Preferências | Manter a escolha do usuário em todos os passos da técnica | Escolhas guardadas por técnica, zeradas ao trocar de técnica |
 
 ## Decisões que dependem de você
 
-1. **Resultado.** O mamilo ficou 2 cm acima do sulco e a projeção cai de 8,4 para 6,2–6,8 cm. É o resultado que se espera ensinar, ou o caso deve mostrar também a acomodação das semanas seguintes (polo inferior que desce, mamilo que sobe em relação ao sulco)?
+1. **Resultado.** O mamilo ficou 1,5 cm acima do sulco, com pilar vertical de 4,8 a 5,6 cm e projeção de 6,5 a 7,2 cm. É o resultado que se espera ensinar, ou o caso deve mostrar também a acomodação das semanas seguintes (polo inferior que desce, mamilo que sobe em relação ao sulco)?
 2. **Padrão vertical**: a cúpula e a largura dos ramos são desenho meu; como o especialista os marca neste caso?
 3. **Próxima fase**: mais pedículos (medial, lateral, central, bipediculado), a oncoplastia, ou o padrão periareolar?
 4. **"Lejour"** continua lido como a mamoplastia vertical; a vertical que entrou é com pedículo superomedial (modelo de Hall-Findlay). Entra também a de Lejour, com pedículo superior?
 5. Marcação, peças e passos **bilaterais** (simetrização), ou só no lado operado como o resto do atlas?
 6. **Aréola do caso**: 5,6 cm antes e areolótomo de 4,2 cm. Servem para o ensino, ou outro par (por exemplo 6,5 cm e 3,8 cm)?
-7. **"Pilar vertical"** foi lido como o ramo vertical da marcação (A–B e A–C no Pitanguy, os ramos da fechadura no Wise, M–F e L–F na vertical) e, no resultado, a distância aréola–sulco na cicatriz. Era essa a medida?
 
 ## Reprodução
 

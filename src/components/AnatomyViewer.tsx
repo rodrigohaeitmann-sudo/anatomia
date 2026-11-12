@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { ContactShadows, Html, OrbitControls, useProgress } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
-import { Play } from "lucide-react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Play, Shirt } from "lucide-react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { PackView, ViewOrientation } from "@/data/packs";
@@ -16,7 +16,8 @@ import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { boneMatrices, posedLandmark } from "@/lib/armPoses";
 import type { BreastSide } from "@/lib/breastMap";
 import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
-import { stepFramesOf } from "@/lib/mammaplastySteps";
+import { stepArrows, stepFramesOf } from "@/lib/mammaplastySteps";
+import { hiddenInSteps } from "@/lib/surgeryVisibility";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
@@ -26,6 +27,9 @@ import { SectionCaps } from "./viewer/SectionCaps";
 import { isMesh, mm, resolvePoint, structureById, v3, wallColors } from "./viewer/shared";
 
 export type SectionReport = { result: SectionResult; axis: SectionAxis; positionModel: number } | null;
+/** Skin of the step-by-step views: as each view draws it, or always opaque or see-through (the user's choice). */
+export type SkinMode = "auto" | "opaque" | "translucent";
+type Motion = { technique: string; from: number; to: number; level: number; active: boolean; end: number };
 export type FocusRequest = { structure: string; nonce: number; point?: Landmark } | null;
 
 type AnatomyViewerProps = {
@@ -69,6 +73,9 @@ type AnatomyViewerProps = {
   /** breast state id (src/data/breastModel.json: ptosis grades) or null for the breast as scanned; changes are animated */
   breast?: string | null;
   onBreastSettled?: (state: string | null) => void;
+  /** step-by-step views: skin as drawn, or forced opaque or see-through; the toggle shows when onSkinMode is given */
+  skinMode?: SkinMode;
+  onSkinMode?: (mode: SkinMode) => void;
 };
 
 const POSE_MS = 950;
@@ -124,21 +131,102 @@ function StudioEnvironment() {
   return null;
 }
 
-function CameraDirector({ position, target, signature }: { position: THREE.Vector3; target: THREE.Vector3; signature: string }) {
+function CameraDirector({ position, target, signature, smooth = false }: { position: THREE.Vector3; target: THREE.Vector3; signature: string; smooth?: boolean }) {
   const { camera, controls, invalidate } = useThree();
+  const placed = useRef(false);
   useEffect(() => {
-    camera.position.copy(position);
     const orbit = controls as unknown as { target: THREE.Vector3; update: () => void } | null;
-    if (orbit) {
-      orbit.target.copy(target);
-      orbit.update();
-    } else {
-      camera.lookAt(target);
+    // the first framing of a canvas is put at once; later ones glide when asked (steps of a surgery)
+    if (!smooth || !orbit || !placed.current) {
+      camera.position.copy(position);
+      if (orbit) {
+        orbit.target.copy(target);
+        orbit.update();
+      } else {
+        camera.lookAt(target);
+      }
+      placed.current = Boolean(orbit);
+      invalidate();
+      return;
     }
-    invalidate();
+    const fromPosition = camera.position.clone();
+    const fromTarget = orbit.target.clone();
+    const start = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / 900);
+      const k = ease(t);
+      camera.position.lerpVectors(fromPosition, position, k);
+      orbit.target.lerpVectors(fromTarget, target, k);
+      orbit.update();
+      invalidate();
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, controls]);
   return null;
+}
+
+/**
+ * Arrows of the motion of a surgical step (src/data/mammaplastySteps.json): each grows from where a part was to where
+ * it goes while its step plays, stays a moment once the step is over, then fades.
+ */
+function MotionArrows({ motion, technique }: { motion: MutableRefObject<Motion>; technique: string | null }) {
+  const invalidate = useThree((state) => state.invalidate);
+  const group = useMemo(() => {
+    const root = new THREE.Group();
+    for (const arrow of technique ? stepArrows(technique) : []) {
+      const material = new THREE.MeshBasicMaterial({ color: arrow.color, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.9 * mm, 0.9 * mm, 1, 10), material);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(2.6 * mm, 7 * mm, 14), material);
+      shaft.renderOrder = head.renderOrder = 20;
+      const item = new THREE.Group();
+      item.add(shaft, head);
+      item.visible = false;
+      item.userData = { frame: arrow.frame, shaft, head, material, from: v3(arrow.from), to: v3(arrow.to) };
+      root.add(item);
+    }
+    return root;
+  }, [technique]);
+  useEffect(
+    () => () =>
+      group.traverse((object) => {
+        if (!isMesh(object)) return;
+        object.geometry.dispose();
+        (object.material as THREE.Material).dispose();
+      }),
+    [group],
+  );
+  const scratch = useMemo(() => ({ up: new THREE.Vector3(0, 1, 0), dir: new THREE.Vector3(), turn: new THREE.Quaternion() }), []);
+  useFrame(() => {
+    const m = motion.current;
+    const fade = m.active ? 1 : Math.max(0, 1 - (performance.now() - m.end - 700) / 900);
+    group.visible = Boolean(technique) && m.technique === technique && m.to > m.from && fade > 0;
+    if (!group.visible) return;
+    for (const item of group.children) {
+      const { frame, shaft, head, material, from, to } = item.userData as { frame: number; shaft: THREE.Mesh; head: THREE.Mesh; material: THREE.MeshBasicMaterial; from: THREE.Vector3; to: THREE.Vector3 };
+      const grown = Math.min(1, Math.max(0, m.level - (frame - 1)));
+      item.visible = frame > m.from && frame <= Math.ceil(m.to) && grown > 0.02;
+      if (!item.visible) continue;
+      const { up, dir, turn } = scratch;
+      dir.subVectors(to, from);
+      const length = dir.length() * grown;
+      dir.normalize();
+      turn.setFromUnitVectors(up, dir);
+      const headLength = Math.min(7 * mm, length * 0.5);
+      shaft.scale.set(1, Math.max(length - headLength, 1e-4), 1);
+      shaft.quaternion.copy(turn);
+      shaft.position.copy(from).addScaledVector(dir, (length - headLength) / 2);
+      head.scale.setScalar(headLength / (7 * mm));
+      head.quaternion.copy(turn);
+      head.position.copy(from).addScaledVector(dir, length - headLength / 2);
+      material.opacity = 0.9 * fade;
+    }
+    if (!m.active) invalidate();
+  });
+  return <primitive object={group} />;
 }
 
 /**
@@ -253,7 +341,7 @@ function modelExtent(root: THREE.Object3D) {
 
 export function AnatomyViewer(props: AnatomyViewerProps) {
   const { view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets } = props;
-  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled, breast = null, onBreastSettled } = props;
+  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled, breast = null, onBreastSettled, skinMode = "auto", onSkinMode } = props;
   const mobile = layout === "mobile";
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
@@ -267,7 +355,14 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     return set;
   }, [dissection.layer, space]);
   const forced = useMemo(() => new Set(space ? [...space.walls.flatMap((wall) => wall.structures), ...space.contents] : []), [space]);
-  const visible = useCallback((id: string) => (Boolean(visibility[id]) || forced.has(id)) && !hidden.has(id), [visibility, hidden, forced]);
+  // in the steps of a surgery, what keeps the breast as it was (and would stay where tissue is removed) is not shown
+  const stepFrame = view.surgery?.frame ?? -1;
+  const cutFrame = view.surgery ? stepFramesOf(view.surgery.technique).findIndex((item) => item.id === "resseccao") : -1;
+  const inSteps = Boolean(view.surgery);
+  const visible = useCallback(
+    (id: string) => (Boolean(visibility[id]) || forced.has(id)) && !hidden.has(id) && !(inSteps && hiddenInSteps(id, stepFrame, cutFrame)),
+    [visibility, hidden, forced, inSteps, stepFrame, cutFrame],
+  );
   const highlight = useMemo(() => {
     const map = new Map<string, string>(Object.entries(view.tint ?? {}));
     space?.walls.forEach((wall, index) => wall.structures.forEach((id) => map.set(id, wallColors[index % wallColors.length])));
@@ -459,6 +554,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   const [surgeryAnimating, setSurgeryAnimating] = useState(false);
   const [replay, setReplay] = useState(0);
   const surgeryRun = useRef<{ technique: string | null; level: number; goal: string; token: number; root: THREE.Object3D | null; replay: number }>({ technique: null, level: 0, goal: "", token: 0, root: null, replay: 0 });
+  const motion = useRef<Motion>({ technique: "", from: 0, to: 0, level: 0, active: false, end: 0 });
   useEffect(() => {
     if (!handle) return;
     handleRef.current = handle;
@@ -502,18 +598,22 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         run.technique = surgery.technique;
         const to = surgery.frame;
         const duration = Math.min(SURGERY_MAX_MS, SURGERY_MS * Math.abs(to - from));
+        motion.current = { technique: surgery.technique, from, to, level: from, active: duration > 0, end: 0 };
         await new Promise<void>((resolve) => {
           const start = performance.now();
           const step = (now: number) => {
             if (!live()) return resolve();
             const k = duration ? Math.min(1, (now - start) / duration) : 1;
             run.level = from + (to - from) * ease(k);
+            motion.current.level = run.level;
             handleRef.current?.setSurgeryLevel(run.level);
             if (k < 1) requestAnimationFrame(step);
             else resolve();
           };
           requestAnimationFrame(step);
         });
+        motion.current.active = false;
+        motion.current.end = performance.now();
       } catch {
         // steps not downloaded (offline before the first visit): try again with the next change
         run.goal = "";
@@ -589,8 +689,21 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     const names = part && "meshNames" in part ? (part as { meshNames: string[] }).meshNames : [];
     return names.length ? new Set(names) : null;
   }, [selectedPart]);
-  const translucent = useMemo(() => new Set([...(attachmentFocus ? [attachmentFocus] : []), ...(view.translucent ?? [])]), [attachmentFocus, view.translucent]);
-  const solid = useMemo(() => new Set(view.solid ?? []), [view.solid]);
+  // the skin of a surgical step: as the view draws it, or as the user asked (opaque or see-through)
+  const skinIds = useMemo(() => (view.surgery ? ["skin", `mamo-step-skin-${view.surgery.technique}`, `mamo-step-disc-${view.surgery.technique}`] : []), [view.surgery]);
+  const translucent = useMemo(() => {
+    const set = new Set([...(attachmentFocus ? [attachmentFocus] : []), ...(view.translucent ?? [])]);
+    if (skinMode === "opaque") skinIds.forEach((id) => set.delete(id));
+    if (skinMode === "translucent") skinIds.forEach((id) => set.add(id));
+    return set;
+  }, [attachmentFocus, view.translucent, skinMode, skinIds]);
+  const solid = useMemo(() => {
+    const set = new Set(view.solid ?? []);
+    if (skinMode === "opaque") skinIds.forEach((id) => set.add(id));
+    if (skinMode === "translucent") skinIds.forEach((id) => set.delete(id));
+    return set;
+  }, [view.solid, skinMode, skinIds]);
+  const skinOpaque = Boolean(view.surgery) && solid.has(`mamo-step-skin-${view.surgery?.technique}`);
   // skin markings and perforator zones are drawn on the trunk skin, which does not follow the arm (anatomical
   // position only) but does carry the breast: in a breast state their points go through the same map
   const overSkin = !settledPose && !animating && (settledBreast <= 0 || Boolean(breastSides));
@@ -679,6 +792,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
               translucent={translucent}
               solid={solid}
               proximity={study.proximity}
+              fadeMs={view.surgery ? 650 : 0}
               onReady={handleReady}
               onPick={(structure, info) => {
                 // a tap within 9 mm of a shown landmark picks the landmark (rulers and quizzes still get the point)
@@ -713,12 +827,13 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
           {quiz && <QuizFeedback target={quiz.target} guess={quiz.guess} name={quiz.name} />}
           <SectionCaps section={section} planeNormal={cutModel ? cutModel.plane.normal : null} selected={selected} />
           {!animating && <PackOverlay view={view} snap={handle?.snap ?? null} annotations={annotations} />}
+          <MotionArrows motion={motion} technique={view.surgery?.technique ?? null} />
           {space && !animating && <SpaceOverlay space={space} snap={handle?.snap ?? null} annotations={annotations} />}
           {selected && !animating && <SelectionMarker structure={selected} snap={handle?.snap ?? null} showName={!mobile && labelMode !== "hidden"} />}
         </group>
         {!lowPower && <ContactShadows position={[0, L.latissimusBounds.min[1] - 0.15, 0]} opacity={0.45} scale={9} blur={2.6} far={5} />}
         <OrbitControls makeDefault enableDamping dampingFactor={0.12} />
-        <CameraDirector position={frame.position} target={frame.target} signature={cameraSignature} />
+        <CameraDirector position={frame.position} target={frame.target} signature={cameraSignature} smooth={Boolean(view.surgery)} />
         <CameraFollow shift={anchorShift} signature={cameraSignature} />
         <Invalidator deps={[cutModel, skinModel, rotationMatrix]} />
         {insets && <ViewInsets top={insets.top} bottom={insets.bottom} />}
@@ -738,10 +853,21 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
       )}
       {surgery && (
         <div
-          className={`absolute z-10 flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 py-1 pl-3 pr-1 text-xs text-slate-200 shadow-lg backdrop-blur ${mobile ? "left-3" : "right-3 top-3"}`}
+          className={`absolute z-10 flex flex-wrap items-center gap-1.5 rounded-[18px] border border-white/10 bg-slate-950/80 py-1 pl-3 pr-1 text-xs text-slate-200 shadow-lg backdrop-blur ${mobile ? "left-3 max-w-[calc(100%-5.5rem)]" : "right-3 top-3 max-w-[70%]"}`}
           style={mobile ? { top: (insets?.top ?? 0) + 10 } : undefined}
         >
-          <span className="font-semibold text-white">{surgery.caption ?? stepFramesOf(surgery.technique)[surgery.frame]?.label}</span>
+          <span className="mr-0.5 font-semibold text-white">{surgery.caption ?? stepFramesOf(surgery.technique)[surgery.frame]?.label}</span>
+          {onSkinMode && (
+            <button
+              type="button"
+              onClick={() => onSkinMode(skinOpaque ? "translucent" : "opaque")}
+              className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 font-semibold text-slate-100 transition active:bg-white/20"
+              aria-label={skinOpaque ? "Deixar a pele transparente" : "Deixar a pele opaca"}
+              aria-pressed={skinMode !== "auto"}
+            >
+              <Shirt size={12} /> {skinOpaque ? "Pele transparente" : "Pele opaca"}
+            </button>
+          )}
           {canReplay && (
             <button
               type="button"

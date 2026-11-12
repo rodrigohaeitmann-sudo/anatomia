@@ -7,11 +7,13 @@ type StructureToggleListProps = {
   embedded?: boolean;
   /** structures of the step-by-step sequence on screen: listed first, in their own group */
   steps?: string[];
+  /** which of the other structures are listed (default: all) */
+  allow?: (id: string) => boolean;
 };
 
 const byId = new Map(modelStructures.map((structure) => [structure.id, structure]));
 
-export function StructureToggleList({ visibility, onToggle, embedded = false, steps = [] }: StructureToggleListProps) {
+export function StructureToggleList({ visibility, onToggle, embedded = false, steps = [], allow = () => true }: StructureToggleListProps) {
   const row = (structure: ModelStructureConfig) => (
     <label key={structure.id} title={`Fonte: ${structure.sources.join(", ")}`} className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-slate-900/80 px-3 py-2 text-sm text-slate-200">
       <span className="flex items-center gap-2">
@@ -37,11 +39,11 @@ export function StructureToggleList({ visibility, onToggle, embedded = false, st
           </div>
         )}
         {structureGroups
-          .filter((group) => modelStructures.some((structure) => structure.group === group && structure.listed))
+          .filter((group) => modelStructures.some((structure) => structure.group === group && structure.listed && allow(structure.id)))
           .map((group) => (
             <div key={group}>
               <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">{group}</p>
-              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1">{modelStructures.filter((structure) => structure.group === group && structure.listed).map(row)}</div>
+              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1">{modelStructures.filter((structure) => structure.group === group && structure.listed && allow(structure.id)).map(row)}</div>
             </div>
           ))}
       </div>

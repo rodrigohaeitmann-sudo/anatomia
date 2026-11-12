@@ -25,7 +25,12 @@ type TechniqueData = {
   measures: { areolaNowMm: number; areolaNewMm: number; ascensionMm: number; bcMm?: number; verticalScarMm?: number; areolaResultMm: number };
   /** schematic branches the pedicle keeps (src/data/breastAnatomy.json mesh names) */
   branches: { artery: string[]; nerve: string[] };
+  /** where things go in each step (model units): drawn while the step plays */
+  arrows: StepArrow[];
+  /** height of the new nipple above the fold in the result (mm) */
+  nippleAboveFoldMm: number;
 };
+export type StepArrow = { frame: number; from: [number, number, number]; to: [number, number, number]; color: string };
 
 const techniques = data.techniques as unknown as Record<string, TechniqueData>;
 
@@ -43,6 +48,7 @@ export const stepMeasurements = (key: string) => techniques[key].measurements;
 export const stepPillarVolumes = (key: string) => techniques[key].pillarsMl;
 export const stepMeasures = (key: string) => techniques[key].measures;
 export const stepBranches = (key: string) => techniques[key].branches;
+export const stepArrows = (key: string) => techniques[key]?.arrows ?? [];
 /** Structures of the step-by-step sequence of a technique (listed with the anatomy while one of its views is open). */
 export const stepStructuresOf = (key: string) => Object.keys(data.structures).filter((id) => id.endsWith(`-${key}`));
 

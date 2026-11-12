@@ -326,7 +326,7 @@ function stepViews(key: TechniqueId): PackView[] {
   const measureLabels: PackLabel[] = [label(measures, "measure-ascension", `Ascensão ${cm(sizes.ascensionMm)} cm`), ...(sizes.bcMm ? [label(measures, "measure-bc", `B–C ${cm(sizes.bcMm)} cm`)] : [])];
   const seamLabels = (seams: string[]) => seams.map((seam) => label(seam === "areola" ? areolaSuture : sutures, `seam-${seam}`, s.seams[seam]));
   const removed = `Sai: ${m.resectionMl} mL de tecido (cerca de ${m.resectionG} g, ${m.resectionPct}% do monte) e a pele do padrão`;
-  const vessels = `Vasos que o pedículo conserva (vermelho): ${branchList(branches.artery)}. Nervos (menu de estruturas): ${branchList(branches.nerve)}`;
+  const vessels = `Artérias da mama: em vermelho vivo as que o pedículo conserva até o mamilo (${branchList(branches.artery)}); em vermelho escuro as cortadas, cujo trecho na peça sai com ela. Os nervos (menu de estruturas ou botão Vasos) seguem a mesma regra`;
 
   const views: PackView[] = [
     {
@@ -378,7 +378,7 @@ function stepViews(key: TechniqueId): PackView[] {
       translucent: [skin],
       tint,
       focus: [resection, excised],
-      labels: [label(resection, "resection", `Ressecção ${t.resection}: ${m.resectionMl} mL`), label(excised, "excised", "Pele ressecada"), label(pedicle, "pedicle", `Pedículo ${t.pedicle} (${m.pedicleMl} mL)`), label(arteries, "arteries", "Artérias do pedículo"), ...pillarLabels],
+      labels: [label(resection, "resection", `Ressecção ${t.resection}: ${m.resectionMl} mL`), label(excised, "excised", "Pele ressecada"), label(pedicle, "pedicle", `Pedículo ${t.pedicle} (${m.pedicleMl} mL)`), label(arteries, "arteries", "Artérias que o pedículo conserva"), ...pillarLabels],
       surgery: surgery(frameOf("resseccao")),
       relations: [removed, `Fica: o pedículo ${t.pedicle} (verde, ${m.pedicleMl} mL) e os ${flaps} medial (${pillarsMl.medial} mL) e lateral (${pillarsMl.lateral} mL)`, vessels, ...s.notes.resection],
     },
@@ -492,12 +492,12 @@ function stepViews(key: TechniqueId): PackView[] {
     landmarks: [`Ascensão: ${cm(sizes.ascensionMm)} cm`, ...(sizes.bcMm ? [`B–C em linha reta: ${cm(sizes.bcMm)} cm`] : []), ...measures_(key)],
   };
   planDetails[`mamo-step-arteries-${key}`] = {
-    summary: `Artérias que o pedículo ${t.pedicle} conserva (camada esquemática): ${branchList(branches.artery)}. Acompanham o pedículo em cada passo: dobram-se na transposição e ficam sepultadas com ele no fechamento; a origem na parede torácica não se move.`,
-    surgical: ["Pode ser ocultado no menu de estruturas", "Trajetos típicos da literatura, não os de uma pessoa"],
+    summary: `Artérias da mama (camada esquemática) acompanhando a cirurgia: cada trecho vai com o tecido em que corre. O que está na peça ressecada sai com ela; o que está no pedículo se dobra e é sepultado com ele; o que está nos ${s.pillar === "Pilar" ? "pilares" : "retalhos"} e no resto da mama os acompanha; a origem na parede torácica não se move. Em vermelho vivo, as que o pedículo ${t.pedicle} conserva até o mamilo: ${branchList(branches.artery)}.`,
+    surgical: ["Pode ser ocultado no menu de estruturas; a escolha vale para todos os passos da técnica", "Trajetos típicos da literatura, não os de uma pessoa"],
   };
   planDetails[`mamo-step-nerves-${key}`] = {
-    summary: `Nervos que o pedículo ${t.pedicle} conserva (camada esquemática): ${branchList(branches.nerve)}. Seguem o pedículo como as artérias.`,
-    surgical: ["Ligue no menu de estruturas"],
+    summary: `Nervos da mama (camada esquemática) acompanhando a cirurgia, como as artérias. Em amarelo vivo, os que o pedículo ${t.pedicle} conserva: ${branchList(branches.nerve)}.`,
+    surgical: ["Ligue no menu de estruturas ou no botão Vasos; a escolha vale para todos os passos da técnica"],
   };
   planDetails[`mamo-step-sutures-areola-${key}`] = {
     summary: `Sutura da aréola: ${s.seams.areola}. Cada fio liga um ponto da borda da pele a um ponto da borda da aréola.`,

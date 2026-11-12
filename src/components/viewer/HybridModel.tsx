@@ -178,6 +178,8 @@ type Props = {
   solid?: Set<string>;
   /** distance map: surfaces coloured by distance to these structures */
   proximity?: string[] | null;
+  /** > 0: meshes fade (opacity and colour) into their new look, and in and out of view, over this many ms */
+  fadeMs?: number;
   onReady: (handle: ModelHandle) => void;
   onPick: (structure: string | null, info?: PickInfo) => void;
 };
@@ -229,7 +231,7 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
 }
 
 export function HybridModel(props: Props) {
-  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, solid, proximity = null, onReady, onPick } = props;
+  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, solid, proximity = null, fadeMs = 0, onReady, onPick } = props;
   const gltf = useGLTF(modelPath, false, true);
   // pieces of the surgical plans (a small binary, loaded with the model)
   const planBin = readPlanBin();
@@ -634,10 +636,19 @@ export function HybridModel(props: Props) {
     invalidate();
   }, [scene, proximityKey, invalidate]);
 
-  // materials, visibility, clipping
+  // materials, visibility, clipping; with fadeMs, every mesh fades from the look it had to the new one
+  const fadedScene = useRef<THREE.Object3D | null>(null);
+  const fadeClones = useRef(new Set<THREE.Material>());
   useEffect(() => {
     const targets = new Set(proximityKey ? proximityKey.split(",") : []);
     const cache = new Map<string, THREE.Material>();
+    // the first look of a scene is put on at once; later changes fade
+    const fading = fadeMs > 0 && fadedScene.current === scene;
+    fadedScene.current = scene;
+    type Fade = { mesh: THREE.Mesh; clone: THREE.MeshStandardMaterial; from: number; to: number; fromColor: THREE.Color; toColor: THREE.Color; final: THREE.Material | null; order: number };
+    const fades: Fade[] = [];
+    const previousClones = new Set(fadeClones.current);
+    const opacityOf = (material: THREE.Material) => (material.transparent ? material.opacity : 1);
     scene.traverse((object) => {
       if (!isMesh(object)) return;
       const record = recordFor(object);
@@ -645,8 +656,21 @@ export function HybridModel(props: Props) {
         object.visible = false;
         return;
       }
-      object.visible = visible(record.structure);
-      if (!object.visible) return;
+      const wasVisible = object.visible;
+      const before = object.material as THREE.MeshStandardMaterial;
+      const show = visible(record.structure);
+      if (!show) {
+        if (fading && wasVisible && before?.color) {
+          const clone = before.clone();
+          clone.transparent = true;
+          fades.push({ mesh: object, clone, from: opacityOf(before), to: 0, fromColor: before.color.clone(), toColor: before.color.clone(), final: null, order: record.tissue === "skin" ? 3 : 2 });
+          object.material = clone;
+          fadeClones.current.add(clone);
+          return;
+        }
+        object.visible = false;
+        return;
+      }
       const list: THREE.Plane[] = [];
       if (planes.cut && (planes.cutScope === "all" || superficialForCut.has(record.structure))) list.push(planes.cut);
       if (planes.skin && record.structure === "skin") list.push(planes.skin);
@@ -673,14 +697,78 @@ export function HybridModel(props: Props) {
         material = makeMaterial(record.tissue, opts);
         cache.set(key, material);
       }
+      const order = material.transparent ? (record.tissue === "skin" ? 3 : 2) : 0;
+      const target = material as THREE.MeshStandardMaterial;
+      if (fading && before?.color && target.color) {
+        const from = wasVisible ? opacityOf(before) : 0;
+        const fromColor = (wasVisible ? before.color : target.color).clone();
+        if (Math.abs(from - opacityOf(target)) > 0.02 || !fromColor.equals(target.color)) {
+          const clone = target.clone();
+          clone.transparent = true;
+          clone.opacity = from;
+          clone.color.copy(fromColor);
+          clone.depthWrite = from >= 0.6;
+          fades.push({ mesh: object, clone, from, to: opacityOf(target), fromColor, toColor: target.color.clone(), final: material, order: record.tissue === "skin" ? 3 : 2 });
+          object.visible = true;
+          object.material = clone;
+          object.renderOrder = record.tissue === "skin" ? 3 : 2;
+          fadeClones.current.add(clone);
+          return;
+        }
+      }
+      object.visible = true;
       object.material = material;
-      object.renderOrder = material.transparent ? (record.tissue === "skin" ? 3 : 2) : 0;
+      object.renderOrder = order;
       object.castShadow = !lowPower && !material.transparent;
       object.receiveShadow = !lowPower;
     });
+    // fades interrupted by this change start again from where they were: their old clones go
+    const used = new Set<THREE.Material>();
+    scene.traverse((object) => {
+      if (isMesh(object)) used.add(object.material as THREE.Material);
+    });
+    previousClones.forEach((clone) => {
+      if (!used.has(clone)) {
+        clone.dispose();
+        fadeClones.current.delete(clone);
+      }
+    });
+    let frame = 0;
+    if (fades.length) {
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / fadeMs);
+        const k = t * t * (3 - 2 * t);
+        for (const fade of fades) {
+          fade.clone.opacity = fade.from + (fade.to - fade.from) * k;
+          fade.clone.depthWrite = fade.clone.opacity >= 0.6;
+          fade.clone.color.lerpColors(fade.fromColor, fade.toColor, k);
+        }
+        if (t >= 1) {
+          for (const fade of fades) {
+            if (fade.final) {
+              fade.mesh.material = fade.final;
+              fade.mesh.renderOrder = fade.final.transparent ? fade.order : 0;
+              fade.mesh.castShadow = !lowPower && !fade.final.transparent;
+              fade.mesh.receiveShadow = !lowPower;
+            } else {
+              fade.mesh.visible = false;
+            }
+            fade.clone.dispose();
+            fadeClones.current.delete(fade.clone);
+          }
+        }
+        invalidate();
+        if (t < 1) frame = requestAnimationFrame(step);
+      };
+      frame = requestAnimationFrame(step);
+    }
     invalidate();
-    return () => cache.forEach((material) => material.dispose());
-  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, solid, proximityKey, highlight, emphasised, lowPower, invalidate]);
+    return () => {
+      cancelAnimationFrame(frame);
+      cache.forEach((material) => material.dispose());
+    };
+  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, solid, proximityKey, highlight, emphasised, lowPower, fadeMs, invalidate]);
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     if (event.delta > 6) return;
