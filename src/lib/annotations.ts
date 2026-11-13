@@ -1,7 +1,7 @@
 import type { PackView } from "@/data/packs";
 import type { SurgicalSpace } from "@/data/surgicalSpaces";
 
-export const labelColor = "#e2e8f0";
+export const labelColor = "#221C20";
 export const wallColors = ["#22d3ee", "#a3e635", "#f472b6", "#facc15", "#fb923c", "#a78bfa"];
 
 export type AnnotationEntry = {
@@ -10,7 +10,7 @@ export type AnnotationEntry = {
   number: number;
   text: string;
   color: string;
-  kind: "label" | "edge" | "wall";
+  kind: "label" | "edge" | "wall" | "note";
   /** structure to select when the entry is tapped */
   structure?: string;
   /** heading the entry belongs to (zone title / space name) */

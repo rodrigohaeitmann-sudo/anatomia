@@ -49,7 +49,7 @@ export function useReview() {
 }
 
 export const reviewTone: Record<ReviewStatus, string> = {
-  confirmado: "text-emerald-300",
-  ajustado: "text-violet-300",
-  incorreto: "text-rose-300",
+  confirmado: "text-sage-deep",
+  ajustado: "text-[#6B4E8E]",
+  incorreto: "text-danger",
 };

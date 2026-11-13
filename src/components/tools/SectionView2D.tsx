@@ -47,13 +47,13 @@ export function SectionView2D({ report, selected, onSelect }: { report: SectionR
     const context = canvas.current?.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, size, size);
-    context.fillStyle = "#020617";
+    context.fillStyle = "#FBF6EE";
     context.fillRect(0, 0, size, size);
     if (!view || !transform) return;
     for (const loops of view.meshes) {
       const { tissue, structure, meshName } = loops[0];
       const fill = filledTissues.has(tissue);
-      const colour = structure === selected ? "#fde68a" : meshColor(meshName, tissue) ?? "#cbd5e1";
+      const colour = structure === selected ? "#8E5C68" : meshColor(meshName, tissue) ?? "#cbd5e1";
       const path = new Path2D();
       for (const loop of loops) {
         for (let i = 0; i < loop.points.length; i += 2) {
@@ -70,7 +70,7 @@ export function SectionView2D({ report, selected, onSelect }: { report: SectionR
       }
       context.globalAlpha = 1;
       context.lineWidth = structure === selected ? 2.5 : tissue === "skin" ? 1.6 : 0.9;
-      context.strokeStyle = fill ? "rgba(2,6,23,0.65)" : colour;
+      context.strokeStyle = fill ? "rgba(34,28,32,0.55)" : colour;
       context.stroke(path);
     }
   }, [view, transform, selected]);
@@ -83,7 +83,7 @@ export function SectionView2D({ report, selected, onSelect }: { report: SectionR
     onSelect(hit?.[0].structure ?? null);
   }
 
-  if (!report) return <p className="text-xs text-slate-400">Calculando o corte…</p>;
+  if (!report) return <p className="text-xs text-muted">Calculando o corte…</p>;
   const labels = orientation[report.axis];
   const reference = report.axis === "transverse" ? ((report.positionModel - L.nipple[1]) / L.unitsPerMm) : report.axis === "sagittal" ? ((report.positionModel - L.nipple[0]) / L.unitsPerMm) : ((report.positionModel - L.nipple[2]) / L.unitsPerMm);
   const referenceText =
@@ -92,17 +92,17 @@ export function SectionView2D({ report, selected, onSelect }: { report: SectionR
 
   return (
     <div className="space-y-2">
-      <div className="relative mx-auto aspect-square w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/10">
+      <div className="relative mx-auto aspect-square w-full max-w-[420px] overflow-hidden rounded-2xl border border-line">
         <canvas ref={canvas} width={size} height={size} onClick={pick} className="h-full w-full cursor-crosshair" />
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{labels.left}</span>
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">{labels.right}</span>
-        <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[10px] font-bold text-slate-400">{labels.top}</span>
-        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-400">{labels.bottom}</span>
+        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted">{labels.left}</span>
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted">{labels.right}</span>
+        <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[10px] font-bold text-muted">{labels.top}</span>
+        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted">{labels.bottom}</span>
       </div>
-      <p className="text-center text-xs text-slate-300">{referenceText} · {present.length} estruturas no plano</p>
+      <p className="text-center text-xs text-ink-2">{referenceText} · {present.length} estruturas no plano</p>
       <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto">
         {present.map((id) => (
-          <button key={id} onClick={() => onSelect(id)} className={`rounded-full px-2 py-1 text-[10px] ${id === selected ? "bg-amber-300/30 text-amber-100" : "bg-slate-800 text-slate-300"}`}>
+          <button key={id} onClick={() => onSelect(id)} className={`rounded-full px-2 py-1 text-[10px] ${id === selected ? "bg-ink text-on-ink" : "bg-surface-alt text-ink-2"}`}>
             {labelOf.get(id) ?? id}
           </button>
         ))}

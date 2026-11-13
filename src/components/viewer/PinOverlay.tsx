@@ -29,41 +29,74 @@ export function PinProjector({ anchors, rotation, onProject }: { anchors: Map<st
   return null;
 }
 
-const PIN = 28;
+const ink = "#221C20";
+const roseDeep = "#8E5C68";
 const GAP = 4;
-const candidates: [number, number][] = [[0, 0]];
-for (const radius of [34, 58, 84]) {
-  for (let i = 0; i < 8; i++) {
-    const angle = -Math.PI / 2 + (i * Math.PI) / 4;
-    candidates.push([Math.round(Math.cos(angle) * radius), Math.round(Math.sin(angle) * radius)]);
-  }
-}
-
-type Placed = { key: string; ax: number; ay: number; x: number; y: number; offscreen: boolean };
+const MAX_TEXT = 210;
 
 /**
- * Greedy screen-space declutter: each pin takes the nearest free slot around its anchor. Anchors
- * outside the visible area are not dropped: their pin is held at the edge, pointing to the anchor.
+ * Width of a pin with a pill (dot, gap, badge, text), estimated from the text for the declutter (Geist semibold:
+ * ≈ 7.3 px per character at 13 px, 6.8 at 12 px). The pill itself takes its natural width.
  */
-function declutter(pins: ProjectedPin[], width: number, height: number, safe: { top: number; bottom: number; right: number }, order: string[]): Placed[] {
-  const placed: Placed[] = [];
-  const minX = PIN / 2 + 6, maxX = width - PIN / 2 - safe.right - 6;
-  const minY = safe.top + PIN / 2 + 4, maxY = height - safe.bottom - PIN / 2 - 4;
-  const sorted = [...pins].filter((pin) => pin.visible).sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+function pillWidth(text: string, compact: boolean) {
+  const perChar = compact ? 6.8 : 7.3;
+  const chrome = compact ? 12 + 8 + 2 + 3 + 18 + 6 + 9 : 12 + 8 + 2 + 4 + 20 + 6 + 11;
+  return Math.round(Math.min(MAX_TEXT, text.length * perChar) + chrome);
+}
+
+type Box = { key: string; ax: number; ay: number; x: number; y: number; w: number; h: number; flip: boolean; offscreen: boolean; dot: boolean };
+
+const offsets: [number, number][] = [[0, 0]];
+for (const dy of [30, 60, 90, 120]) offsets.push([0, -dy], [0, dy]);
+for (const dx of [40, 80]) for (const dy of [0, -30, 30, -60, 60]) offsets.push([dx, dy], [-dx, dy]);
+const DISC = 28;
+/** notes keep their pill short: the full text opens on tap */
+const NOTE_TEXT = 22;
+
+/**
+ * Greedy screen-space declutter: each pin (a dot on its anchor and a pill beside it, or a numbered disc) takes the
+ * nearest free slot; a pill that would leave the visible area turns to the other side of its dot, and one that finds
+ * no room becomes a disc. No pin is dropped: anchors outside the visible area are held at the edge with a dashed
+ * leader, and a pin with no free slot at all is drawn on its anchor.
+ */
+function declutter(pins: ProjectedPin[], entries: Map<string, AnnotationEntry>, width: number, height: number, safe: { top: number; bottom: number; right: number }, names: boolean, compact: boolean, order: string[]): Box[] {
+  const placed: Box[] = [];
+  const minX = 8;
+  const maxX = width - safe.right - 8;
+  const minY = safe.top + 6;
+  const maxY = height - safe.bottom - 6;
+  const sorted = [...pins].filter((pin) => pin.visible && entries.has(pin.key)).sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+  const hit = (a: { x: number; y: number; w: number; h: number }) => placed.some((b) => a.x < b.x + b.w + GAP && b.x < a.x + a.w + GAP && a.y < b.y + b.h + GAP && b.y < a.y + a.h + GAP);
   for (const pin of sorted) {
-    const cx = Math.min(maxX, Math.max(minX, pin.x));
-    const cy = Math.min(maxY, Math.max(minY, pin.y));
-    const offscreen = cx !== pin.x || cy !== pin.y;
-    let best: Placed | null = null;
-    for (const [dx, dy] of candidates) {
-      const x = cx + dx;
-      const y = cy + dy;
-      if (x < minX || x > maxX || y < minY || y > maxY) continue;
-      if (placed.some((other) => Math.hypot(other.x - x, other.y - y) < PIN + GAP)) continue;
-      best = { key: pin.key, ax: pin.x, ay: pin.y, x, y, offscreen };
-      break;
+    const entry = entries.get(pin.key)!;
+    const note = entry.kind === "note";
+    const wantsPill = names || note;
+    const pillW = pillWidth(note ? entry.text.slice(0, NOTE_TEXT) : entry.text, compact);
+    const pillH = compact ? 26 : 28;
+    const cx = Math.min(maxX - DISC / 2, Math.max(minX + DISC / 2, pin.x));
+    const cy = Math.min(maxY - DISC / 2, Math.max(minY + DISC / 2, pin.y));
+    const offscreen = Math.abs(cx - pin.x) > 1 || Math.abs(cy - pin.y) > 1;
+    let best: Box | null = null;
+    for (const pill of wantsPill ? [true, false] : [false]) {
+      const w = pill ? pillW : DISC;
+      const h = pill ? pillH : DISC;
+      for (const [dx, dy] of offsets) {
+        const x0 = cx + dx;
+        const y0 = cy + dy;
+        for (const flip of pill ? [false, true] : [false]) {
+          // pill: the dot sits on the slot (x0) and the pill extends to the right (or to the left when flipped)
+          const x = pill ? (flip ? x0 - w + 6 : x0 - 6) : x0 - w / 2;
+          const box = { x, y: y0 - h / 2, w, h };
+          if (box.x < minX || box.x + w > maxX || box.y < minY || box.y + h > maxY) continue;
+          if (hit(box)) continue;
+          best = { key: pin.key, ax: pin.x, ay: pin.y, ...box, flip, offscreen, dot: pill };
+          break;
+        }
+        if (best) break;
+      }
+      if (best) break;
     }
-    if (best) placed.push(best);
+    placed.push(best ?? { key: pin.key, ax: pin.x, ay: pin.y, x: cx - DISC / 2, y: cy - DISC / 2, w: DISC, h: DISC, flip: false, offscreen, dot: false });
   }
   return placed;
 }
@@ -74,33 +107,52 @@ type OverlayProps = {
   activePin: string | null;
   onPin: (key: string | null) => void;
   onOpenDetails: (structure: string) => void;
+  onOpenNote?: (key: string) => void;
+  /** names beside the pins (pills); off: numbered discs, tap to read */
+  showNames: boolean;
+  compact?: boolean;
   width: number;
   height: number;
   insets: { top: number; bottom: number; right?: number };
 };
 
-/** Numbered pins with leader lines and a tap-to-read bubble, kept inside the visible area. */
-export function PinOverlay({ pins, entries, activePin, onPin, onOpenDetails, width, height, insets }: OverlayProps) {
+function PenGlyph({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 20l1-4L16 5l3 3L8 19z" />
+      <path d="M14 7l3 3" />
+    </svg>
+  );
+}
+
+/** Pins of the view (MamaFlow style): a dot on the anchor and a pill with the number and the name; the user's notes in rose. */
+export function PinOverlay({ pins, entries, activePin, onPin, onOpenDetails, onOpenNote, showNames, compact = false, width, height, insets }: OverlayProps) {
   if (!width || !height) return null;
   const order = [...entries.keys()];
   const right = insets.right ?? 0;
-  const placed = declutter(pins, width, height, { top: insets.top, bottom: insets.bottom, right }, order);
+  const placed = declutter(pins, entries, width, height, { top: insets.top, bottom: insets.bottom, right }, showNames, compact, order);
   const active = placed.find((pin) => pin.key === activePin);
   const activeEntry = activePin ? entries.get(activePin) : undefined;
-  const bubbleWidth = Math.min(260, width - right - 24);
-  const bubbleLeft = active ? Math.max(12, Math.min(width - right - bubbleWidth - 12, active.x - bubbleWidth / 2)) : 0;
-  const above = active ? active.y - PIN / 2 - 10 > insets.top + 80 : true;
+  const bubbleWidth = Math.min(280, width - right - 24);
+  const bubbleLeft = active ? Math.max(12, Math.min(width - right - bubbleWidth - 12, active.x + active.w / 2 - bubbleWidth / 2)) : 0;
+  const above = active ? active.y - 10 > insets.top + 90 : true;
+  // a pill already shows the name: the bubble only adds the way to the card (or the note text)
+  const bubble = active && activeEntry && (!showNames || activeEntry.kind === "note" || activeEntry.structure || activeEntry.group);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[15]">
       <svg className="absolute inset-0 h-full w-full" aria-hidden>
         {placed.map((pin) => {
           const entry = entries.get(pin.key);
-          if (!entry || (pin.x === pin.ax && pin.y === pin.ay)) return null;
+          if (!entry) return null;
+          const dotX = pin.dot ? (pin.flip ? pin.x + pin.w - 6 : pin.x + 6) : pin.x + pin.w / 2;
+          const dotY = pin.y + pin.h / 2;
+          if (Math.hypot(dotX - pin.ax, dotY - pin.ay) < 2) return null;
+          const color = entry.kind === "note" ? roseDeep : entry.kind === "label" ? ink : entry.color;
           return (
             <g key={pin.key}>
-              <line x1={pin.ax} y1={pin.ay} x2={pin.x} y2={pin.y} stroke={entry.color} strokeOpacity={pin.offscreen ? 0.6 : 0.85} strokeWidth={1.5} strokeDasharray={pin.offscreen ? "4 4" : undefined} />
-              {!pin.offscreen && <circle cx={pin.ax} cy={pin.ay} r={3} fill={entry.color} />}
+              <line x1={pin.ax} y1={pin.ay} x2={dotX} y2={dotY} stroke={color} strokeOpacity={pin.offscreen ? 0.5 : 0.75} strokeWidth={1.4} strokeDasharray={pin.offscreen ? "4 4" : undefined} />
+              {!pin.offscreen && <circle cx={pin.ax} cy={pin.ay} r={3} fill={color} />}
             </g>
           );
         })}
@@ -109,36 +161,83 @@ export function PinOverlay({ pins, entries, activePin, onPin, onOpenDetails, wid
         const entry = entries.get(pin.key);
         if (!entry) return null;
         const isActive = pin.key === activePin;
+        const note = entry.kind === "note";
+        const tone = note ? roseDeep : entry.kind === "label" ? ink : entry.color;
+        const strong = isActive || note;
+        const press = () => onPin(isActive ? null : pin.key);
+        if (!pin.dot) {
+          const filled = isActive || note;
+          return (
+            <button
+              key={pin.key}
+              type="button"
+              aria-label={note ? `Sua anotação: ${entry.text}` : `${entry.number}. ${entry.text}`}
+              onClick={press}
+              title={pin.offscreen ? "Fora da área visível" : entry.text}
+              className={`pointer-events-auto absolute grid place-items-center rounded-full border-[2.5px] text-[11px] font-bold shadow-pin transition-transform ${isActive ? "z-10 scale-110" : ""} ${pin.offscreen ? "border-dashed opacity-80" : ""}`}
+              style={{ width: pin.w, height: pin.h, left: pin.x, top: pin.y, borderColor: filled ? roseDeep : tone, background: filled ? roseDeep : "#FFFFFF", color: filled ? "#FCF9F6" : "#221C20" }}
+            >
+              {note ? <PenGlyph size={13} color="#FCF9F6" /> : entry.number}
+            </button>
+          );
+        }
+        const badge = compact ? 18 : 20;
         return (
           <button
             key={pin.key}
             type="button"
-            aria-label={`${entry.number}. ${entry.text}`}
-            onClick={() => onPin(isActive ? null : pin.key)}
-            title={pin.offscreen ? "Estrutura fora da área visível" : undefined}
-            className={`pointer-events-auto absolute grid place-items-center rounded-full border-2 bg-slate-950/85 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,0.6)] backdrop-blur transition-transform ${isActive ? "z-10 scale-[1.18]" : ""} ${pin.offscreen ? "border-dashed opacity-80" : ""}`}
-            style={{ width: PIN, height: PIN, left: pin.x - PIN / 2, top: pin.y - PIN / 2, borderColor: entry.color }}
+            aria-label={note ? `Sua anotação: ${entry.text}` : `${entry.number}. ${entry.text}`}
+            onClick={press}
+            title={pin.offscreen ? "Estrutura fora da área visível" : entry.text}
+            className={`pointer-events-auto absolute flex w-max items-center gap-2 ${pin.flip ? "flex-row-reverse" : ""} ${isActive ? "z-10" : ""}`}
+            // the dot sits on the slot's anchor side; the pill grows away from it
+            style={pin.flip ? { right: width - (pin.x + pin.w), top: pin.y, height: pin.h } : { left: pin.x, top: pin.y, height: pin.h }}
           >
-            {entry.number}
+            <span className="h-3 w-3 shrink-0 rounded-full bg-white" style={{ border: `2.5px solid ${strong ? roseDeep : tone}`, boxShadow: strong ? "0 0 0 6px #F4E1E5" : "none" }} />
+            <span
+              className={`flex min-w-0 items-center gap-1.5 rounded-full border font-semibold shadow-pin ${pin.flip ? "flex-row-reverse" : ""} ${compact ? "py-[3px] text-[12px]" : "py-1 text-[13px]"} ${pin.flip ? (compact ? "pl-[9px] pr-[3px]" : "pl-[11px] pr-1") : compact ? "pl-[3px] pr-[9px]" : "pl-1 pr-[11px]"}`}
+              style={{ background: strong ? roseDeep : "#FFFFFF", color: strong ? "#FCF9F6" : "#221C20", borderColor: strong ? "transparent" : "#E3D8CB" }}
+            >
+              <span className="grid shrink-0 place-items-center rounded-full text-[11px] font-bold" style={{ width: badge, height: badge, background: strong ? "#FFFFFF" : tone, color: strong ? roseDeep : "#FCF9F6" }}>
+                {note ? <PenGlyph size={11} color={roseDeep} /> : entry.number}
+              </span>
+              <span className="truncate" style={{ maxWidth: note ? NOTE_TEXT * (compact ? 6.8 : 7.3) : MAX_TEXT }}>
+                {entry.text}
+              </span>
+            </span>
           </button>
         );
       })}
-      {active && activeEntry && (
+      {bubble && active && activeEntry && (
         <div
-          className="pointer-events-auto absolute z-20 rounded-2xl border border-white/10 bg-slate-950/[0.92] px-3 py-2.5 text-left text-[13px] font-semibold leading-snug text-white shadow-2xl backdrop-blur-xl"
-          style={{ width: "max-content", maxWidth: bubbleWidth, left: bubbleLeft, ...(above ? { bottom: height - (active.y - PIN / 2 - 8) } : { top: active.y + PIN / 2 + 8 }) }}
+          className="pointer-events-auto absolute z-20 rounded-2xl border border-line bg-surface px-3.5 py-3 text-left text-[13.5px] font-medium leading-snug text-ink shadow-menu"
+          style={{ width: "max-content", maxWidth: bubbleWidth, left: bubbleLeft, ...(above ? { bottom: height - (active.y - 8) } : { top: active.y + active.h + 8 }) }}
         >
-          <span className="flex items-start gap-2">
-            <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: activeEntry.color }} />
-            <span>
-              {activeEntry.group && <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">{activeEntry.group}</span>}
-              {activeEntry.text}
-            </span>
-          </span>
-          {activeEntry.structure && (
-            <button type="button" onClick={() => onOpenDetails(activeEntry.structure!)} className="mt-1.5 text-[12px] font-bold text-sky-300">
-              Ver ficha ›
-            </button>
+          {activeEntry.kind === "note" ? (
+            <>
+              <span className="block text-[10.5px] font-semibold uppercase tracking-[1px] text-rose-deep">Sua anotação</span>
+              <span className="mt-1 block whitespace-pre-wrap">{activeEntry.text}</span>
+              {onOpenNote && activeEntry.key !== "note:draft" && (
+                <button type="button" onClick={() => onOpenNote(activeEntry.key)} className="mt-2 text-[13px] font-semibold text-ink underline decoration-line underline-offset-4">
+                  Editar ou apagar
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="flex items-start gap-2">
+                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: activeEntry.kind === "label" ? ink : activeEntry.color }} />
+                <span>
+                  {activeEntry.group && <span className="block text-[10.5px] font-semibold uppercase tracking-[1px] text-muted">{activeEntry.group}</span>}
+                  {activeEntry.text}
+                </span>
+              </span>
+              {activeEntry.structure && (
+                <button type="button" onClick={() => onOpenDetails(activeEntry.structure!)} className="mt-2 text-[13px] font-semibold text-rose-deep">
+                  Ver ficha ›
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

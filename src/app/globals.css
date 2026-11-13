@@ -2,6 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
-body { margin: 0; background: #020617; color: #e2e8f0; }
-* { box-sizing: border-box; }
+:root {
+  color-scheme: light;
+}
+html,
+body {
+  background: #fcf9f6;
+  color: #221c20;
+}
+body {
+  margin: 0;
+  font-family: var(--font-geist-sans), -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+* {
+  box-sizing: border-box;
+}
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+.viewer-shell canvas {
+  touch-action: none;
+}
+
+@layer components {
+  /* light sand stage behind the 3D model (MamaFlow Anatomia) */
+  .stage-bg {
+    background: radial-gradient(110% 80% at 50% 42%, #ffffff 0%, #fbf6ee 55%, #f4e9db 100%);
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.82);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* safe areas of phones (notch, gesture bar) */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* sliders in the MamaFlow style: 4 px track filled in ink up to the value, white round thumb ringed in ink */
+input[type="range"].mf-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 50%;
+}
+input[type="range"].mf-slider:focus-visible {
+  outline: 2px solid #b68690;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+input[type="range"].mf-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #221c20 var(--fill), #e3d8cb var(--fill));
+}
+input[type="range"].mf-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: #e3d8cb;
+}
+input[type="range"].mf-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 4px;
+  background: #221c20;
+}
+input[type="range"].mf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid #221c20;
+  box-shadow: 0 2px 8px rgba(34, 28, 32, 0.2);
+}
+input[type="range"].mf-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid #221c20;
+  box-shadow: 0 2px 8px rgba(34, 28, 32, 0.2);
+}

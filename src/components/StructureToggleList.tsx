@@ -15,26 +15,26 @@ const byId = new Map(modelStructures.map((structure) => [structure.id, structure
 
 export function StructureToggleList({ visibility, onToggle, embedded = false, steps = [], allow = () => true }: StructureToggleListProps) {
   const row = (structure: ModelStructureConfig) => (
-    <label key={structure.id} title={`Fonte: ${structure.sources.join(", ")}`} className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-slate-900/80 px-3 py-2 text-sm text-slate-200">
+    <label key={structure.id} title={`Fonte: ${structure.sources.join(", ")}`} className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-surface-alt px-3 py-2 text-sm text-ink">
       <span className="flex items-center gap-2">
         <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: structure.color }} />
         <span>
           {structure.label}
-          {structure.schematic && <span className="ml-1.5 rounded bg-amber-400/15 px-1 py-px align-middle text-[10px] font-semibold text-amber-200">esquemático</span>}
-          {structure.plan && <span className="ml-1.5 rounded bg-emerald-400/15 px-1 py-px align-middle text-[10px] font-semibold text-emerald-200">plano</span>}
+          {structure.schematic && <span className="ml-1.5 rounded bg-amber-tint px-1 py-px align-middle text-[10px] font-semibold text-amber-deep">esquemático</span>}
+          {structure.plan && <span className="ml-1.5 rounded bg-sage-tint px-1 py-px align-middle text-[10px] font-semibold text-sage-deep">plano</span>}
         </span>
       </span>
-      <input type="checkbox" checked={visibility[structure.id] ?? false} onChange={() => onToggle(structure.id)} className="h-4 w-4 accent-sky-400" />
+      <input type="checkbox" checked={visibility[structure.id] ?? false} onChange={() => onToggle(structure.id)} className="h-4 w-4 accent-[#221C20]" />
     </label>
   );
   const stepRows = steps.map((id) => byId.get(id)).filter((structure): structure is ModelStructureConfig => Boolean(structure));
   return (
-    <section className={embedded ? "" : "rounded-3xl border border-slate-800 bg-slate-950/80 p-4"}>
-      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-sky-300">Estruturas</p>
+    <section className={embedded ? "" : "rounded-card border border-line bg-surface p-4"}>
+      <p className="text-[11.5px] font-semibold uppercase tracking-[1.5px] text-muted">Estruturas</p>
       <div className={embedded ? "mt-2 space-y-3" : "mt-3 max-h-[70vh] space-y-3 overflow-y-auto pr-1"}>
         {stepRows.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-pink-300">Passo a passo: esta técnica</p>
+            <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-[1.5px] text-rose-deep">Passo a passo: esta técnica</p>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1">{stepRows.map(row)}</div>
           </div>
         )}
@@ -42,7 +42,7 @@ export function StructureToggleList({ visibility, onToggle, embedded = false, st
           .filter((group) => modelStructures.some((structure) => structure.group === group && structure.listed && allow(structure.id)))
           .map((group) => (
             <div key={group}>
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">{group}</p>
+              <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-[1.5px] text-muted">{group}</p>
               <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1">{modelStructures.filter((structure) => structure.group === group && structure.listed && allow(structure.id)).map(row)}</div>
             </div>
           ))}

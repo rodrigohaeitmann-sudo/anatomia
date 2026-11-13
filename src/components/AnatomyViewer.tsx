@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { PackView, ViewOrientation } from "@/data/packs";
 import { surgicalSpaces } from "@/data/surgicalSpaces";
-import { hybridTorsoModel, modelLandmarks as L, type Landmark } from "@/lib/modelConfig";
+import { modelLandmarks as L, type Landmark } from "@/lib/modelConfig";
 import { computeSection, sectionPlane, type SectionAxis, type SectionResult } from "@/lib/sectioning";
 import { defaultStudy, hiddenByLayer, type CutState, type DissectionState, type PickInfo, type StructureVisibility, type StudyState, type ViewMode } from "@/lib/viewerTypes";
 import { layerAttachments, layerFibres, layerLandmarks, partById, perforatorZones, regionByStructure, skinMarkings, type LayerAttachment, type Zone } from "@/lib/anatomyLayers";
@@ -19,7 +19,7 @@ import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type Breas
 import { stepArrows, stepFramesOf } from "@/lib/mammaplastySteps";
 import { hiddenInSteps } from "@/lib/surgeryVisibility";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
-import { viewAnnotations, type LabelMode } from "@/lib/annotations";
+import { viewAnnotations, type AnnotationEntry, type LabelMode } from "@/lib/annotations";
 import { annotationAnchors, PackOverlay, SelectionMarker, SpaceOverlay, type AnnotationProps } from "./viewer/Guides";
 import { PinOverlay, PinProjector, type ProjectedPin } from "./viewer/PinOverlay";
 import { HybridModel, type ModelHandle, type PlaneSet } from "./viewer/HybridModel";
@@ -31,6 +31,8 @@ export type SectionReport = { result: SectionResult; axis: SectionAxis; position
 export type SkinMode = "auto" | "opaque" | "translucent";
 type Motion = { technique: string; from: number; to: number; level: number; active: boolean; end: number };
 export type FocusRequest = { structure: string; nonce: number; point?: Landmark } | null;
+/** personal note pinned to a point of the model (drawn as a rose pin with a pen) */
+export type NotePin = { key: string; point: Landmark; text: string };
 
 type AnatomyViewerProps = {
   view: PackView;
@@ -49,7 +51,7 @@ type AnatomyViewerProps = {
   /** opens the structure card (pins' "Ver ficha"); defaults to onSelect */
   onOpenDetails?: (structure: string) => void;
   onSection: (report: SectionReport) => void;
-  /** "mobile": full-bleed canvas behind floating UI; "desktop": framed card with caption and credits */
+  /** "mobile": compact pins and touch framing; "desktop": full labels. The canvas always fills its container. */
   layout?: "desktop" | "mobile";
   labelMode?: LabelMode;
   activePin?: string | null;
@@ -76,6 +78,11 @@ type AnatomyViewerProps = {
   /** step-by-step views: skin as drawn, or forced opaque or see-through; the toggle shows when onSkinMode is given */
   skinMode?: SkinMode;
   onSkinMode?: (mode: SkinMode) => void;
+  /** structures the user made see-through (ficha: Transparência) */
+  userTranslucent?: string[];
+  /** the user's notes on this view */
+  notePins?: NotePin[];
+  onOpenNote?: (key: string) => void;
 };
 
 const POSE_MS = 950;
@@ -86,6 +93,8 @@ const BREAST_MAX_MS = 1500;
 const SURGERY_MS = 1500;
 const SURGERY_MAX_MS = 4500;
 const emptyAnchors = new Map<string, Landmark>();
+const emptyNotes: NotePin[] = [];
+const noteColor = "#8E5C68";
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 
@@ -319,7 +328,12 @@ function LoadingModel() {
   const { progress } = useProgress();
   return (
     <Html center className="pointer-events-none">
-      <div className="rounded-xl bg-slate-900/90 px-4 py-3 text-xs font-semibold text-white shadow-xl">Carregando modelo anatômico… {progress.toFixed(0)}%</div>
+      <div className="w-52 rounded-2xl border border-line bg-surface px-4 py-3 text-center text-[13px] font-semibold text-ink shadow-glass">
+        Carregando o modelo… {progress.toFixed(0)}%
+        <div className="mt-2 h-1 overflow-hidden rounded bg-line">
+          <div className="h-full rounded bg-ink transition-[width]" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
     </Html>
   );
 }
@@ -341,7 +355,7 @@ function modelExtent(root: THREE.Object3D) {
 
 export function AnatomyViewer(props: AnatomyViewerProps) {
   const { view, viewKey, caption, visibility, viewMode, resetSignal, modelPath, lowPower, cut, dissection, selected, focus, onSelect, onOpenDetails, onSection, layout = "desktop", labelMode = "names", activePin = null, onPin, insets } = props;
-  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled, breast = null, onBreastSettled, skinMode = "auto", onSkinMode } = props;
+  const { study = defaultStudy, selectedPart = null, selectedLandmark = null, attachmentFocus = null, review = {}, rulerPoints = [], quiz = null, onPickLandmark, onPickAttachment, pose = null, onPoseSettled, breast = null, onBreastSettled, skinMode = "auto", onSkinMode, userTranslucent, notePins = emptyNotes, onOpenNote } = props;
   const mobile = layout === "mobile";
   const [handle, setHandle] = useState<ModelHandle | null>(null);
   const [extent, setExtent] = useState<THREE.Box3 | null>(null);
@@ -370,9 +384,19 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   }, [space, view.tint]);
   const emphasised = useMemo(() => new Set([...(space?.contents ?? []), ...(view.focus ?? [])]), [space, view.focus]);
   const activeStructures = useMemo(() => new Set(view.focus ?? []), [view.focus]);
-  const entries = useMemo(() => new Map(viewAnnotations(view, space).map((entry) => [entry.key, entry])), [view, space]);
-  const annotations: AnnotationProps = useMemo(() => ({ entries, mode: labelMode }), [entries, labelMode]);
-  const anchors = useMemo(() => annotationAnchors(view, space, handle?.snap ?? null), [view, space, handle]);
+  const entries = useMemo(() => {
+    const map = new Map<string, AnnotationEntry>(viewAnnotations(view, space).map((entry) => [entry.key, entry]));
+    notePins.forEach((note) => map.set(note.key, { key: note.key, number: 0, text: note.text, color: noteColor, kind: "note" }));
+    return map;
+  }, [view, space, notePins]);
+  // names are drawn by the DOM pins (pills): the 3D layer only keeps its markers and zone titles
+  const annotations: AnnotationProps = useMemo(() => ({ entries, mode: labelMode === "names" ? "pins" : labelMode }), [entries, labelMode]);
+  const anchors = useMemo(() => {
+    const map = annotationAnchors(view, space, handle?.snap ?? null);
+    if (labelMode === "hidden") map.clear();
+    notePins.forEach((note) => map.set(note.key, note.point));
+    return map;
+  }, [view, space, handle, notePins, labelMode]);
   const [pins, setPins] = useState<ProjectedPin[]>([]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellSize, setShellSize] = useState({ width: 0, height: 0 });
@@ -692,11 +716,11 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   // the skin of a surgical step: as the view draws it, or as the user asked (opaque or see-through)
   const skinIds = useMemo(() => (view.surgery ? ["skin", `mamo-step-skin-${view.surgery.technique}`, `mamo-step-disc-${view.surgery.technique}`] : []), [view.surgery]);
   const translucent = useMemo(() => {
-    const set = new Set([...(attachmentFocus ? [attachmentFocus] : []), ...(view.translucent ?? [])]);
+    const set = new Set([...(attachmentFocus ? [attachmentFocus] : []), ...(view.translucent ?? []), ...(userTranslucent ?? [])]);
     if (skinMode === "opaque") skinIds.forEach((id) => set.delete(id));
     if (skinMode === "translucent") skinIds.forEach((id) => set.add(id));
     return set;
-  }, [attachmentFocus, view.translucent, skinMode, skinIds]);
+  }, [attachmentFocus, view.translucent, skinMode, skinIds, userTranslucent]);
   const solid = useMemo(() => {
     const set = new Set(view.solid ?? []);
     if (skinMode === "opaque") skinIds.forEach((id) => set.add(id));
@@ -744,16 +768,15 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   }, [cutModel, handle, cut.axis, onSection]);
 
 
-  const shellClass = mobile
-    ? "viewer-shell absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#1e293b,#020617_72%)]"
-    : "viewer-shell relative h-[58dvh] min-h-[360px] overflow-hidden rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_50%_35%,#1e293b,#020617_70%)] sm:h-[620px]";
+  // light sand stage (MamaFlow Anatomia): the canvas fills the area its layout gives it
+  const shellClass = "viewer-shell stage-bg absolute inset-0 overflow-hidden";
 
   return (
     <div ref={shellRef} className={shellClass}>
-      {!mobile && (
-        <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-          <span className="rounded-full border border-pink-300/20 bg-pink-500/15 px-3 py-1 text-xs font-bold text-pink-100">{caption}</span>
-          {space && <span className="rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-cyan-100">{space.label}</span>}
+      <span className="sr-only">{caption}</span>
+      {space && (
+        <div className="pointer-events-none absolute left-3 z-10" style={{ top: (insets?.top ?? 0) + 12 }}>
+          <span className="glass rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink shadow-glass">{space.label}</span>
         </div>
       )}
       <Canvas
@@ -770,7 +793,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         }}
       >
         <StudioEnvironment />
-        <hemisphereLight args={["#f8fafc", "#1e293b", 0.35]} />
+        <hemisphereLight args={["#fffaf4", "#cdbba6", 0.4]} />
         <directionalLight position={[4, 6, 5]} intensity={2.1} castShadow={!lowPower} shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} />
         <directionalLight position={[-5, 3, -4]} intensity={0.9} color="#9cc7ff" />
         <directionalLight position={[0, -3, 4]} intensity={0.35} color="#ffd9c7" />
@@ -837,15 +860,18 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         <CameraFollow shift={anchorShift} signature={cameraSignature} />
         <Invalidator deps={[cutModel, skinModel, rotationMatrix]} />
         {insets && <ViewInsets top={insets.top} bottom={insets.bottom} />}
-        {labelMode === "pins" && <PinProjector anchors={animating ? emptyAnchors : anchors} rotation={frame.rotation} onProject={setPins} />}
+        {anchors.size > 0 && <PinProjector anchors={animating ? emptyAnchors : anchors} rotation={frame.rotation} onProject={setPins} />}
       </Canvas>
-      {labelMode === "pins" && (
+      {anchors.size > 0 && (
         <PinOverlay
           pins={pins}
           entries={entries}
           activePin={activePin}
           onPin={onPin ?? (() => undefined)}
           onOpenDetails={onOpenDetails ?? ((structure) => onSelect(structure))}
+          onOpenNote={onOpenNote}
+          showNames={labelMode === "names"}
+          compact={mobile}
           width={shellSize.width}
           height={shellSize.height}
           insets={insets ?? { top: 0, bottom: 0 }}
@@ -853,15 +879,15 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
       )}
       {surgery && (
         <div
-          className={`absolute z-10 flex flex-wrap items-center gap-1.5 rounded-[18px] border border-white/10 bg-slate-950/80 py-1 pl-3 pr-1 text-xs text-slate-200 shadow-lg backdrop-blur ${mobile ? "left-3 max-w-[calc(100%-5.5rem)]" : "right-3 top-3 max-w-[70%]"}`}
-          style={mobile ? { top: (insets?.top ?? 0) + 10 } : undefined}
+          className={`glass absolute z-10 flex flex-wrap items-center gap-1.5 rounded-[18px] border border-line py-1 pl-3 pr-1 text-xs text-ink-2 shadow-glass ${mobile ? "left-3 max-w-[calc(100%-5.5rem)]" : "left-4 max-w-[60%]"}`}
+          style={{ top: (insets?.top ?? 0) + (mobile ? 10 : 16) }}
         >
-          <span className="mr-0.5 font-semibold text-white">{surgery.caption ?? stepFramesOf(surgery.technique)[surgery.frame]?.label}</span>
+          <span className="mr-0.5 font-semibold text-ink">{surgery.caption ?? stepFramesOf(surgery.technique)[surgery.frame]?.label}</span>
           {onSkinMode && (
             <button
               type="button"
               onClick={() => onSkinMode(skinOpaque ? "translucent" : "opaque")}
-              className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 font-semibold text-slate-100 transition active:bg-white/20"
+              className="flex items-center gap-1 rounded-full bg-warm px-2.5 py-1 font-semibold text-ink transition active:bg-line"
               aria-label={skinOpaque ? "Deixar a pele transparente" : "Deixar a pele opaca"}
               aria-pressed={skinMode !== "auto"}
             >
@@ -873,18 +899,12 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
               type="button"
               onClick={() => setReplay((value) => value + 1)}
               disabled={surgeryAnimating}
-              className="flex items-center gap-1 rounded-full bg-pink-500/25 px-2.5 py-1 font-semibold text-pink-100 transition enabled:active:bg-pink-500/40 disabled:opacity-50"
+              className="flex items-center gap-1 rounded-full bg-rose-tint px-2.5 py-1 font-semibold text-rose-deep transition enabled:active:bg-rose-bg disabled:opacity-50"
               aria-label="Rever a animação deste passo"
             >
               <Play size={12} /> Rever
             </button>
           )}
-        </div>
-      )}
-      {!mobile && (
-        <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-white/10 bg-slate-950/75 p-2 text-[11px] text-slate-300 backdrop-blur sm:p-3 sm:text-xs">
-          <span className="font-semibold text-slate-100">Toque em uma estrutura para ver a ficha.</span>
-          <span className="hidden sm:inline"> · Modelo híbrido feminino · HRA/NIH · BodyParts3D/DBCLS · Z-Anatomy · {(hybridTorsoModel.totalTriangles / 1e6).toFixed(1)} M triângulos</span>
         </div>
       )}
     </div>
