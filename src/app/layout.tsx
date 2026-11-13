@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 import "@/styles/viewer.css";
@@ -6,10 +8,10 @@ import "@/styles/viewer.css";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
-  title: "Anatomia Cirúrgica em Mastologia",
-  description: "Atlas cirúrgico interativo para cortes anatômicos e etapas em mastologia.",
+  title: "MamaFlow Anatomia",
+  description: "Atlas 3D de anatomia e cirurgia mamária: packs guiados, modelo livre, forma da mama, posição do braço, anotações e modo aula.",
   manifest: `${basePath}/manifest.webmanifest`,
-  applicationName: "Anatomia Mama",
+  applicationName: "MamaFlow Anatomia",
   icons: {
     icon: [
       { url: `${basePath}/favicon.png`, sizes: "32x32", type: "image/png" },
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: `${basePath}/icons/apple-touch-icon.png`, sizes: "180x180" }],
   },
-  appleWebApp: { capable: true, title: "Anatomia Mama", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Anatomia", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 
@@ -25,12 +27,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#020617",
+  themeColor: "#FCF9F6",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
         {children}
         <ServiceWorkerRegistration />

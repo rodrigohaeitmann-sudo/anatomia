@@ -21,7 +21,7 @@ export type AnnotationProps = {
 export function GuideLabel({ position, children, stack = 0 }: { position: Landmark; children: React.ReactNode; stack?: number }) {
   return (
     <Html position={position} className="pointer-events-none" zIndexRange={[20, 0]}>
-      <div style={{ transform: `translate(${stack % 2 ? 12 : -12 - 8 * stack}px, ${-100 - stack * 70}%)` }} className="whitespace-nowrap rounded-xl border border-white/10 bg-slate-950/85 px-2 py-1 text-[10px] font-semibold leading-tight text-white shadow-xl backdrop-blur">
+      <div style={{ transform: `translate(${stack % 2 ? 12 : -12 - 8 * stack}px, ${-100 - stack * 70}%)` }} className="whitespace-nowrap rounded-full border border-[#E3D8CB] bg-white px-2.5 py-1 text-[11px] font-semibold leading-tight text-[#221C20] shadow-[0_4px_14px_-6px_rgba(34,28,32,.25)]">
         {children}
       </div>
     </Html>
@@ -33,7 +33,7 @@ function Annotation({ position, entry, stack, annotations }: { position: Landmar
   if (annotations.mode !== "names") return null;
   return (
     <GuideLabel position={position} stack={stack}>
-      <span className="mr-1 inline-grid h-4 w-4 place-items-center rounded-full text-[9px] font-black text-slate-950" style={{ backgroundColor: entry.color }}>
+      <span className="mr-1 inline-grid h-4 w-4 place-items-center rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: entry.color }}>
         {entry.number}
       </span>
       {entry.text}
@@ -45,7 +45,7 @@ function GuideLine({ points, color = "#a855f7", dashed = false, width = 3 }: { p
   return <Line points={points} color={color} lineWidth={width} dashed={dashed} dashSize={0.04} gapSize={0.025} depthTest={false} transparent opacity={0.95} renderOrder={10} />;
 }
 
-export function Marker({ position, color = "#f8fafc" }: { position: Landmark; color?: string }) {
+export function Marker({ position, color = "#221C20" }: { position: Landmark; color?: string }) {
   return (
     <mesh position={position} renderOrder={11}>
       <sphereGeometry args={[4 * mm, 16, 12]} />
@@ -60,7 +60,7 @@ export function SpaceOverlay({ space, snap, annotations }: { space: SurgicalSpac
   if (!centre) return null;
   return (
     <group>
-      <Marker position={centre} color="#f8fafc" />
+      <Marker position={centre} color="#221C20" />
       {space.walls.map((wall, index) => {
         const entry = annotations.entries.get(`wall:${index}`);
         const nearest = wallPoint(wall.structures, centre, snap);
@@ -146,7 +146,7 @@ function ZonePolygon({ corners, color, label, zoneIndex, edgeCount, annotations 
       </mesh>
       <GuideLine points={[...corners, corners[0]]} color={color} width={4} />
       {corners.map((corner, index) => <Marker key={index} position={corner} color={color} />)}
-      {annotations.mode === "names" && <GuideLabel position={centre}>{label}</GuideLabel>}
+      {annotations.mode !== "hidden" && <GuideLabel position={centre}>{label}</GuideLabel>}
       {Array.from({ length: edgeCount }, (_, index) => {
         const entry = annotations.entries.get(`zone:${zoneIndex}:${index}`);
         const a = corners[index];
@@ -172,7 +172,7 @@ export function PackOverlay({ view, snap, annotations }: { view: PackView; snap:
         if (!position || !entry) return null;
         return (
           <group key={entry.key}>
-            {annotations.mode !== "hidden" && <Marker position={position} color="#e2e8f0" />}
+            {annotations.mode !== "hidden" && <Marker position={position} color="#221C20" />}
             <Annotation position={position} entry={entry} stack={index % 3} annotations={annotations} />
           </group>
         );

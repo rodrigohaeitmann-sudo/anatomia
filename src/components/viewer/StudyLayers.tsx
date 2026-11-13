@@ -39,10 +39,10 @@ export function useLayerBuffers(enabled: boolean) {
 }
 
 function Tag({ position, children, tone = "slate" }: { position: THREE.Vector3Tuple; children: React.ReactNode; tone?: "slate" | "amber" | "sky" }) {
-  const border = tone === "amber" ? "border-amber-300/40" : tone === "sky" ? "border-sky-300/40" : "border-white/10";
+  const border = tone === "amber" ? "border-[#9C6E2E]/50" : tone === "sky" ? "border-[#221C20]/40" : "border-[#E3D8CB]";
   return (
     <Html position={position} className="pointer-events-none" zIndexRange={[25, 0]}>
-      <div className={`-translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-lg border ${border} bg-slate-950/90 px-2 py-0.5 text-[11px] font-semibold text-white shadow-lg`}>{children}</div>
+      <div className={`-translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-full border ${border} bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#221C20] shadow-[0_4px_14px_-6px_rgba(34,28,32,.25)]`}>{children}</div>
     </Html>
   );
 }
@@ -329,7 +329,7 @@ const markingShort: Record<string, string> = {
 function MarkLabel({ position, text, color }: { position: THREE.Vector3Tuple; text: string; color: string }) {
   return (
     <Html position={position} className="pointer-events-none" zIndexRange={[24, 0]}>
-      <span className="ml-1.5 -translate-y-1/2 whitespace-nowrap rounded bg-slate-950/70 px-1 text-[10px] font-semibold leading-tight" style={{ color, display: "inline-block" }}>
+      <span className="ml-1.5 -translate-y-1/2 whitespace-nowrap rounded bg-white/85 px-1 text-[10px] font-semibold leading-tight shadow-sm" style={{ color, display: "inline-block" }}>
         {text}
       </span>
     </Html>
