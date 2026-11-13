@@ -30,9 +30,13 @@ same function also carries labels, markings and surgical pieces to any breast st
    overtakes it), so the axis of the breast turns downwards and the nipple reaches the lowest contour.
 3. Hypertrophy: ptosis seldom comes without it, so every grade carries a growth of the mound applied
    after the flows: thicker (depth), wider (about the meridian), longer below the fold and, for the
-   pendulous breast, hanging closer to the abdominal wall. The volume of every state is measured
+   pendulous breast, hanging closer to the abdominal wall. The growth is a flow too: a smooth velocity
+   field integrated over unit time (RK4), whose divergence is the gain of volume. Being a flow it cannot
+   fold the tissue (a displacement applied in one go did, at the lateral edge of the mound, where the
+   taper falls faster than the distance from the meridian grows). The volume of every state is measured
    through the Jacobian of the whole map (the chart is cylindrical: tissue carried to a larger radius
-   also gains width, so the flows alone already change the volume a little).
+   also gains width, so the flows alone already change the volume a little), and the smallest Jacobian
+   determinant is checked (FOLD_LIMIT).
 4. Regnault grades are picked by measuring the result (nipple against the fold and the lowest contour).
 
 Outputs:
@@ -73,7 +77,8 @@ B_STEP = 0.005  # mm, quantisation of the base surface
 # Ptosis model parameters (mm, degrees). See the module docstring.
 FLOW = {"shear": 7.0, "shearFold": 20.0, "shearBlend": [5.0, 65.0], "rise": 60.0, "decel": [-55.0, 15.0], "lmin": 0.7, "stepMm": 4.0}
 TILT = {"reach": 60.0, "fade": [0.0, 60.0], "stepMm": 4.0}  # extra descent of the tissue far from the wall, below the fold
-GROWTH = {"shear": 15.0, "blend": 20.0, "hangMm": 120.0}  # width/length follow the superficial tissue; length grows below the fold
+GROWTH = {"shear": 15.0, "blend": 20.0, "hangMm": 120.0, "steps": 6}  # width/length follow the superficial tissue; length grows below the fold
+FOLD_LIMIT = 0.1  # smallest Jacobian determinant accepted anywhere in the mound (0 would be tissue folding over itself)
 TAPER_MM = 28.0
 HINGE_FLAT = 0.5  # the pouch hangs from a flatter curve than the fold (broad U instead of a V)
 
@@ -108,7 +113,31 @@ STATES = [
         "growth": {"depth": 1.45, "width": 1.4, "length": 1.3, "hang": 0.5},
         "description": "Mamilo no contorno mais baixo da mama, apontando para baixo. A mama, volumosa, pende sobre a parede abdominal e a aréola se alonga.",
     },
+    # Hypertrophy graded by the weight a reduction removes (Berrocal Revueltas: III 800-1000 g, IV >= 1000 g per breast),
+    # on a grade III ptosis (docs/plano-mamoplastia-g3-g4.md). `resultMl`: the breast the reduction aims at.
+    {
+        "id": "g3",
+        "label": "G3: ptose grau III com hipertrofia grau III",
+        "short": "G3",
+        "descent": 80.0,
+        "tilt": 1.3,
+        "growth": {"depth": 2.4, "width": 1.85, "length": 1.3, "hang": 0.5},
+        "resultMl": 700,
+        "description": "Hipertrofia grau III de Berrocal Revueltas: a redução retira de 800 a 1.000 g por mama. Mama larga e pendente, mamilo no contorno mais baixo, fúrcula–mamilo acima de 40 cm.",
+    },
+    {
+        "id": "g4",
+        "label": "G4: ptose grau III com gigantomastia (hipertrofia grau IV)",
+        "short": "G4",
+        "descent": 84.0,
+        "tilt": 1.4,
+        "growth": {"depth": 2.9, "width": 2.0, "length": 1.4, "hang": 0.6},
+        "resultMl": 850,
+        "description": "Gigantomastia: hipertrofia grau IV de Berrocal Revueltas, a redução retira mais de 1.000 g por mama. Fúrcula–mamilo de 44 cm, faixa em que muitos autores consideram o enxerto livre do complexo areolopapilar.",
+    },
 ]
+RESULT_ML = 500  # the breast a reduction aims at when a state does not say (for the expected Berrocal grade)
+DENSITY = 0.95  # g/mL, fatty breast tissue
 
 
 # --------------------------------------------------------------------------------------------------
@@ -376,19 +405,36 @@ def tilt_advance(a, d, amp, tilt: float):
     return a, d
 
 
-def grow(u, a, d, amp, um: float, growth: dict):
-    """Hypertrophy, applied to the flowed breast: thicker everywhere in the footprint, wider about the meridian
-    and longer below the fold for the tissue beyond the shear layer (the wall keeps its place). `hang` makes the
-    pouch thinner the lower it hangs: a pendulous breast lies along the abdominal wall instead of standing out."""
-    superficial = smoothstep(d / GROWTH["shear"]) * amp
+def growth_velocity(breast: Breast, u, a, d, um: float, rates: tuple[float, float, float], hang: float):
+    """Velocity of the hypertrophy flow at (u, a, d): the superficial tissue (beyond GROWTH.shear from the wall) moves
+    away from the meridian (width) and, below the fold, down (length); depth grows everywhere in the footprint, less
+    where the pouch hangs (`hang`: a pendulous breast lies along the abdominal wall instead of standing out). `rates`
+    are the logarithms of the width, length and depth factors, so the central tissue grows by exactly those factors."""
+    lw, ll, ld = rates
+    taper = breast.taper(u)
+    superficial = smoothstep(d / GROWTH["shear"]) * taper
     below = smoothstep((GROWTH["blend"] - a) / (2 * GROWTH["blend"]))
-    a2 = a + (growth["length"] - 1) * superficial * below * a
-    thin = 1 - growth["hang"] * amp * smoothstep(-a2 / GROWTH["hangMm"])
-    return (
-        u + (growth["width"] - 1) * superficial * (u - um),
-        a2,
-        d * (1 + (growth["depth"] - 1) * amp) * thin,
-    )
+    thin = 1 - hang * taper * smoothstep(-a / GROWTH["hangMm"])
+    return lw * superficial * (u - um), ll * superficial * below * a, d * (ld * taper + np.log(np.maximum(thin, 1e-3)))
+
+
+def grow(breast: Breast, u, a, d, um: float, growth: dict):
+    """Hypertrophy, applied to the flowed breast as a flow of its own (RK4 over unit time): it cannot fold the tissue,
+    and the wall (d = 0) keeps its place."""
+    rates = (np.log(growth["width"]), np.log(growth["length"]), np.log(growth["depth"]))
+    if not any(rates) and not growth["hang"]:
+        return u, a, d
+    u, a, d = np.asarray(u, float), np.asarray(a, float), np.asarray(d, float)
+    h = 1.0 / GROWTH["steps"]
+    for _ in range(GROWTH["steps"]):
+        k1 = growth_velocity(breast, u, a, d, um, rates, growth["hang"])
+        k2 = growth_velocity(breast, u + 0.5 * h * k1[0], a + 0.5 * h * k1[1], d + 0.5 * h * k1[2], um, rates, growth["hang"])
+        k3 = growth_velocity(breast, u + 0.5 * h * k2[0], a + 0.5 * h * k2[1], d + 0.5 * h * k2[2], um, rates, growth["hang"])
+        k4 = growth_velocity(breast, u + h * k3[0], a + h * k3[1], d + h * k3[2], um, rates, growth["hang"])
+        u = u + h * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]) / 6
+        a = a + h * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]) / 6
+        d = np.maximum(d + h * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]) / 6, 0)
+    return u, a, d
 
 
 def deform(breast: Breast, q: np.ndarray) -> list[np.ndarray]:
@@ -407,7 +453,7 @@ def deform(breast: Breast, q: np.ndarray) -> list[np.ndarray]:
         a, dd = flow_advance(a, dd, amp_s, top, travelled, state["descent"])
         travelled = state["descent"]
         a2, d2 = tilt_advance(a, dd, amp_s, state["tilt"])
-        u2, a2, d2 = grow(u[sel], a2, d2, amp_s, um, state["growth"])
+        u2, a2, d2 = grow(breast, u[sel], a2, d2, um, state["growth"])
         moved = q.copy()
         moved[sel, 0] = u2
         moved[sel, 1] = hinge + a2
@@ -423,9 +469,9 @@ def polyline_length(points: np.ndarray) -> float:
     return float(np.linalg.norm(np.diff(points, axis=0), axis=1).sum())
 
 
-def mound_volumes(breast: Breast) -> list[float]:
-    """Volume (mL) of the mound (tissue in front of the wall, under the skin, where the map acts) at rest and in
-    every state: rest volume elements times the Jacobian determinant of the map, by finite differences."""
+def mound_jacobians(breast: Breast) -> tuple[np.ndarray, list[np.ndarray]]:
+    """Rest volume elements (mm^3) of the mound (tissue in front of the wall, under the skin, where the map acts) and
+    the Jacobian determinant of the map at each of them in every state, by finite differences."""
     ch = breast.ch
     lo, hi = breast.fold_range
     step, layers, h = 3.0, 8, 0.4
@@ -442,11 +488,19 @@ def mound_volumes(breast: Breast) -> list[float]:
     p = ch.to_model(q)
     offsets = [np.zeros(3), np.array([h, 0, 0]), np.array([0, h, 0]), np.array([0, 0, h])]
     moved = [[ch.to_model(m) for m in deform(breast, ch.to_chart(p + o))] for o in offsets]
-    volumes = [float(dv.sum()) / 1000]
-    for k in range(len(STATES)):
-        jac = np.stack([(moved[i][k] - moved[0][k]) / h for i in (1, 2, 3)], -1)
-        volumes.append(float((dv * np.abs(np.linalg.det(jac))).sum()) / 1000)
-    return volumes
+    dets = [np.linalg.det(np.stack([(moved[i][k] - moved[0][k]) / h for i in (1, 2, 3)], -1)) for k in range(len(STATES))]
+    return dv, dets
+
+
+def mound_volumes(breast: Breast) -> list[float]:
+    """Volume (mL) of the mound at rest and in every state: rest volume elements times the Jacobian determinant."""
+    dv, dets = mound_jacobians(breast)
+    return [float(dv.sum()) / 1000] + [float((dv * np.abs(det)).sum()) / 1000 for det in dets]
+
+
+def berrocal(grams: float) -> str:
+    """Hypertrophy grade by the weight a reduction removes from one breast (Berrocal Revueltas)."""
+    return "grau I" if grams <= 500 else "grau II" if grams <= 800 else "grau III" if grams < 1000 else "grau IV"
 
 
 def measure(breast: Breast, notch_model: np.ndarray, midline_x: float) -> dict:
@@ -482,12 +536,22 @@ def measure(breast: Breast, notch_model: np.ndarray, midline_x: float) -> dict:
             "projectionMm": round(float(breast.depth(nipple[None])[0]), 0),
             "nipple": [round(float(c) * MM, 4) for c in nipple_model],
         }
-    volumes = mound_volumes(breast)
-    for entry, volume in zip(result.values(), volumes):
+    dv, dets = mound_jacobians(breast)
+    volumes = [float(dv.sum()) / 1000] + [float((dv * np.abs(det)).sum()) / 1000 for det in dets]
+    for k, (entry, volume) in enumerate(zip(result.values(), volumes)):
         n, low = entry["nippleToFoldMm"], entry["nippleAboveLowestContourMm"]
         entry["regnault"] = "sem ptose" if n > 10 else "grau I" if n >= -10 else "grau III" if low <= 20 else "grau II"
         entry["volumeMl"] = round(volume)
         entry["volumeGainPct"] = round((volume / volumes[0] - 1) * 100)
+        if k:
+            # what a reduction to the breast this state aims at would remove, and the hypertrophy grade that makes
+            state = STATES[k - 1]
+            target = state.get("resultMl", RESULT_ML)
+            grams = max(volume - target, 0.0) * DENSITY
+            entry["reductionToMl"] = target
+            entry["reductionG"] = int(round(grams, -1))
+            entry["berrocal"] = berrocal(grams)
+            entry["minJacobian"] = round(float(dets[k - 1].min()), 3)
     return result
 
 
@@ -537,7 +601,10 @@ def main() -> None:
         m = measurements[side]
         print(f"[{side}] fold columns {breast.fold_range}, nipple chart {np.round(ch.nipple, 1)}")
         for key, entry in m.items():
-            print(f"   {key:8s} mamilo {entry['nippleToFoldMm']:+6.1f} mm do sulco · contorno {entry['lowestContourToFoldMm']:+6.1f} · fúrcula–mamilo {entry['notchToNippleMm']:.0f} · mamilo–sulco {entry['nippleToFoldSkinMm']:.0f} · projeção {entry['projectionMm']:.0f} · {entry['volumeMl']} mL ({entry['volumeGainPct']:+d}%) · {entry['regnault']}")
+            extra = f" · redução a {entry['reductionToMl']} mL ≈ {entry['reductionG']} g, Berrocal {entry['berrocal']} · jacobiano mín {entry['minJacobian']:.2f}" if "berrocal" in entry else ""
+            print(f"   {key:8s} mamilo {entry['nippleToFoldMm']:+6.1f} mm do sulco · contorno {entry['lowestContourToFoldMm']:+6.1f} · fúrcula–mamilo {entry['notchToNippleMm']:.0f} · mamilo–sulco {entry['nippleToFoldSkinMm']:.0f} · projeção {entry['projectionMm']:.0f} · {entry['volumeMl']} mL ({entry['volumeGainPct']:+d}%) · {entry['regnault']}{extra}")
+            if entry.get("minJacobian", 1.0) < FOLD_LIMIT:
+                raise SystemExit(f"[{side}] {key}: the map folds the tissue (Jacobian {entry['minJacobian']} < {FOLD_LIMIT})")
     OUT_BIN.write_bytes(b"".join(blobs))
     model = {
         "version": 1,

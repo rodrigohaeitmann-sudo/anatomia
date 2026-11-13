@@ -119,7 +119,7 @@ export function StructureDetails({ structure, part = null, onPart, attachmentsSh
       )}
       {info?.plan && (
         <p className="rounded-xl border border-emerald-300/30 bg-emerald-400/10 p-2 text-xs leading-snug text-emerald-100">
-          <span className="font-bold">Plano cirúrgico.</span> Marcação, peça ou passo gerado sobre a mama do modelo (ptose grau II com hipertrofia moderada), em pé. Serve para estudar a técnica; não substitui o planejamento do caso nem prevê o resultado de uma paciente.
+          <span className="font-bold">Plano cirúrgico.</span> Marcação, peça ou passo gerado sobre a mama do modelo em pé (ptose grau II com hipertrofia moderada, ou as mamas G3 e G4). Serve para estudar a técnica; não substitui o planejamento do caso nem prevê o resultado de uma paciente.
         </p>
       )}
       {parts.length > 0 && onPart && (

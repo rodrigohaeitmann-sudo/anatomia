@@ -2,8 +2,8 @@
 """Tissue rearrangement of a reduction mammaplasty, step by step (docs/plano-mamoplastia.md, fase 4).
 
 For each technique of build_mammaplasty.py (Pitanguy, Wise with inferior pedicle, vertical with superomedial
-pedicle) this script works out where every part of the operated breast goes, the patient standing, at the key frames
-of its schedule (SCHEDULES):
+pedicle) and each case (bm.CASES: ptosis II, hypertrophies G3 and G4) this script works out where every part of the
+operated breast goes, the patient standing, at the key frames of its schedule (SCHEDULES):
 
   marcacao         the ptotic breast (ptosis grade II with moderate hypertrophy) with its marking, its measurements and
                    the areolotome on the enlarged areola of the case
@@ -23,12 +23,12 @@ How (mammaplasty_result.py):
     after the resection and whose nipple sits 2 cm above the fold, applied to the closed skin and to the tissue
     under it, which follows its skin; the pedicle is buried under the flaps except under the areola.
 
-Outputs:
-  src/data/mammaplastySteps.json                 structures, meshes, frames, measurements before and after
-  public/models/hybrid/mammaplasty-<tecnica>.bin  per technique: positions of every mesh at its key frames
-                                                   (uint16, quantised over the technique's box) and indices
+Outputs (per case; ptosis II without suffix, the others with -g3, -g4):
+  src/data/mammaplastySteps<-case>.json                structures, meshes, frames, measurements before and after
+  public/models/hybrid/mammaplasty-<tecnica><-case>.bin per technique: positions of every mesh at its key frames
+                                                        (uint16, quantised over the technique's box) and indices
 
-Usage: python3 scripts/hybrid/build_mammaplasty_steps.py [--figures DIR]   (after build_mammaplasty.py)
+Usage: python3 scripts/hybrid/build_mammaplasty_steps.py [--case g3] [--figures DIR]   (after build_mammaplasty.py)
 """
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ import build_mammaplasty as bm  # noqa: E402
 import mammaplasty_result as mr  # noqa: E402
 from pilot_mammaplasty import tube  # noqa: E402
 
-OUT_JSON = bb.ROOT / "src/data/mammaplastySteps.json"
+OUT_JSON = bb.ROOT / "src/data/mammaplastySteps{suffix}.json"
 OUT_BIN = bb.ROOT / "public/models/hybrid/mammaplasty-{key}.bin"
 MM = bb.MM
 # How far every group of the closure has gone at each key frame (0 open, 1 sutured). "global": all the skin that stays
@@ -90,7 +90,7 @@ LINE_GROUPS = {
     "wise": {"arc": "areola", "med": "vertical", "lat": "vertical", "bd": "fold", "ce": "fold"},
     "vertical": {"dome": "areola", "med": "vertical", "lat": "vertical"},
 }
-AREOLA_NOW = 56.0  # mm, the areola of this case on the standing skin, stretched by the hypertrophy
+# the areola of each case on the standing skin, stretched by the hypertrophy: bm.CASES[case]["areolaNowMm"]
 AREOLA_NEW = bm.AREOLA_D  # mm, the areolotome: diameter of the new areola
 INSET = 9.0  # mm: in Pitanguy's technique the nipple-areola complex (its nipple stands 7.5 mm proud) and the pedicle
 # under it wait this deep under the closed skin until the areola is opened
@@ -98,14 +98,20 @@ STITCH_STEP = 8.0  # mm between two stitches of a suture line
 T_RADIUS = 10.0  # mm of the lines round B and C that the key stitch closes
 PILLAR = 50.0  # mm, the vertical pillar of the result: lower border of the areola to the fold, on the skin (4.5-6 cm)
 NIPPLE_ABOVE_FOLD = 15.0  # mm, the new nipple in the standing result: a little above point A, the projection of the fold
-SKIRT = 15.0  # mm of trunk skin round the breast outline over which the result fades into the skin that stays
+# mm of trunk skin round the breast outline over which the result fades into the skin that stays (the large breasts
+# change their outline more: a wider skirt)
+SKIRTS = {"ptose-2": 15.0, "g3": 25.0, "g4": 25.0}
 AREOLA_R = 13.2  # mm, the areola of the model in the rest chart (its radius on the skin)
 BURY = bm.FLAP_THICKNESS  # the pedicle goes this deep under the flaps, except under the areola
 SCAR_RADIUS = 0.55
 SCAR_LIFT = 0.45
 # mm: the excised skin and the resection leave the breast together (one specimen): a little forwards, then medially and
 # down, to lie below the breast and in front of the epigastrium, where the frontal views of the steps see it whole
-OUT_OFFSET = {"radial": 30.0, "medial": 65.0, "down": 95.0}
+OUT_OFFSET = {"radial": 30.0, "medial": 65.0, "down": 95.0}  # for the specimen of ptosis II; larger ones go further
+OUT_REFERENCE_ML = 180.0  # the specimen those offsets were made for (they grow with its cube root)
+# the lower pole of the result may be shortened down to this share of its length in the map (ptosis II: 40%; the long
+# lower poles of G3 and G4 need more to bring the vertical pillar to PILLAR)
+MIN_LOWER_POLE = {"ptose-2": 0.4, "g3": 0.12, "g4": 0.12}
 COLORS = {
     "skin": "#e7b8a0", "excised": "#e9a27f", "dermis": "#d97a82", "nac": "#9b5a47", "areola-ring": "#b07a64",
     "pedicle": "#3fae6b", "resection": "#e08a2e", "pillar-medial": "#4f7fd6", "pillar-lateral": "#9a6fd6", "scar": "#7d2f32",
@@ -158,8 +164,10 @@ def smooth01(x):
 # one technique
 # --------------------------------------------------------------------------------------------------
 class Technique:
-    def __init__(self, key: str, item: dict, st, front: bm.Front, inverse: bm.Inverse, rest: mr.Rest, mound_ml: float) -> None:
-        self.key, self.item, self.st, self.front, self.inverse, self.rest = key, item, st, front, inverse, rest
+    def __init__(self, kind: str, case: str, item: dict, st, front: bm.Front, inverse: bm.Inverse, rest: mr.Rest, mound_ml: float) -> None:
+        # kind: the technique (pitanguy, wise, vertical); key: its name in this case (the names of meshes and structures)
+        self.kind, self.case, self.key = kind, case, bm.case_key(kind, case)
+        self.item, self.st, self.front, self.inverse, self.rest = item, st, front, inverse, rest
         self.breast = st.b
         self.ch = st.b.ch
         self.removed_ml = item["resection"].volume
@@ -169,7 +177,8 @@ class Technique:
         self.areola_r = self.areola_radius(AREOLA_NEW)
         lines = {name: rest.carry(xs) for name, xs in item["lines"].items()}
         self.regions_and_lines(lines)
-        self.patch = mr.SkinPatch(rest, [("nac", Point(0, 0).buffer(self.areola_r + 0.6, 64)), ("dermis", self.dermis), ("excised", self.pattern), ("stay", None)], self.named, skirt=SKIRT)
+        self.skirt = SKIRTS[case]
+        self.patch = mr.SkinPatch(rest, [("nac", Point(0, 0).buffer(self.areola_r + 0.6, 64)), ("dermis", self.dermis), ("excised", self.pattern), ("stay", None)], self.named, skirt=self.skirt)
         self.closure = mr.Closure(self.patch, ("stay",), self.targets, self.areola_r, seam="seam" if "seam" in self.named else None)
         rho = np.hypot(*rest.iso(item["pedicle"].rest[:, :2]).T)
         self.reach = max(float(np.percentile(rho, 98)), self.areola_r + 10)  # how far the pedicle reaches from the nipple
@@ -195,7 +204,7 @@ class Technique:
         for _ in range(6):
             if abs(l1 - target) < 0.4 or abs(l1 - l0) < 1e-6:
                 break
-            g0, g1, l0 = g1, float(np.clip(g1 + (target - l1) * (g1 - g0) / (l1 - l0), 0.4, 1.0)), l1
+            g0, g1, l0 = g1, float(np.clip(g1 + (target - l1) * (g1 - g0) / (l1 - l0), MIN_LOWER_POLE[self.case], 1.0)), l1
             result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g1)
             l1 = self.nipple_to_fold(result)
         return result, NIPPLE_ABOVE_FOLD
@@ -203,7 +212,7 @@ class Technique:
     def inset(self, q: np.ndarray) -> np.ndarray:
         """Pitanguy: rest chart points pushed in under the new areola, where the closed skin covers the nipple-areola
         complex until the areola is opened (identity elsewhere and in the other techniques)."""
-        if self.key != "pitanguy":
+        if self.kind != "pitanguy":
             return q
         rho = np.hypot(*self.rest.iso(q[:, :2]).T)
         out = q.copy()
@@ -223,7 +232,7 @@ class Technique:
     # ---- regions of the skin, in the isotropic rest chart -------------------------------------------------------
     def regions_and_lines(self, lines: dict) -> None:
         rest, item = self.rest, self.item
-        key = self.key
+        key = self.kind
         if key == "wise":
             arc, med, lat, bd, ce = (lines[k] for k in ("fechadura", "ramo medial", "ramo lateral", "horizontal medial", "horizontal lateral"))
             bd[-1], ce[-1] = rest.snap(bd[-1]), rest.snap(ce[-1])
@@ -507,8 +516,10 @@ def dashes(points: np.ndarray, on: float = 3.0, off: float = 2.0) -> list[np.nda
 
 
 def resample(points: np.ndarray, step: float) -> np.ndarray:
+    """A polyline resampled every `step` mm (the first three columns are the position; any further columns, values
+    carried along it, are interpolated the same way)."""
     p = np.asarray(points, float)
-    s = np.r_[0, np.cumsum(np.linalg.norm(np.diff(p, axis=0), axis=1))]
+    s = np.r_[0, np.cumsum(np.linalg.norm(np.diff(p[:, :3], axis=0), axis=1))]
     t = np.linspace(0, s[-1], max(4, int(np.ceil(s[-1] / step)) + 1))
     return np.stack([np.interp(t, s, p[:, c]) for c in range(p.shape[1])], 1)
 
@@ -588,7 +599,7 @@ def staged_skin(tech: Technique, k0: np.ndarray, final: np.ndarray, schedule: li
     disp = final - k0
     verts = closure.vertices
     group = np.full(n, "", object)
-    for name, g in LINE_GROUPS[tech.key].items():
+    for name, g in LINE_GROUPS[tech.kind].items():
         if name in patch.lines:
             ids, _ = patch.on_line(name)
             group[ids] = g
@@ -647,7 +658,7 @@ def sutures(tech: Technique, skin: list[np.ndarray], disc: list[np.ndarray], rim
     patch, closure = tech.patch, tech.closure
     outline_ids = np.nonzero(patch.on_outline)[0]
     out = {}
-    tracks = {name: line_track(patch, name) for name in LINE_GROUPS[tech.key]}
+    tracks = {name: line_track(patch, name) for name in LINE_GROUPS[tech.kind]}
 
     def outline_point(theta: float) -> int:
         goal = closure.polar_to_iso(theta, 1.0)
@@ -683,7 +694,7 @@ def sutures(tech: Technique, skin: list[np.ndarray], disc: list[np.ndarray], rim
                     lip.append(v)
             out[side] = (stitches, [line_frames(name), [frame[np.array(lip)] for frame in skin]])
     # areola: the opening of the pattern round the border of the new areola
-    opening = {"pitanguy": "edge", "wise": "arc", "vertical": "dome"}[tech.key]
+    opening = {"pitanguy": "edge", "wise": "arc", "vertical": "dome"}[tech.kind]
     stitches = []
     for f in np.arange(0, 1, 1 / 16):
         theta = -np.pi + 2 * np.pi * f
@@ -729,7 +740,7 @@ def neurovascular_tracks(tech: Technique, item: dict, pillar_pieces: dict, anato
     the pillars, and in the rest of the breast, follow them; the origin on the chest wall stays put. A branch is cut where
     it passes from removed tissue into tissue that stays. Returns one record per piece of branch."""
     st, ch, breast, front = tech.st, tech.ch, tech.breast, tech.front
-    key = tech.key
+    key = tech.kind
     ids = [fid for fid, _, _ in schedule]
     fr = [f for _, _, f in schedule]
     t2, t3 = ids.index("resseccao"), ids.index("transposicao")
@@ -744,9 +755,16 @@ def neurovascular_tracks(tech: Technique, item: dict, pillar_pieces: dict, anato
         if geometry["kind"] != "tube":
             continue
         kept = not (report[name][key]["insideMm"] >= 4.0 or report[name][key]["incisions"] > 0)
-        pts = resample(np.array(geometry["points"]).reshape(-1, 3) / MM, 1.5)
+        rest_pts = np.array(geometry["points"]).reshape(-1, 3) / MM
+        # the push that keeps the course under the skin in this state, carried along by the resampling
+        push = np.zeros_like(rest_pts)
+        for index, *shift in geometry.get("clearance", {}).get(bb.STATES[st.k]["id"], []):
+            push[index] = np.array(shift) / MM
+        dense = resample(np.c_[rest_pts, push], 1.5)
+        pts, push = dense[:, :3], dense[:, 3:]
         q = ch.to_chart(pts)
-        standing = st.to_state(q)
+        k0 = ch.to_model(bb.deform(breast, q)[st.k]) + push
+        standing = ch.to_chart(k0)
         uv = standing[:, :2]
         in_pattern = shapely.contains_xy(item["pattern"], uv[:, 0], uv[:, 1])
         on_pedicle = shapely.contains_xy(item["footprint"].buffer(1.0), uv[:, 0], uv[:, 1])
@@ -760,7 +778,6 @@ def neurovascular_tracks(tech: Technique, item: dict, pillar_pieces: dict, anato
         m_pil = {side: value * scale for side, value in m_pil.items()}
         m_stay = np.clip(1 - m_ped - sum(m_pil.values()), 0, 1)
         anchor = smooth01((q[:, 2] - breast.base(q[:, 0], q[:, 1])) / 8.0)
-        k0 = ch.to_model(bb.deform(breast, q)[st.k])
         # where each tissue takes the point (Pitanguy: the pedicle under the areola waits deeper until it is opened)
         q_in = tech.inset(q)
         swing = tech.swing(q, k0, tech.final(q, "pedicle", buried=False))
@@ -828,16 +845,18 @@ KINDS = {
 }
 
 
-def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs: list, anatomy: dict, report: dict, before: dict, notch: np.ndarray):
-    info = bm.TECHNIQUES[key]
-    tech = Technique(key, item, st, front, inverse, rest, mound_ml)
+def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs: list, anatomy: dict, report: dict, before: dict, notch: np.ndarray):
+    info = bm.TECHNIQUES[kind]
+    tech = Technique(kind, case, item, st, front, inverse, rest, mound_ml)
+    key = tech.key
+    areola_now = bm.CASES[case]["areolaNowMm"]
     patch, closure, ch, breast = tech.patch, tech.closure, tech.ch, tech.breast
-    schedule = SCHEDULES[key]
+    schedule = SCHEDULES[kind]
     ids = [fid for fid, _, _ in schedule]
     fr = [f for _, _, f in schedule]
     nf = len(schedule)
     t2, t3 = ids.index("resseccao"), ids.index("transposicao")
-    pillar_word = "Retalho" if key == "wise" else "Pilar"
+    pillar_word = "Retalho" if kind == "wise" else "Pilar"
     print(f"{info['label']}: pele {len(patch.iso)} vértices; aréola nova {2 * tech.areola_r:.1f} na carta; fechamento: {closure.unassigned} sem condição, {closure.flipped} triângulos invertidos (degenerados no sulco)")
     print(f"   resultado: descida {tech.result['descent']} mm, crescimento {tech.result['growth']}")
     w = Writer(nf)
@@ -846,7 +865,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     def waiting(i: int) -> bool:
         """Pitanguy: once the flaps start to close over them, the areola and the pedicle under it wait deeper, under the
         skin, until the opening."""
-        return key == "pitanguy" and i > t3 and ids[i] != "abertura"
+        return kind == "pitanguy" and i > t3 and ids[i] != "abertura"
 
     def pedicle_like(q, k0):
         """Pedicle tissue (rest chart q, first frame k0): swung in the transposition, buried as the closure goes."""
@@ -882,14 +901,14 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     skirt = np.unique(patch.faces("skirt"))
     rim_ids = np.nonzero(patch.on_outline)[0]
     distance, nearest = cKDTree(patch.iso[rim_ids]).query(patch.iso[skirt])
-    fade = (1 - smooth01(distance / SKIRT))[:, None]
+    fade = (1 - smooth01(distance / tech.skirt))[:, None]
     stay_final[skirt] = k0[skirt] + fade * (stay_final[rim_ids[nearest]] - k0[rim_ids[nearest]])
-    print(f"   contorno: o resultado se afasta até {float(np.linalg.norm(stay_final[rim_ids] - k0[rim_ids], axis=1).max()):.1f} mm da pele em pé; a saia de {SKIRT:.0f} mm absorve")
+    print(f"   contorno: o resultado se afasta até {float(np.linalg.norm(stay_final[rim_ids] - k0[rim_ids], axis=1).max()):.1f} mm da pele em pé; a saia de {tech.skirt:.0f} mm absorve")
     skin = staged_skin(tech, k0, stay_final, schedule)
     w.add(f"mamo_{key}_step_skin", sid("skin"), "Pele que fica", COLORS["skin"], 1.0, "skin", patch.faces("stay", "skirt"), skin)
     nac_final = tech.skin_final(patch.rest_chart)
     w.add(f"mamo_{key}_step_nac_skin", sid("skin"), "Pele sob a aréola", COLORS["skin"], 1.0, "skin", patch.faces("nac"), nac_like(patch.rest_chart, k0, nac_final))
-    out_dir = out_direction(ch, k0[np.unique(patch.faces("excised"))].mean(0), st)
+    out_dir = out_direction(ch, k0[np.unique(patch.faces("excised"))].mean(0), st, item["resection"].volume)
     # skin coloured: the views of the incision onwards tint them (excised skin, de-epithelialised dermis)
     w.add(f"mamo_{key}_step_excised", sid("excised"), "Pele ressecada", COLORS["skin"], 1.0, "skin", patch.faces("excised"), removed(k0, out_dir))
     # the dermis lies on the pedicle: a little off its surface, or the two would flicker into each other
@@ -900,7 +919,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     nipple = st.chart_of_rest(st.um, 0.0)
     n = 48
     disc_radii = [AREOLA_NEW / 2 * k / 6 for k in range(1, 7)]
-    ring_radii = list(np.linspace(AREOLA_NEW / 2, AREOLA_NOW / 2, 4))
+    ring_radii = list(np.linspace(AREOLA_NEW / 2, areola_now / 2, 4))
     grid = nipple_grid(st, nipple, disc_radii + ring_radii[1:], n)
     lift_areola = 0.3
     disc_xs = np.vstack([nipple[None], grid[:6].reshape(-1, 2)])
@@ -941,7 +960,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
     res_k0 = ch.to_model(res.standing)
     w.add(f"mamo_{key}_step_resection", sid("resection"), f"Ressecção {info['resection']}", COLORS["resection"], 0.9, "piece", res.faces, removed(res_k0, out_dir))
     volumes, pillar_frames = {}, {}
-    pillar_pieces = pillars(key, item, front, inverse, st)
+    pillar_pieces = pillars(kind, item, front, inverse, st)
     for side, piece in pillar_pieces.items():
         k0p = ch.to_model(piece.standing)
         finalp = tech.final(piece.rest, "pillar")
@@ -961,7 +980,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
 
     # ---- Pitanguy: the skin closes over the areola, which is marked and opened at the end ------------------------
     extra_points = {}
-    if key == "pitanguy":
+    if kind == "pitanguy":
         e_ids, e_frac = line_track(patch, "edge")
         cover_theta = np.linspace(-np.pi, np.pi, n, endpoint=False)
         cover_rho = np.r_[0.0, np.repeat(np.arange(1, 7) / 6, n)]
@@ -1025,7 +1044,7 @@ def build(key: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs:
             arrow(i, disc[i - 1][0], disc[i][0], COLORS["nac"])
 
     # ---- measurements of the marking ---------------------------------------------------------------------------------
-    measures, values = [], {"areolaNowMm": AREOLA_NOW, "areolaNewMm": AREOLA_NEW}
+    measures, values = [], {"areolaNowMm": areola_now, "areolaNewMm": AREOLA_NEW}
     climb = np.c_[np.zeros(80), np.linspace(nipple[1], 0.0, 80)]
     values["ascensionMm"] = round(float(bb.polyline_length(st.model(st.skin(climb)))), 1)
     climb_k0 = st.model(st.skin(climb, 0.6))
@@ -1099,62 +1118,73 @@ def anchors(tech: Technique, writer: Writer) -> dict:
 
 
 def main() -> None:
-    state = [s["id"] for s in bb.STATES].index(bm.STATE)
-    breast = bb.Breast("op", bb.trunk_axis())
-    st = bm.Standing(breast, state)
-    front = bm.Front(st)
-    inverse = bm.Inverse(breast, state)
+    cases = [c for c in bm.CASES if "--case" not in sys.argv or c == sys.argv[sys.argv.index("--case") + 1]]
+    for case in cases:
+        write_case(case)
+
+
+def write_case(case: str) -> None:
+    suffix = bm.CASES[case]["suffix"]
+    breast, st, front, inverse, state = bm.case_setup(case)
     rest = mr.Rest(st)
-    plan = bm.techniques(st, front, inverse)
+    # the very pieces of build_mammaplasty.py: same design (pedicle thinning, undermining) for this case
+    plan = bm.techniques(st, front, inverse, bm.load_design(case))
     mound_ml = bb.mound_volumes(breast)[state + 1]
     model = json.loads(bb.OUT_JSON.read_text())
-    before = model["measurements"]["op"][bm.STATE]
+    before = model["measurements"]["op"][case]
     notch = bb.layer_landmark("esterno.incisura-jugular")
     nacs = nac_meshes(breast)
     anatomy = json.loads(bm.ANATOMY_JSON.read_text())
     report = bm.neurovascular(st, front, plan)
     structures, manifest, techniques = {}, [], {}
     figures_dir = Path(sys.argv[sys.argv.index("--figures") + 1]) if "--figures" in sys.argv else None
-    for key, item in plan.items():
-        info = bm.TECHNIQUES[key]
-        tech, writer, volumes, branches, extra_points, values, arrows = build(key, item, st, front, inverse, rest, mound_ml, nacs, anatomy, report, before, notch)
-        records, box_ = writer.write(Path(str(OUT_BIN).format(key=key)))
+    for kind, item in plan.items():
+        info = bm.TECHNIQUES[kind]
+        tech, writer, volumes, branches, extra_points, values, arrows = build(kind, case, item, st, front, inverse, rest, mound_ml, nacs, anatomy, report, before, notch)
+        key = tech.key
+        out_bin = Path(str(OUT_BIN).format(key=key))
+        records, box_ = writer.write(out_bin)
         m = measure(tech, before, notch)
         print(f"   mamilo {tech.nipple_above_fold} mm acima do sulco; polo inferior x{tech.result['growth']['length']} para um pilar vertical de {PILLAR / 10:.1f} cm")
         print(f"   antes {m['before']}\n   depois {m['after']}\n   medidas {values}")
         print(f"   vasos e nervos do pedículo: {branches}")
         # the content hash keeps the service worker (cache first) from serving an older binary with newer data
-        digest = hashlib.sha1(Path(str(OUT_BIN).format(key=key)).read_bytes()).hexdigest()[:10]
+        digest = hashlib.sha1(out_bin.read_bytes()).hexdigest()[:10]
         techniques[key] = {
-            "bin": f"models/hybrid/mammaplasty-{key}.bin?v={digest}", **box_,
-            "frames": [{"id": fid, "label": label} for fid, label, _ in SCHEDULES[key]],
+            "technique": kind, "case": case,
+            "bin": f"models/hybrid/{out_bin.name}?v={digest}", **box_,
+            "frames": [{"id": fid, "label": label} for fid, label, _ in SCHEDULES[kind]],
             "result": tech.result, "nippleAboveFoldMm": tech.nipple_above_fold, "measurements": m, "measures": values, "pillarsMl": volumes, "branches": branches, "arrows": arrows,
             "points": {**anchors(tech, writer), **extra_points},
             "meshes": records,
         }
-        words = {"label": info["label"], "pedicle": info["pedicle"], "resection": info["resection"], "pillar": "Retalho" if key == "wise" else "Pilar"}
+        words = {"label": info["label"], "pedicle": info["pedicle"], "resection": info["resection"], "pillar": "Retalho" if kind == "wise" else "Pilar"}
         for mesh in writer.meshes:
-            kind = mesh["structure"][len("mamo-step-"): -len(key) - 1]
-            structures.setdefault(mesh["structure"], {"label": KINDS[kind].format(**words), "group": "Mamoplastia", "visible": False, "labelAnchor": [round(float(x) * MM, 4) for x in mesh["full"][0].mean(0)], "meshNames": []})["meshNames"].append(mesh["name"])
+            part = mesh["structure"][len("mamo-step-"): -len(key) - 1]
+            structures.setdefault(mesh["structure"], {"label": KINDS[part].format(**words), "group": "Mamoplastia", "visible": False, "labelAnchor": [round(float(x) * MM, 4) for x in mesh["full"][0].mean(0)], "meshNames": []})["meshNames"].append(mesh["name"])
             manifest.append({"name": mesh["name"], "structure": mesh["structure"], "tissue": mesh["tissue"], "source": bm.SOURCE, "sourceName": mesh["label"], "license": bm.LICENSE, "triangles": int(len(mesh["faces"])), "color": mesh["color"], "opacity": mesh["opacity"]})
         if figures_dir is not None:
             review(tech, writer, figures_dir)
     # where the skin of the trunk gives way to the patch of each technique (rest chart u, v of the operated side)
     hole = rest.uv(np.array(tech.patch.mesh_domain.buffer(-1.5).simplify(0.3).exterior.coords))
     out = {
-        "version": 3, "source": bm.SOURCE, "state": bm.STATE, "pillarMm": PILLAR,
+        "version": 4, "source": bm.SOURCE, "case": case, "state": case, "pillarMm": PILLAR,
         "hole": [[round(float(u), 2), round(float(v), 2)] for u, v in hole],
         "techniques": techniques, "structures": structures, "meshes": manifest,
     }
-    OUT_JSON.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n")
+    out_json = Path(str(OUT_JSON).format(suffix=suffix))
+    out_json.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n")
     sizes = ", ".join(f"{k} {v['byteLength'] / 1e3:.0f} kB" for k, v in techniques.items())
-    print(f"wrote {OUT_JSON.relative_to(bb.ROOT)} ({OUT_JSON.stat().st_size / 1e3:.0f} kB) and binaries: {sizes}")
+    print(f"wrote {out_json.relative_to(bb.ROOT)} ({out_json.stat().st_size / 1e3:.0f} kB) and binaries: {sizes}")
 
 
-def out_direction(ch, centre: np.ndarray, st) -> np.ndarray:
+def out_direction(ch, centre: np.ndarray, st, specimen_ml: float = OUT_REFERENCE_ML) -> np.ndarray:
+    """Where the specimen is put aside: forwards, medially and down, further for a larger specimen (cube root of its
+    volume), so that it lies below the breast and in front of the epigastrium, seen whole from the front."""
+    scale = float(np.clip((specimen_ml / OUT_REFERENCE_ML) ** (1 / 3), 1.0, 2.2))
     radial = radial_of(ch, centre)
     medial = np.array([ch.s, 0.0, 0.0])  # the operated side lies towards -x
-    return radial * OUT_OFFSET["radial"] + medial * OUT_OFFSET["medial"] + np.array([0.0, -OUT_OFFSET["down"], 0.0])
+    return scale * (radial * OUT_OFFSET["radial"] + medial * OUT_OFFSET["medial"] + np.array([0.0, -OUT_OFFSET["down"], 0.0]))
 
 
 def scar_lines(tech: Technique) -> list[tuple[str, np.ndarray]]:

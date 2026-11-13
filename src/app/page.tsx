@@ -126,7 +126,7 @@ export default function Home() {
   const view = pack.views[viewIndex] ?? pack.views[0];
   const viewKey = `${pack.id}/${view.id}`;
   // the step-by-step sequences are drawn on the breast they were planned on
-  const breastLock = view.surgery ? "Nos passos da cirurgia a mama fica como foi planejada: ptose grau II com hipertrofia moderada." : undefined;
+  const breastLock = view.surgery ? `Nos passos da cirurgia a mama fica na forma em que a técnica foi planejada (${breastStateById.get(view.breast ?? "")?.label ?? "Ptose grau II com hipertrofia moderada"}).` : undefined;
   // the pieces, vessels and sutures of the technique on screen can be shown or hidden like any structure
   const stepStructures = useMemo(() => (view.surgery ? stepStructuresOf(view.surgery.technique) : []), [view.surgery]);
   const modelPath = lowPower ? hybridTorsoModel.modelPath.replace(/\.glb$/, "-mobile.glb") : hybridTorsoModel.modelPath;

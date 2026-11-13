@@ -590,7 +590,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         if (!live()) return;
         await handle.prepareSurgery(surgery.technique);
         if (!live()) return;
-        await handle.setSkinHole(true);
+        await handle.setSkinHole(true, surgery.technique);
         if (!live()) return;
         // another technique starts at its frame; a replay starts where the view says
         let from = run.technique === surgery.technique && !surgery.instant ? run.level : surgery.frame;

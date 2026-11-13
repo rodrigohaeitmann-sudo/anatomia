@@ -16,6 +16,7 @@ export function breastSummary(m: BreastMeasurement) {
     { label: "Mamilo–sulco", value: `${cm(m.nippleToFoldSkinMm)} cm` },
     { label: "Volume", value: breastVolume(m) },
     { label: "Regnault", value: m.regnault },
+    ...(m.berrocal ? [{ label: `Redução a ${m.reductionToMl} mL`, value: `≈ ${m.reductionG} g (hipertrofia ${m.berrocal} de Berrocal)` }] : []),
   ];
 }
 
@@ -78,7 +79,7 @@ export function BreastPicker({ state, settled, onState, variant, bottom = 0, onC
           ))}
         </p>
       )}
-      {active && !floating && <p className="mt-1.5 text-[11px] text-slate-500">Pele, gordura, glândula, ductos e ligamentos são deformados pelo mesmo mapa; a parede torácica não se move. Cada grau traz a hipertrofia que costuma acompanhá-lo. Modelo geométrico, não é simulação física.</p>}
+      {active && !floating && <p className="mt-1.5 text-[11px] text-slate-500">Pele, gordura, glândula, ductos e ligamentos são deformados pelo mesmo mapa; a parede torácica não se move. Cada grau traz a hipertrofia que costuma acompanhá-lo; G3 e G4 são as hipertrofias graus III e IV de Berrocal Revueltas (pelo peso que a redução retira). Modelo geométrico, não é simulação física.</p>}
     </>
   );
   if (variant === "inline") return <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3">{body}</div>;

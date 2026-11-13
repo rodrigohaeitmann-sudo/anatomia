@@ -24,6 +24,10 @@ export type BreastMeasurement = {
   /** volume of the mound in front of the trunk surface, and its gain over the breast as scanned */
   volumeMl: number;
   volumeGainPct: number;
+  /** a reduction of this state to `reductionToMl` would remove about `reductionG` grams: hypertrophy grade (Berrocal Revueltas) */
+  reductionToMl?: number;
+  reductionG?: number;
+  berrocal?: string;
 };
 
 const raw = data as unknown as BreastModelParams & {

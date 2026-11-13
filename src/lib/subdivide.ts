@@ -106,3 +106,19 @@ export function meanEdgeLength(positions: ArrayLike<number>, index: ArrayLike<nu
   }
   return n ? sum / n : 0;
 }
+
+/**
+ * Vertices of the triangles that some deformation stretches beyond `limit`: `positions` at rest and `shift` (the
+ * displacement of every vertex) in the same units. Used to refine, once more, only where a large breast state
+ * still stretches the skin into long facets (the upper pole of the pendulous breasts).
+ */
+export function stretchedRegion(positions: ArrayLike<number>, shift: ArrayLike<number>, index: ArrayLike<number>, limit: number): Uint8Array {
+  const inside = new Uint8Array(positions.length / 3);
+  const at = (i: number, k: number) => positions[i * 3 + k] + shift[i * 3 + k];
+  const length = (i: number, j: number) => Math.hypot(at(i, 0) - at(j, 0), at(i, 1) - at(j, 1), at(i, 2) - at(j, 2));
+  for (let f = 0; f < index.length; f += 3) {
+    const a = index[f], b = index[f + 1], c = index[f + 2];
+    if (length(a, b) > limit || length(b, c) > limit || length(c, a) > limit) inside[a] = inside[b] = inside[c] = 1;
+  }
+  return inside;
+}

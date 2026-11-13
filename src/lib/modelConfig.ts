@@ -1,7 +1,6 @@
 import breastAnatomy from "@/data/breastAnatomy.json";
 import hybridTorsoManifest from "@/data/hybridTorsoManifest.json";
-import mammaplasty from "@/data/mammaplasty.json";
-import mammaplastySteps from "@/data/mammaplastySteps.json";
+import { planFiles, stepFiles } from "@/data/planCases";
 
 export type Tissue =
   | "skin"
@@ -111,14 +110,17 @@ export const tissueOpacity: Partial<Record<Tissue, number>> = {
 /** Source name of the schematic structures (scripts/hybrid/build_breast_anatomy.py). */
 export const schematicSource = breastAnatomy.source;
 /** Source name of markings and pieces of the surgical plans (scripts/hybrid/build_mammaplasty.py). */
-export const planSource = mammaplasty.source;
-export const modelMeshes = [...hybridTorsoManifest.meshes, ...breastAnatomy.meshes, ...mammaplasty.meshes, ...mammaplastySteps.meshes] as ModelMeshRecord[];
+type CaseFile = { source: string; meshes: unknown[]; structures: Record<string, unknown> };
+const plans = planFiles as CaseFile[];
+const steps = stepFiles as CaseFile[];
+export const planSource = plans[0].source;
+export const modelMeshes = [...hybridTorsoManifest.meshes, ...breastAnatomy.meshes, ...plans.flatMap((file) => file.meshes), ...steps.flatMap((file) => file.meshes)] as ModelMeshRecord[];
 /** structures of the step-by-step sequences: shown by their views, not listed with the anatomy */
-const stepStructures = new Set(Object.keys(mammaplastySteps.structures));
+const stepStructures = new Set(steps.flatMap((file) => Object.keys(file.structures)));
 export const modelLandmarks = hybridTorsoManifest.landmarks as unknown as ModelLandmarks;
 export const hybridTorsoModel = hybridTorsoManifest;
 
-const manifestStructures = { ...hybridTorsoManifest.structures, ...breastAnatomy.structures, ...mammaplasty.structures, ...mammaplastySteps.structures } as unknown as Record<string, ManifestStructure>;
+const manifestStructures = Object.assign({}, hybridTorsoManifest.structures, breastAnatomy.structures, ...plans.map((file) => file.structures), ...steps.map((file) => file.structures)) as unknown as Record<string, ManifestStructure>;
 const meshByName = new Map(modelMeshes.map((mesh) => [mesh.name, mesh]));
 
 function dominantTissue(meshNames: string[]): Tissue {

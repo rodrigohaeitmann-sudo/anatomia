@@ -3,8 +3,8 @@
  *
  *  - schematic breast anatomy (src/data/breastAnatomy.json, scripts/hybrid/build_breast_anatomy.py): arteries
  *    that enter the breast, nerves of the nipple-areola complex, the horizontal septum and its ligaments;
- *  - surgical plans (src/data/mammaplasty.json + mammaplasty.bin, scripts/hybrid/build_mammaplasty.py):
- *    pre-operative markings (pen lines) and the pedicle and resection of every technique;
+ *  - surgical plans (src/data/mammaplasty<-case>.json + mammaplasty<-case>.bin, scripts/hybrid/build_mammaplasty.py):
+ *    pre-operative markings (pen lines) and the pedicle and resection of every technique, in every case;
  *  - the step-by-step sequences (src/lib/mammaplastySteps.ts): empty meshes here, filled by the viewer with the
  *    key frames of a technique when one of its views opens.
  *
@@ -14,31 +14,42 @@
  */
 import * as THREE from "three";
 import data from "@/data/breastAnatomy.json";
-import plans from "@/data/mammaplasty.json";
+import { planFiles } from "@/data/planCases";
 import { stepMeshNames } from "@/lib/mammaplastySteps";
 
-type TubeData = { kind: "tube"; points: number[]; radiusMm: number[] };
+/**
+ * `clearance`: per breast state, a sparse push of the centre line (sample index, then xyz in model units) that keeps the
+ * tube under the skin where the map thins the layer above it; `lengthsMm`: length of the course at rest and per state.
+ */
+type TubeData = { kind: "tube"; points: number[]; radiusMm: number[]; clearance?: Record<string, number[][]>; lengthsMm?: Record<string, number> };
 type SheetData = { kind: "sheet"; size: number[]; points: number[]; thicknessMm: number };
-/** closed mesh in the binary: positions as uint16 between min and max, then uint16 indices */
-type SolidData = { kind: "solid"; byteOffset: number; vertices: number; triangles: number; min: number[]; max: number[] };
+/** closed mesh in a plan's binary (`plan`: which case): positions as uint16 between min and max, then uint16 indices */
+type SolidData = { kind: "solid"; byteOffset: number; vertices: number; triangles: number; min: number[]; max: number[]; plan?: number };
 
-const geometryData = { ...data.geometry, ...plans.geometry } as unknown as Record<string, TubeData | SheetData | SolidData>;
-let planBin: ArrayBuffer | null = null;
+const plans = planFiles as { bin: string; geometry: Record<string, TubeData | SolidData> }[];
+const geometryData = { ...data.geometry } as unknown as Record<string, TubeData | SheetData | SolidData>;
+plans.forEach((plan, index) => {
+  for (const [name, item] of Object.entries(plan.geometry)) geometryData[name] = item.kind === "solid" ? { ...item, plan: index } : item;
+});
+let planBins: ArrayBuffer[] | null = null;
 let planRequest: Promise<void> | null = null;
 
 /**
- * Binary with the pieces of the surgical plans. Suspends the calling component until it is loaded (it is
- * requested once, with the model). If it cannot be loaded the model still opens, without the pieces.
+ * Binaries with the pieces of the surgical plans, one per case. Suspends the calling component until they are loaded
+ * (requested once, with the model). A binary that cannot be loaded leaves its pieces out; the model still opens.
  */
-export function readPlanBin(): ArrayBuffer {
-  if (planBin) return planBin;
+export function readPlanBin(): ArrayBuffer[] {
+  if (planBins) return planBins;
   if (!planRequest) {
-    planRequest = fetch(plans.bin)
-      .then((response) => (response.ok ? response.arrayBuffer() : new ArrayBuffer(0)))
-      .catch(() => new ArrayBuffer(0))
-      .then((buffer) => {
-        planBin = buffer;
-      });
+    planRequest = Promise.all(
+      plans.map((plan) =>
+        fetch(plan.bin)
+          .then((response) => (response.ok ? response.arrayBuffer() : new ArrayBuffer(0)))
+          .catch(() => new ArrayBuffer(0)),
+      ),
+    ).then((buffers) => {
+      planBins = buffers;
+    });
   }
   throw planRequest;
 }
@@ -49,6 +60,30 @@ export type TubeSpec = { points: Float32Array; radii: [number, number]; sides: n
 export type SheetSpec = { points: Float32Array; size: [number, number]; thickness: number };
 
 export const schematicMeshNames = Object.keys(geometryData);
+
+/**
+ * Push of a tube's centre line in each breast state (`stateIds`, in the order of the morph targets), as dense xyz
+ * arrays (model units) to add after the breast map; null for a state without one.
+ */
+export function tubeClearance(name: string, stateIds: string[]): (Float32Array | null)[] | null {
+  const item = geometryData[name];
+  if (item?.kind !== "tube" || !item.clearance) return null;
+  const length = item.points.length;
+  return stateIds.map((id) => {
+    const sparse = item.clearance?.[id];
+    if (!sparse) return null;
+    const dense = new Float32Array(length);
+    for (const [index, x, y, z] of sparse) dense.set([x, y, z], index * 3);
+    return dense;
+  });
+}
+
+/** Lengths (mm) of the schematic tubes at rest ("rest") and in every breast state, by mesh name. */
+export const tubeLengths = Object.fromEntries(
+  Object.entries(data.geometry as unknown as Record<string, TubeData | SheetData>)
+    .filter((entry): entry is [string, TubeData] => entry[1].kind === "tube" && Boolean((entry[1] as TubeData).lengthsMm))
+    .map(([name, item]) => [name, { lengths: item.lengthsMm as Record<string, number>, radiusMm: item.radiusMm }]),
+);
 
 /**
  * Vertices of a tube around a centre line: one ring of `sides` vertices per point (parallel transport
@@ -175,9 +210,9 @@ const stepCache = new Map<string, THREE.BufferGeometry>();
 
 /**
  * One mesh per generated part, in model space, named as in the manifests (`sides`: tube resolution;
- * `planBin`: contents of mammaplasty.bin, for the pieces; the step meshes start empty).
+ * `planBins`: contents of the plans' binaries, for the pieces; the step meshes start empty).
  */
-export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBin: ArrayBuffer): THREE.Mesh[] {
+export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBins: ArrayBuffer[]): THREE.Mesh[] {
   const meshes = schematicMeshNames.map((name) => {
     const key = `${name}|${sides}`;
     let entry = cache.get(key);
@@ -191,6 +226,7 @@ export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBin:
         geometry.setAttribute("position", new THREE.BufferAttribute(tubeVertices(tube.points, tube.radii, sides), 3));
         geometry.setIndex(tubeIndex(tube.points.length / 3, sides));
       } else if (item.kind === "solid") {
+        const planBin = planBins[item.plan ?? 0] ?? new ArrayBuffer(0);
         if (planBin.byteLength < item.byteOffset + item.vertices * 6 + item.triangles * 6) return null;
         const quantised = new Uint16Array(planBin.slice(item.byteOffset, item.byteOffset + item.vertices * 6));
         const positions = new Float32Array(item.vertices * 3);

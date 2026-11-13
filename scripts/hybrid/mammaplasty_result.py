@@ -47,7 +47,7 @@ def state_map(breast: bb.Breast, q: np.ndarray, state: dict) -> np.ndarray:
     a, dd = bb.flow_advance(v[sel] - hinge, d[sel], amp[sel], top, 0.0, state["descent"])
     a, dd = bb.tilt_advance(a, dd, amp[sel], state.get("tilt", 0.0))
     um = round(float(breast.ch.nipple[0]), 2)
-    u2, a2, d2 = bb.grow(u[sel], a, dd, amp[sel], um, state["growth"])
+    u2, a2, d2 = bb.grow(breast, u[sel], a, dd, um, state["growth"])
     moved = q.copy()
     moved[sel, 0] = u2
     moved[sel, 1] = hinge + a2
@@ -97,7 +97,7 @@ def result_state(breast: bb.Breast, volume_ml: float, nipple_above_fold: float, 
 
     descent, k = 10.0, 0.1
     for _ in range(3):
-        k = bisect(lambda x: mound_volume(breast, lambda q: state_map(breast, q, make(descent, x))), -0.3, 0.8, volume_ml, True)
+        k = bisect(lambda x: mound_volume(breast, lambda q: state_map(breast, q, make(descent, x))), -0.3, 1.8, volume_ml, True)
         descent = bisect(lambda x: float(state_map(breast, ch.nipple[None], make(x, k))[0, 1] - fold_v), 0.0, 45.0, nipple_above_fold, False)
     return make(descent, k)
 
