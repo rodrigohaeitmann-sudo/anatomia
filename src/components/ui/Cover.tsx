@@ -7,6 +7,7 @@ import { asset, cx } from "./kit";
 
 const tileTones: Record<string, [string, string, string]> = {
   mama: ["#F8E7E9", "#F4E1E5", "#8E5C68"],
+  ...Object.fromEntries(["ptose-1", "ptose-2", "ptose-3", "g3", "g4"].map((grade) => [`mamoplastia-${grade}`, ["#F8E7E9", "#F4E1E5", "#8E5C68"] as [string, string, string]])),
   axila: ["#E7EEE9", "#DDE7E0", "#3F5E51"],
   retalhos: ["#F6EBDA", "#EFDFC4", "#6F4D1E"],
   "parede-ombro": ["#F4EEE7", "#E9DFD3", "#5A5057"],

@@ -17,6 +17,32 @@ const covers: Record<string, string> = {
   "mamoplastia-wise-passo-a-passo": "/covers/passos-wise.jpg",
   "mamoplastia-vertical-passo-a-passo": "/covers/passos-vertical.jpg",
   "vascular-mama": "/covers/irrigacao-0.jpg",
+  // reduction mammaplasty by degree of ptosis: the plan of each degree and each technique step by step
+  "mamoplastia-tecnica-por-grau": "/covers/tecnica-por-grau.jpg",
+  "mamoplastia-redutora-ptose-1": "/covers/plano-ptose-1.jpg",
+  "mamoplastia-redutora-ptose-3": "/covers/plano-ptose-3.jpg",
+  "mamoplastia-redutora-g3": "/covers/plano-g3.jpg",
+  "mamoplastia-redutora-g4": "/covers/plano-g4.jpg",
+  ...Object.fromEntries(
+    [
+      "lejour",
+      "periareolar-p1",
+      "lejour-p1",
+      "pitanguy-p3",
+      "wise-p3",
+      "vertical-p3",
+      "orlando-p3",
+      "pitanguy-g3",
+      "wise-g3",
+      "vertical-g3",
+      "orlando-g3",
+      "pitanguy-g4",
+      "wise-g4",
+      "vertical-g4",
+      "orlando-g4",
+      "thorek-g4",
+    ].map((key) => [`mamoplastia-${key}-passo-a-passo`, `/covers/passos-${key}.jpg`]),
+  ),
 };
 /** Optional per-view covers (thumbnails in the view list); default: the pack cover. */
 const viewCovers: Record<string, string> = {
@@ -30,6 +56,11 @@ const viewCovers: Record<string, string> = {
   "vascular-mama/septo-ptose": "/covers/irrigacao-3.jpg",
   "mamoplastia-redutora/pitanguy-marcacao": "/covers/mamoplastia-marcacao.jpg",
   "mamoplastia-redutora/pitanguy-pediculo": "/covers/mamoplastia-pediculo.jpg",
+  "mamoplastia-tecnica-por-grau/tecnicas-ptose-1": "/covers/plano-ptose-1.jpg",
+  "mamoplastia-tecnica-por-grau/tecnicas-ptose-2": "/covers/mamoplastia-marcacao.jpg",
+  "mamoplastia-tecnica-por-grau/tecnicas-ptose-3": "/covers/plano-ptose-3.jpg",
+  "mamoplastia-tecnica-por-grau/tecnicas-g3": "/covers/plano-g3.jpg",
+  "mamoplastia-tecnica-por-grau/tecnicas-g4": "/covers/plano-g4.jpg",
 };
 
 export const coverOf = (packId: string): string | null => covers[packId] ?? null;
