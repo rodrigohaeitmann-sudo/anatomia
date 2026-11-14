@@ -70,7 +70,7 @@ Gera `src/data/breastAnatomy.json`: 10 estruturas que as fontes não trazem e qu
 | Ramo cutâneo lateral do 4º intercostal | Emerge no 4º espaço perto da linha axilar média; ramo profundo sobre a parede (fáscia) até o meio da mama e daí ao mamilo junto ao septo; ramo superficial pelo subcutâneo | Schlenz et al. 2000 |
 | Ramos cutâneos laterais (3º, 5º) e anteriores (3º–5º) | Dos espaços correspondentes, pelo subcutâneo, até a pele lateral/medial e a borda da aréola | Schlenz et al. 2000 |
 
-Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior, parede (envoltória externa de músculos, costelas e cartilagens), pele, aréola, mamilo e sulco são **medidos nas malhas**; profundidades no subcutâneo, calibres (ampliados 1,35× para leitura) e espessuras são valores de desenho. O script confere que todo trajeto fica sob a pele e fora dos ossos. No app, `src/lib/breastAnatomy.ts` constrói tubos e lâminas e os reconstrói em cada estado da mama a partir da linha de centro deformada.
+Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior, parede (envoltória externa de músculos, costelas e cartilagens), pele, aréola, mamilo e sulco são **medidos nas malhas**; profundidades no subcutâneo, calibres (ampliados 1,35× para leitura) e espessuras são valores de desenho. O script confere que todo trajeto fica sob a pele e fora dos ossos. Em cada estado da mama ele mede o comprimento de cada ramo e, onde o mapa afina a camada sob a pele, empurra a linha de centro para dentro (suave ao longo do ramo) até o tubo ficar a 0,5 mm da pele (`state_courses`; `clearance` e `lengthsMm` no JSON). No app, `src/lib/breastAnatomy.ts` constrói tubos e lâminas e os reconstrói em cada estado da mama a partir da linha de centro deformada, mais esse deslocamento.
 
 ## Mamoplastia redutora: marcações e peças
 
@@ -78,41 +78,42 @@ Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior,
 npm run mammaplasty:hybrid   # decode_model.mjs → build_breast_anatomy.py → build_mammaplasty.py (~1 min; `-- --figures DIR` grava renders)
 ```
 
-Gera `src/data/mammaplasty.json` (linhas das marcações, pontos nomeados, medidas, o que cada técnica conserva e secciona) e `public/models/hybrid/mammaplasty.bin` (pedículos e ressecções: posições em repouso em 16 bits e índices). Três técnicas: Pitanguy (pedículo superior), Wise com pedículo inferior, vertical com pedículo superomedial.
+Gera, por caso (`CASES`: ptose I, II e III, G3, G4), `src/data/mammaplasty<-caso>.json` (linhas das marcações, pontos nomeados, medidas, desenho, o que cada técnica conserva e secciona) e `public/models/hybrid/mammaplasty<-caso>.bin` (pedículos e ressecções: posições em repouso em 16 bits e índices; o endereço leva o hash; o app baixa cada um quando uma peça do caso fica visível). Cada técnica é um padrão de pele (T invertido, Wise, vertical, anel periareolar), um pedículo e uma ressecção (`TECHNIQUES`): Pitanguy, Wise com pedículo inferior, vertical com pedículo superomedial, Lejour, Wise com pedículo superomedial, periareolar de Benelli e Thorek (enxerto livre); cada caso tem as técnicas do seu grau (`CASES[caso]["techniques"]`, `docs/plano-mamoplastia-tecnicas.md`). O ponto A fica pelo menos 20 mm acima do mamilo (`MIN_RISE`). `--case g3` gera um caso só.
 
 | Etapa | Como |
 |---|---|
-| Mama a operar | Ptose grau II com hipertrofia moderada, em pé (estado `ptose-2` de `build_breast.py`) |
+| Mama a operar | Ptose grau II com hipertrofia moderada (estado `ptose-2` de `build_breast.py`), G3 ou G4, em pé |
+| Desenho das mamas grandes | `design_for`: pedículo afinado por trás até a fração do resultado que tem na ptose II (nunca menos de 20 mm, nunca abaixo da camada dos seus vasos nem do plano do septo) e retalhos de pele em volta do padrão afinados até o volume final do caso (mínimo de 15 mm, 10 mm a mais acima de A, um corredor de 12 mm preservado em volta dos vasos do pedículo); o volume vem das peças medidas, por bissecção |
 | Carta da pele em pé | A pele do estado é desenrolada (X através da mama, s ao longo do meridiano a partir do ponto A); cada ponto guarda a pré-imagem em repouso (`pilot_mammaplasty.Standing`) |
 | Marcação | Ponto A = projeção do sulco no meridiano. Linhas traçadas com comprimento verdadeiro (a mais reta a partir de um ponto, com rumo e comprimento). Saem como linhas de centro em repouso; o app as leva à mama em pé |
 | Peças | Tecido atrás de uma região da mama vista de frente, da pele reto para trás: até a parede (face posterior do corpo adiposo), até a pele da face inferior onde a mama pende, ou até uma espessura de retalho. Malhas fechadas construídas na mama em pé e invertidas para o repouso (Newton sobre o mapa da mama) |
 | Volume e peso | Volume da malha na mama em pé × 0,95 g/mL |
 | Conserva × secciona | Cada vaso e nervo de `breastAnatomy.json` é seguido até o mamilo: seccionado se passa pela peça ressecada ou se cruza a linha da marcação ainda superficial, fora da base do pedículo |
 
-As dimensões (aréola, ramos, ângulo, bases, espessuras, tecido deixado sobre a fáscia) estão no topo do script e foram aceitas na revisão. `pilot_mammaplasty.py` guarda a carta da pele em pé e o renderizador de conferência usados aqui; seu `main()` é o piloto original das fases 2 e 3.
+As dimensões (aréola, ramos, ângulo, bases, espessuras, tecido deixado sobre a fáscia) estão no topo do script e foram aceitas na revisão; as dos casos G3 e G4 estão em `CASES` (`docs/plano-mamoplastia-g3-g4.md`). `pilot_mammaplasty.py` guarda a carta da pele em pé e o renderizador de conferência usados aqui; seu `main()` é o piloto original das fases 2 e 3.
 
 ## Mamoplastia redutora: passo a passo e resultado
 
 ```bash
-python3 scripts/hybrid/build_mammaplasty_steps.py                 # ~1 min; último passo de `npm run mammaplasty:hybrid`
+python3 scripts/hybrid/build_mammaplasty_steps.py                 # ~3 min por caso (--case g3: um caso só); último passo de `npm run mammaplasty:hybrid`
 python3 scripts/hybrid/build_mammaplasty_steps.py --figures DIR   # renders dos quadros e do resultado, para conferência (requer matplotlib)
 ```
 
-Gera `src/data/mammaplastySteps.json` (os quadros de cada técnica, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas da marcação e medidas antes e depois, vasos e nervos do pedículo) e `public/models/hybrid/mammaplasty-<técnica>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro. Os quadros de cada técnica e quanto cada grupo de suturas fecha em cada um estão em `SCHEDULES`, no topo do script.
+Gera, por caso, `src/data/mammaplastySteps<-caso>.json` (os quadros de cada técnica, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas da marcação e medidas antes e depois, vasos e nervos do pedículo) e `public/models/hybrid/mammaplasty-<técnica><-caso>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro. Os quadros de cada técnica e quanto cada grupo de suturas fecha em cada um estão em `SCHEDULES`, no topo do script (o Lejour usa os da vertical e o Wise superomedial os do Wise; a periareolar tem a cerclagem em bolsa e o Thorek o leito e o enxerto, sem transposição).
 
 | Etapa | Como (`mammaplasty_result.py`) |
 |---|---|
 | Carta de trabalho | A pele da mama operada na carta em repouso, isotrópica em torno do mamilo: ((u − u<sub>m</sub>)·κ, v), κ = raio da pele no mamilo / 170 (`Rest`) |
-| Malha | Delaunay conforme sobre a área toda (contorno da mama + saia de 15 mm), com as linhas da marcação como arestas; triângulos rotulados: fica, ressecada, derme do pedículo, aréola (`SkinPatch`) |
+| Malha | Delaunay conforme sobre a área toda (contorno da mama + saia de 15 mm; 25 mm em G3 e G4), com as linhas da marcação como arestas; triângulos rotulados: fica, ressecada, derme do pedículo, aréola (`SkinPatch`) |
 | Fechamento | Destinos nas bordas de sutura (ramos na linha vertical, ramos horizontais no sulco, abertura da aréola em volta de A); harmônico (valor médio) perto das bordas e polar em volta do mamilo, misturados de 30 a 55 mm (`Closure`) |
 | Forma do resultado | Novo estado do mapa da mama: descida que deixa o mamilo 20 mm acima do sulco e crescimento até o volume que restou (`result_state`, por bissecção) |
 | Tecido profundo | Pedículo e pilares seguem a pele por um campo harmônico; o pedículo fica 15 mm sob a pele, menos sob a aréola |
 | Quadros-chave | Marcação, incisão (mesma geometria), ressecção (pele e peça saem 30 mm para a frente, 65 mm medial, 95 mm para baixo), transposição (complexo areolopapilar e pedículo na posição final, com giro no caminho) e as etapas do fechamento de cada técnica; cicatrizes como tubos sobre a pele final |
 | Etapas do fechamento | Cada etapa dá a fração fechada de cada grupo (ponto em T, vertical, sulco, aréola, pontos profundos) e a da pele em geral; a diferença nas linhas é espalhada por um mapa harmônico sobre a pele que fica (`staged_skin`) |
 | Pontos | Pares tirados do fechamento: fração a fração nos ramos verticais, ramo horizontal com o ponto do sulco aonde vai, B e C com o meio do sulco, abertura com a borda da aréola no mesmo ângulo, pilares onde se tocam no resultado; fios e bordas seguem as pontas em todos os quadros (`sutures`) |
-| Aréola | Disco de 5,6 cm na pele em pé com o areolótomo de 4,2 cm; o anel externo segue a derme do pedículo, o disco interno vai ao círculo da carta que o resultado mostra com 4,2 cm (`Technique.areola_radius`) |
+| Aréola | Disco de 5,6 cm (7,5 em G3, 9,0 em G4) na pele em pé com o areolótomo de 4,2 cm; o anel externo segue a derme do pedículo, o disco interno vai ao círculo da carta que o resultado mostra com 4,2 cm (`Technique.areola_radius`) |
 | Vasos e nervos | Todos os ramos da camada esquemática, trecho a trecho: o que está na ressecção (ou superficial sob a pele ressecada) sai com a peça e se recolhe, cortando o ramo; o que fica segue pedículo, pilares ou o resto da mama, com a origem na parede fixa. Cor viva para os ramos que o pedículo conserva (regra de `build_mammaplasty.neurovascular`) (`neurovascular_tracks`) |
-| Resultado | Mamilo 1,5 cm acima do sulco (`NIPPLE_ABOVE_FOLD`); comprimento do polo inferior resolvido (secante) para um pilar vertical de 5 cm (`PILLAR`), limitado a 40% |
+| Resultado | Mamilo 1,5 cm acima do sulco (`NIPPLE_ABOVE_FOLD`); comprimento do polo inferior resolvido (secante) para um pilar vertical de 5 cm (`PILLAR`), limitado a 40% (12% em G3 e G4, `MIN_LOWER_POLE`) |
 | Setas | Para cada quadro, de onde a onde vão a peça, o complexo areolopapilar, os pilares e as bordas de cada sutura que fecha nele (`arrows` no JSON) |
 | Pitanguy | Pele dos retalhos fechada sobre a aréola (um disco preso à borda da derme), marcação do círculo no vértice do cone e abertura; durante o fechamento o complexo areolopapilar e o pedículo, a derme e os vasos sob ele ficam 9 mm abaixo (`Technique.inset`) até a exteriorização |
 | Medidas | Mamilo × sulco, fúrcula–mamilo e mamilo–sulco sobre a pele do resultado, projeção, volume do monte |
@@ -148,6 +149,8 @@ Gera `src/data/breastModel.json` (carta dos dois lados, curvas do sulco, parâme
 | Superfície-base | Raio da pele fora da pegada do corpo adiposo e continuação harmônica (membrana) por dentro, suavizada: o tronco sem o monte mamário |
 | Sulco inframamário | Maior concavidade vertical da pele junto ao limite inferior do corpo adiposo, coluna a coluna |
 | Ptose | Mapa de fluxo de um campo incompressível preso à parede (camada de cisalhamento, afinamento do polo superior, acúmulo abaixo do sulco); grau III com giro polar em torno do sulco |
+| Hipertrofia | Também um fluxo (campo integrado em 6 passos RK4, `GROWTH.steps`): espessura, largura em torno do meridiano, comprimento abaixo do sulco e bolsa pendente. Não dobra o tecido; o script falha se o jacobiano do mapa ficar abaixo de 0,1 em algum ponto do monte |
+| Estados | Ptose I, II e III com hipertrofia leve, moderada e acentuada; G3 e G4 (hipertrofia graus III e IV de Berrocal Revueltas, com ptose III). Para cada estado, a redução esperada (`resultMl`) e o grau de Berrocal que ela dá |
 | Medidas | Tiradas no modelo deformado: mamilo × sulco, contorno inferior, fúrcula–mamilo e mamilo–sulco sobre a pele; a classificação de Regnault sai delas |
 
 `--figures DIR` grava os perfis de cada estado no meridiano da mama, para revisão.

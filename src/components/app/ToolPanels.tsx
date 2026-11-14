@@ -36,7 +36,10 @@ export function ShapePanel({ ctl, columns = 3 }: { ctl: ViewerController; column
   const active = state ? breastStateById.get(state) : undefined;
   const settled = ctl.breastSettled === state;
   const stats = breastStats(settled ? state : ctl.breastSettled);
-  const regnault = measurementsOf(settled ? state : ctl.breastSettled).regnault;
+  const measured = measurementsOf(settled ? state : ctl.breastSettled);
+  const regnault = measured.regnault;
+  // what a reduction to the breast this state aims at would remove: the hypertrophy grade (Berrocal Revueltas)
+  const reduction = measured.berrocal ? `Redução a ${measured.reductionToMl} mL: ≈ ${measured.reductionG} g, hipertrofia ${measured.berrocal} de Berrocal.` : null;
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap gap-2">
@@ -64,6 +67,7 @@ export function ShapePanel({ ctl, columns = 3 }: { ctl: ViewerController; column
             Volume ≈ {stats[3].value} mL · Regnault: {regnault}.
           </span>
         )}
+        {reduction && <span className="text-muted"> {reduction}</span>}
       </p>
     </div>
   );

@@ -18,7 +18,10 @@ carry), Schlenz et al. 2000 (innervation of the nipple-areola complex), van Deve
 2007 (arterial sources of the complex) and Bayati & Seckel 1995 (inframammary crease ligament).
 
 Output: src/data/breastAnatomy.json (centre lines with radii, sheets as grids, manifest entries).
-        The app builds the meshes (tubes, sheets) and moves them with the breast states.
+        The app builds the meshes (tubes, sheets) and moves them with the breast states. For every state the
+        file also carries, per tube, the length of the course and a small push of the centre line where the
+        breast map thins the layer under the skin (the pouch of the large states): a tube keeps its calibre, so
+        without the push a superficial branch would cross the skin (`clearance`, model units, sparse).
 
 Usage: node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast_anatomy.py [--figures DIR]
 """
@@ -30,7 +33,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.interpolate import splev, splprep
-from scipy.ndimage import gaussian_filter, gaussian_filter1d, map_coordinates
+from scipy.ndimage import gaussian_filter, gaussian_filter1d, map_coordinates, maximum_filter1d
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -51,6 +54,7 @@ SHEET_STYLE = {
     "inframammary-ligament": {"color": "#c4d96a", "opacity": 0.9, "thicknessMm": 1.4},
 }
 ORDINAL = {2: "second", 3: "third", 4: "fourth", 5: "fifth", 6: "sixth", 7: "seventh"}
+SKIN_CLEARANCE = 0.5  # mm left between the surface of a tube and the skin, in every breast state
 
 BY_SOURCE: dict[str, list[str]] = {}
 for record in bb.MANIFEST["meshes"]:
@@ -459,18 +463,76 @@ def check(scene: Scene, items: list[dict]) -> None:
         print(f"  {item['name']:30s} {'%5.0f mm' % length if length else '  sheet '} · sob a pele ≥ {margin.min():5.1f} mm · osso ≥ {bone.min():5.1f} mm{flag}")
 
 
+def state_courses(scene: Scene, items: list[dict]) -> dict[str, dict]:
+    """Every tube in every breast state: the centre line carried by the breast map, pushed inwards (away from the
+    nearest skin, smoothly along the branch) where it would come closer to the skin than its radius plus
+    SKIN_CLEARANCE, and the length of the course. The skin is the deformed trunk skin around the breast, refined once
+    (midpoints carried by the map) so that its facets follow the stretched upper pole."""
+    import trimesh
+
+    breast, ch = scene.breast, scene.ch
+    pos, idx = bb.mesh(bb.SKIN)
+    q = ch.to_chart(pos)
+    lo, hi = breast.fold_range
+    near = (q[:, 0] > lo - 70) & (q[:, 0] < hi + 70) & (q[:, 1] > -280) & (q[:, 1] < 230)
+    faces = idx[near[idx].all(1)]
+    used, faces = np.unique(faces, return_inverse=True)
+    faces = faces.reshape(-1, 3)
+    rest_skin = trimesh.Trimesh(pos[used], faces, process=False).subdivide()
+    skin_states = bb.deform(breast, ch.to_chart(rest_skin.vertices))
+    tubes = [item for item in items if "points" in item]
+    out: dict[str, dict] = {item["name"]: {"lengthsMm": {"rest": round(bb.polyline_length(item["points"]), 1)}, "clearance": {}} for item in tubes}
+    for k, state in enumerate(bb.STATES):
+        skin = trimesh.Trimesh(ch.to_model(skin_states[k]), rest_skin.faces, process=False)
+        normals = skin.face_normals
+        worst = []
+        for item in tubes:
+            p = ch.to_model(bb.deform(breast, ch.to_chart(item["points"]))[k])
+            radius = np.linspace(item["radius"][0], item["radius"][1], len(p))
+            push = np.zeros_like(p)
+            for _ in range(8):
+                closest, distance, face = trimesh.proximity.closest_point(skin, p + push)
+                outward = normals[face]
+                inside = np.einsum("ij,ij->i", closest - (p + push), outward) > 0
+                depth = np.where(inside, distance, -distance)
+                need = radius + SKIN_CLEARANCE - depth
+                if need.max() <= 0.02:
+                    break
+                # a smooth push, never smaller than what each sample needs: widened, then blurred along the branch
+                amount = gaussian_filter1d(maximum_filter1d(np.maximum(need, 0) + 0.05, 7), 1.5)
+                amount[need.max() <= 0] = 0
+                direction = gaussian_filter1d(-outward, 2.0, axis=0)
+                direction /= np.maximum(np.linalg.norm(direction, axis=1, keepdims=True), 1e-9)
+                push += direction * amount[:, None] * (amount[:, None] > 0.03)
+            closest, distance, face = trimesh.proximity.closest_point(skin, p + push)
+            inside = np.einsum("ij,ij->i", closest - (p + push), normals[face]) > 0
+            clearance = (np.where(inside, distance, -distance) - radius).min()
+            bone = scene.bone.query(p + push)[0].min()  # centre line, as in check()
+            worst.append(f"{item['name']} {clearance:.1f}/{bone:.1f}")
+            moved = np.nonzero(np.linalg.norm(push, axis=1) > 0.05)[0]
+            if len(moved):
+                out[item["name"]]["clearance"][state["id"]] = [[int(i), *[round(float(x) * MM, 5) for x in push[i]]] for i in moved]
+            out[item["name"]]["lengthsMm"][state["id"]] = round(bb.polyline_length(p + push), 1)
+            if clearance < SKIN_CLEARANCE - 0.1 or bone < 1.0:
+                print(f"  <-- CHECK {state['id']} {item['name']}: sob a pele {clearance:.2f} mm, osso {bone:.2f} mm")
+        pushed = sum(1 for item in tubes if state["id"] in out[item["name"]]["clearance"])
+        print(f"  {state['id']:8s} {pushed} ramos empurrados para dentro; folga mínima (pele/osso, mm, descontado o raio): " + ", ".join(worst))
+    return out
+
+
 def main() -> None:
     scene = Scene()
     print(f"mamilo u={scene.un:.1f}; aréola r={scene.areola_r:.1f} mm; sulco v={scene.fold_v:.1f}")
     print("espaços intercostais (altura no meridiano / junto ao esterno): " + ", ".join(f"{k}º {scene.space(k, scene.un)[0]:+.0f}/{scene.space(k, 52.0)[0]:+.0f}" for k in (2, 3, 4, 5, 6)))
     _, items = build(scene)
     check(scene, items)
+    courses = state_courses(scene, items)
     r4 = lambda values: [round(float(x), 4) for x in values]  # noqa: E731
     meshes, geometry, structures = [], {}, {}
     for item in items:
         if "points" in item:
             verts, faces = tube_mesh(item["points"], item["radius"])
-            geometry[item["name"]] = {"kind": "tube", "points": r4((item["points"] * MM).ravel()), "radiusMm": [round(x, 2) for x in item["radius"]]}
+            geometry[item["name"]] = {"kind": "tube", "points": r4((item["points"] * MM).ravel()), "radiusMm": [round(x, 2) for x in item["radius"]], **courses[item["name"]]}
             anchor = item["points"][len(item["points"]) * 2 // 3]
         else:
             verts, faces = sheet_mesh(item["grid"])

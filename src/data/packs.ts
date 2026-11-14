@@ -4,7 +4,7 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
-import { mammaplastyPack, mammaplastyStepPacks } from "@/data/mammaplasty";
+import { mammaplastyGroups, mammaplastyOverviewPack } from "@/data/mammaplasty";
 import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
@@ -85,7 +85,8 @@ const breastFacts = (state: string | null) => {
   const level = Math.round(Math.abs(m.nippleToFoldMm));
   const nipple = level < 3 ? "mamilo na altura do sulco" : `mamilo ${level} mm ${m.nippleToFoldMm > 0 ? "acima" : "abaixo"} do sulco`;
   const volume = `volume ≈ ${Math.round(m.volumeMl / 10) * 10} mL${m.volumeGainPct > 0 ? ` (+${m.volumeGainPct}%)` : ""}`;
-  return `${nipple}, fúrcula–mamilo ${cm(m.notchToNippleMm)} cm, mamilo–sulco ${cm(m.nippleToFoldSkinMm)} cm, ${volume}`;
+  const reduction = m.berrocal ? `; uma redução a ${m.reductionToMl} mL retiraria ≈ ${m.reductionG} g (hipertrofia ${m.berrocal} de Berrocal Revueltas)` : "";
+  return `${nipple}, fúrcula–mamilo ${cm(m.notchToNippleMm)} cm, mamilo–sulco ${cm(m.nippleToFoldSkinMm)} cm, ${volume}${reduction}`;
 };
 // Surface views: opaque skin with the nipple-areola complex on it. Profiles leave the far nipple out:
 // at eye level it would show beside the near breast.
@@ -191,7 +192,7 @@ export const packGroups: PackGroup[] = [
       {
         id: "ptose-mamaria",
         title: "Ptose mamária",
-        summary: "Do perfil sem ptose aos graus I–III de Regnault, cada um com a hipertrofia que costuma acompanhá-lo: o que desce, o que cresce e o que continua preso à parede. A forma muda em qualquer vista pelo seletor Forma da mama.",
+        summary: "Do perfil sem ptose aos graus I–III de Regnault, cada um com a hipertrofia que costuma acompanhá-lo, e as mamas G3 e G4 (hipertrofia graus III e IV de Berrocal Revueltas, com ptose grau III): o que desce, o que cresce e o que continua preso à parede. A forma muda em qualquer vista pelo seletor Forma da mama.",
         views: [
           {
             id: "sem-ptose",
@@ -213,6 +214,16 @@ export const packGroups: PackGroup[] = [
           ptosisProfile(0, ["Grau I: mamilo na altura do sulco (até 1 cm), acima do contorno inferior", "Hipertrofia leve: a mama já pesa mais e o polo inferior ultrapassa o sulco", "Pseudoptose é diferente: o mamilo fica acima do sulco e só o polo inferior desce"]),
           ptosisProfile(1, ["Grau II: mamilo 1–3 cm abaixo do sulco, ainda acima do contorno inferior", "Hipertrofia moderada: é o quadro mais comum de quem procura a mamoplastia redutora", "A distância fúrcula–mamilo e o segmento mamilo–sulco definem a pele a ressecar e a subida do complexo areolopapilar"]),
           ptosisProfile(2, ["Grau III: mamilo mais de 3 cm abaixo do sulco, no contorno mais baixo, apontando para baixo", "Hipertrofia acentuada: mama pendente, larga na base e pesada; o eixo da mama aponta para baixo", "Subidas longas do complexo areolopapilar exigem pedículo mais confiável ou enxerto livre de aréola"]),
+          ptosisProfile(3, [
+            "Hipertrofia grau III de Berrocal Revueltas: a redução retira de 800 a 1.000 g por mama",
+            "Ptose grau III: mamilo no contorno mais baixo; a mama, larga e pesada, alonga a pele do polo superior",
+            "Fúrcula–mamilo perto de 40 cm e subida do complexo areolopapilar de cerca de 11 cm: pedículos longos",
+          ]),
+          ptosisProfile(4, [
+            "Gigantomastia (hipertrofia grau IV de Berrocal Revueltas: 1.000 g ou mais por mama; mais de 1.500 g pela definição internacional)",
+            "Fúrcula–mamilo acima de 40 cm: faixa em que muitos autores consideram o enxerto livre do complexo areolopapilar",
+            "No modelo é a mesma mama crescida por um mapa: a proporção entre glândula e gordura não muda",
+          ]),
           {
             id: "frente",
             title: "Frente",
@@ -263,10 +274,39 @@ export const packGroups: PackGroup[] = [
             cut: { axis: "sagittal", at: "nipple" },
             relations: ["O polo inferior pende à frente da pele abaixo do sulco, sem atravessá-la", "Compare com Anatomia da mama → Corte sagital pelo mamilo (mesmo plano, sem ptose)"],
           },
+          {
+            id: "frente-g4",
+            title: "Frente: G4",
+            description: "As duas mamas com gigantomastia (G4): bases largas que avançam para a axila, polo superior esvaziado e bolsas pendentes que escondem o sulco.",
+            structures: ptosisSurface,
+            solid: ["skin"],
+            orientation: "anterior",
+            anchor: "breastCenter",
+            distance: 1.05,
+            breast: "g4",
+            labels: [
+              { structure: "nipple-areola", near: "nipple", text: "Mamilo no contorno mais baixo" },
+              { structure: "skin", near: "nipple", nearOffsetMm: [0, 60, -25], text: "Polo superior esvaziado" },
+              { structure: "skin", near: "nipple", nearOffsetMm: [0, -32, -8], text: "Bolsa pendente" },
+            ],
+            relations: [`No modelo: ${breastFacts("g4")}`, "Na gigantomastia a base da mama se alarga em direção à axila; o sulco continua no lugar"],
+          },
+          {
+            id: "corte-sagital-g4",
+            title: "Corte sagital: G4",
+            description: "Plano sagital pelo meridiano da mama com gigantomastia: polo superior fino, bolsa espessa e longa pendendo à frente da parede abdominal.",
+            structures: ["skin", ...breastParts, "pectoral-fascia", "pectoralis-major", "pectoralis-minor", "intercostal-muscles", ...thoracicCage],
+            orientation: "lateral",
+            anchor: "nipple",
+            distance: 0.95,
+            breast: "g4",
+            cut: { axis: "sagittal", at: "nipple" },
+            relations: ["O tecido junto à parede continua no lugar: o crescimento é do tecido à frente da camada de deslizamento", "Compare com o corte sagital da ptose II (mesmo plano)"],
+          },
         ],
       },
-      mammaplastyPack,
-      ...mammaplastyStepPacks,
+      // which technique for which breast; the techniques themselves are in the groups by degree, after this one
+      mammaplastyOverviewPack,
       {
         id: "vascular-mama",
         title: "Irrigação e inervação da mama",
@@ -409,6 +449,33 @@ export const packGroups: PackGroup[] = [
               schematicNote,
             ],
           },
+          ...(["g3", "g4"] as const).map((state): PackView => ({
+            id: `septo-${state}`,
+            title: `Septo e vasos em ${state.toUpperCase()}`,
+            description:
+              state === "g3"
+                ? "Mama G3 (ptose grau III, hipertrofia grau III): o septo desce quase vertical até o mamilo, no contorno mais baixo, e os ramos que chegam ao complexo areolopapilar ficam cerca de 30% mais longos que na ptose II."
+                : "Mama G4 (gigantomastia): os ramos para o complexo areolopapilar passam de 30 cm (perfurante do 2º espaço: 34 cm) e o septo vira uma lâmina longa e oblíqua dentro da bolsa.",
+            structures: ["skin", "nipple-areola", ...breastSuspension, ...mammaryArteries, "fourth-intercostal-lateral-branch", "lateral-cutaneous-branches", "anterior-cutaneous-branches", ...arterialSources, ...thoracicCage],
+            focus: ["horizontal-septum", ...mammaryArteries],
+            orientation: "anterolateral",
+            anchor: "nipple",
+            distance: state === "g3" ? 0.75 : 0.85,
+            breast: state,
+            labels: [
+              { structure: "horizontal-septum", near: "nipple", nearOffsetMm: [10, 0, -30], text: "Septo, quase vertical" },
+              { structure: "internal-thoracic-perforators", near: "breastMedial", nearOffsetMm: [0, 40, 0], text: "Perfurantes mediais longos" },
+              { structure: "intercostal-perforators", near: "nipple", nearOffsetMm: [0, 40, -40], text: "Perfurantes intercostais pelo septo" },
+              { structure: "lateral-mammary-branches", near: "breastLateral", nearOffsetMm: [-20, -10, -30], text: "Ramos laterais" },
+            ],
+            relations: [
+              `No modelo: ${breastFacts(state)}`,
+              "O comprimento de cada ramo em cada forma da mama está na ficha do ramo; o calibre é o mesmo (não há estudo que mostre vasos mais calibrosos na hipertrofia)",
+              "O trajeto não muda com o tamanho da mama (Sarhadi et al., 1996); muda o comprimento. A sensibilidade do complexo areolopapilar cai com o tamanho e a ptose (Tairych et al., 1998)",
+              "Onde a bolsa afina a camada sob a pele, os ramos superficiais são afastados da pele o bastante para não atravessá-la",
+              schematicNote,
+            ],
+          })),
         ],
       },
       {
@@ -473,6 +540,8 @@ export const packGroups: PackGroup[] = [
       },
     ],
   },
+  // reduction mammaplasty: one group per degree of ptosis (I, II, III) and per hypertrophy (G3, G4)
+  ...mammaplastyGroups,
   {
     id: "axila",
     title: "Axila",

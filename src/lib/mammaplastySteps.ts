@@ -1,15 +1,20 @@
 /**
- * Reduction mammaplasty step by step (src/data/mammaplastySteps.json and public/models/hybrid/mammaplasty-<key>.bin,
- * written by scripts/hybrid/build_mammaplasty_steps.py): skin, pieces, areola, the vessels and nerves the pedicle keeps,
+ * Reduction mammaplasty step by step (src/data/mammaplastySteps<-case>.json and public/models/hybrid/mammaplasty-<key>.bin,
+ * written by scripts/hybrid/build_mammaplasty_steps.py; one file per case, see planCases.ts): skin, pieces, areola, the
+ * vessels and nerves the pedicle keeps,
  * sutures, measurements and scars of every technique at its key frames (marking, incision, resection, transposition and
  * the stages of the closure). The viewer plays them as morph targets: frame 0 is the geometry, the others are deltas.
  */
-import data from "@/data/mammaplastySteps.json";
+import { stepFiles } from "@/data/planCases";
 
 export type StepRecord = { name: string; vertices: number; triangles: number; frames: number[]; byteOffset: number };
 /** Clinical measurements of the breast before the operation and of the expected result (mm, mL). */
 export type StepMeasurements = { nippleToFoldMm: number; notchToNippleMm: number; nippleToFoldSkinMm: number; projectionMm: number; volumeMl: number };
 type TechniqueData = {
+  /** pitanguy, wise or vertical */
+  technique: string;
+  /** breast state of the case (ptose-2, g3, g4) */
+  case: string;
   bin: string;
   min: number[];
   max: number[];
@@ -32,11 +37,20 @@ type TechniqueData = {
 };
 export type StepArrow = { frame: number; from: [number, number, number]; to: [number, number, number]; color: string };
 
-const techniques = data.techniques as unknown as Record<string, TechniqueData>;
+type StepFile = { hole: [number, number][]; techniques: Record<string, TechniqueData>; structures: Record<string, unknown> };
+const files = stepFiles as StepFile[];
+const techniques: Record<string, TechniqueData> = Object.assign({}, ...files.map((file) => file.techniques));
+const structures: Record<string, unknown> = Object.assign({}, ...files.map((file) => file.structures));
+/** Technique (pitanguy, wise, vertical) and case of a step sequence key (e.g. "wise-g3"). */
+export const stepTechniqueOf = (key: string) => techniques[key]?.technique ?? key;
+export const stepCaseOf = (key: string) => techniques[key]?.case ?? "ptose-2";
 
 /** Key frames of a technique (its schedule: the closure has its own stages in every technique). */
 export const stepFramesOf = (key: string) => techniques[key]?.frames ?? [];
-export const stepHole = data.hole as [number, number][];
+/** Outline (rest chart of the operated breast) of the skin patch of a technique: the trunk skin gives way inside it. */
+const holes = new Map<string, [number, number][]>();
+files.forEach((file) => Object.keys(file.techniques).forEach((key) => holes.set(key, file.hole)));
+export const stepHoleOf = (key: string) => holes.get(key) ?? files[0].hole;
 /** technique of every step mesh */
 export const stepMeshTechnique = new Map<string, string>();
 Object.entries(techniques).forEach(([key, item]) => item.meshes.forEach((mesh) => stepMeshTechnique.set(mesh.name, key)));
@@ -50,7 +64,7 @@ export const stepMeasures = (key: string) => techniques[key].measures;
 export const stepBranches = (key: string) => techniques[key].branches;
 export const stepArrows = (key: string) => techniques[key]?.arrows ?? [];
 /** Structures of the step-by-step sequence of a technique (listed with the anatomy while one of its views is open). */
-export const stepStructuresOf = (key: string) => Object.keys(data.structures).filter((id) => id.endsWith(`-${key}`));
+export const stepStructuresOf = (key: string) => Object.keys(structures).filter((id) => id.endsWith(`-${key}`));
 
 export type StepGeometry = { positions: Float32Array[]; index: Uint16Array };
 

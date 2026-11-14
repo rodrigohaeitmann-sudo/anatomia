@@ -8,6 +8,8 @@ import { allPacks, type PackView } from "@/data/packs";
 import { surgicalSpaces } from "@/data/surgicalSpaces";
 import { attachmentsFor, landmarkById, layerLandmarks, loadLayerBuffers, partByMesh, regionByStructure, regionLookup, type LayerAttachment } from "@/lib/anatomyLayers";
 import { viewAnnotations, type AnnotationEntry, type LabelMode } from "@/lib/annotations";
+import { planCaseOf } from "@/lib/breastAnatomy";
+import { breastStateById } from "@/lib/breastStates";
 import { stepStructuresOf } from "@/lib/mammaplastySteps";
 import { hybridTorsoModel, modelStructures, structureGroups, type Landmark } from "@/lib/modelConfig";
 import { useReview } from "@/lib/review";
@@ -145,7 +147,7 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   const viewKey = free ? FREE_PACK : `${pack.id}/${view.id}`;
   const labelMode: LabelMode = labelsHidden ? "hidden" : settings.labelNames ? "names" : "pins";
   // the step-by-step sequences are drawn on the breast they were planned on
-  const breastLock = view.surgery ? "Nos passos da cirurgia a mama fica como foi planejada: ptose grau II com hipertrofia moderada." : undefined;
+  const breastLock = view.surgery ? `Nos passos da cirurgia a mama fica na forma em que a técnica foi planejada (${breastStateById.get(view.breast ?? "")?.label ?? "ptose grau II com hipertrofia moderada"}).` : undefined;
   // the pieces, vessels and sutures of the technique on screen can be shown or hidden like any structure
   const stepStructures = useMemo(() => (view.surgery ? stepStructuresOf(view.surgery.technique) : []), [view.surgery]);
   const modelPath = lowPower ? hybridTorsoModel.modelPath.replace(/\.glb$/, "-mobile.glb") : hybridTorsoModel.modelPath;
@@ -454,7 +456,16 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   };
 
   // ---- layers (tool Camadas) -----------------------------------------------------------------------------
-  const allowed = useCallback((id: string) => (view.surgery ? listedInSteps(id) : true), [view.surgery]);
+  // the structures of the surgical plans are listed only for the case of the view (none outside the plans)
+  const viewCases = useMemo(() => new Set(view.structures.map(planCaseOf).filter((index) => index !== undefined)), [view.structures]);
+  const allowed = useCallback(
+    (id: string) => {
+      if (view.surgery) return listedInSteps(id);
+      const plan = planCaseOf(id);
+      return plan === undefined || viewCases.has(plan);
+    },
+    [view.surgery, viewCases],
+  );
   const setGroupShown = (groupName: string, on: boolean) => {
     const entry = layerGroups.find((item) => item.group === groupName);
     if (!entry) return;

@@ -38,7 +38,17 @@ export type BreastSideData = {
 /** Growth of the mound in a state: factors for depth, width about the nipple meridian and length below the fold; `hang` thins the pouch as it hangs. */
 export type BreastGrowth = { depth: number; width: number; length: number; hang: number };
 
-export type BreastStateData = { id: string; label: string; short: string; descent: number; tilt: number; growth: BreastGrowth; description: string };
+export type BreastStateData = {
+  id: string;
+  label: string;
+  short: string;
+  descent: number;
+  tilt: number;
+  growth: BreastGrowth;
+  description: string;
+  /** volume (mL) of the breast a reduction of this state aims at (hypertrophy grades G3, G4) */
+  resultMl?: number;
+};
 
 export type BreastModelParams = {
   unitsPerMm: number;
@@ -47,7 +57,8 @@ export type BreastModelParams = {
   taperMm: number;
   flow: { shear: number; shearFold: number; shearBlend: number[]; rise: number; decel: number[]; lmin: number; stepMm: number };
   tilt: { reach: number; fade: number[]; stepMm: number };
-  growth: { shear: number; blend: number; hangMm: number };
+  /** hypertrophy flow: superficial layer, blend above the fold, hang scale (mm) and RK4 steps over unit time */
+  growth: { shear: number; blend: number; hangMm: number; steps: number };
   states: BreastStateData[];
 };
 
@@ -169,6 +180,48 @@ export class BreastSide {
     this.od = d;
   }
 
+  // ---- hypertrophy flow ------------------------------------------------------------------------------
+  private gu = 0;
+  private ga = 0;
+  private gd = 0;
+
+  /** Velocity of the hypertrophy flow (rates: logarithms of the width, length and depth factors); left in gu/ga/gd. */
+  private growthVelocity(u: number, a: number, d: number, um: number, lw: number, ll: number, ld: number, hang: number) {
+    const { shear, blend, hangMm } = this.p.growth;
+    const taper = this.taper(u);
+    const superficial = smoothstep(d / shear) * taper;
+    const below = smoothstep((blend - a) / (2 * blend));
+    const thin = 1 - hang * taper * smoothstep(-a / hangMm);
+    this.gu = lw * superficial * (u - um);
+    this.ga = ll * superficial * below * a;
+    this.gd = d * (ld * taper + Math.log(thin > 1e-3 ? thin : 1e-3));
+  }
+
+  /** The growth as a flow (RK4 over unit time): it cannot fold the tissue and the wall keeps its place. Result in gu/ga/gd. */
+  private grow(u: number, a: number, d: number, um: number, g: BreastGrowth) {
+    const lw = Math.log(g.width);
+    const ll = Math.log(g.length);
+    const ld = Math.log(g.depth);
+    const hang = g.hang;
+    const steps = this.p.growth.steps;
+    const h = 1 / steps;
+    for (let n = 0; n < steps; n++) {
+      this.growthVelocity(u, a, d, um, lw, ll, ld, hang);
+      const k1u = this.gu, k1a = this.ga, k1d = this.gd;
+      this.growthVelocity(u + 0.5 * h * k1u, a + 0.5 * h * k1a, d + 0.5 * h * k1d, um, lw, ll, ld, hang);
+      const k2u = this.gu, k2a = this.ga, k2d = this.gd;
+      this.growthVelocity(u + 0.5 * h * k2u, a + 0.5 * h * k2a, d + 0.5 * h * k2d, um, lw, ll, ld, hang);
+      const k3u = this.gu, k3a = this.ga, k3d = this.gd;
+      this.growthVelocity(u + h * k3u, a + h * k3a, d + h * k3d, um, lw, ll, ld, hang);
+      u += (h * (k1u + 2 * k2u + 2 * k3u + this.gu)) / 6;
+      a += (h * (k1a + 2 * k2a + 2 * k3a + this.ga)) / 6;
+      d = Math.max(d + (h * (k1d + 2 * k2d + 2 * k3d + this.gd)) / 6, 0);
+    }
+    this.gu = u;
+    this.ga = a;
+    this.gd = d;
+  }
+
   // ---- public ---------------------------------------------------------------------------------------
   /** Chart coordinates (mm) of a rest point given in model units: u (lateral +), v (height above the nipple), depth in front of the base. */
   chart(x: number, y: number, z: number): [number, number, number] {
@@ -187,9 +240,10 @@ export class BreastSide {
    */
   displacements(positions: ArrayLike<number>, count = positions.length / 3): Float32Array[] | null {
     const { s, xc, zc, y0 } = this.data;
-    const { unitsPerMm, rref, states, flow, growth } = this.p;
+    const { unitsPerMm, rref, states, flow } = this.p;
     const tiltReach = this.p.tilt.reach;
     const tiltStep = this.p.tilt.stepMm;
+    const tiltFade = this.p.tilt.fade;
     const hingeCurve = this.data.hinge;
     const topCurve = this.data.top;
     const um = this.data.nippleChart[0];
@@ -225,18 +279,23 @@ export class BreastSide {
         let a2 = a;
         let d2 = d;
         const tilting = Math.ceil((Math.abs(state.tilt) * tiltReach) / tiltStep);
-        if (tilting > 0) {
-          this.integrate(true, a, d, state.tilt * amp, top, tilting);
-          a2 = this.oa;
-          d2 = this.od;
+        if (tilting > 0 && a < tiltFade[1]) {
+          if (a <= tiltFade[0] && state.tilt >= 0) {
+            // below the fold the tilt is a pure shear (d constant, constant descent): the exact solution, which is also
+            // what RK4 gives there; above the fade the field is zero
+            const t = (d > 0 ? d : 0) / tiltReach;
+            a2 = a - (state.tilt * amp * tiltReach * t * t) / (1 + t * t);
+          } else {
+            this.integrate(true, a, d, state.tilt * amp, top, tilting);
+            a2 = this.oa;
+            d2 = this.od;
+          }
         }
         // hypertrophy: thicker, wider about the meridian, longer below the fold; the pendulous pouch hangs thinner
-        const g = state.growth;
-        const superficial = smoothstep(d2 / growth.shear) * amp;
-        const below = smoothstep((growth.blend - a2) / (2 * growth.blend));
-        const u2 = u + (g.width - 1) * superficial * (u - um);
-        a2 += (g.length - 1) * superficial * below * a2;
-        d2 *= (1 + (g.depth - 1) * amp) * (1 - g.hang * amp * smoothstep(-a2 / growth.hangMm));
+        this.grow(u, a2, d2, um, state.growth);
+        const u2 = this.gu;
+        a2 = this.ga;
+        d2 = this.gd;
         const v2 = hinge + a2;
         const r2 = this.baseAt(u2, v2) + d2;
         const theta = u2 / rref;

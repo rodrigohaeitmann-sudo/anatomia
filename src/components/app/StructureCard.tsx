@@ -180,7 +180,7 @@ export function StructureCard({ ctl, variant = "sheet" }: { ctl: ViewerControlle
             </>
           ) : (
             <>
-              <b>Plano cirúrgico.</b> Marcação, peça ou passo gerado sobre a mama do modelo (ptose II com hipertrofia moderada), em pé. Não substitui o planejamento do caso.
+              <b>Plano cirúrgico.</b> Marcação, peça ou passo gerado sobre a mama do modelo em pé, na forma em que a técnica foi planejada (graus de ptose I a III, G3 ou G4). Não substitui o planejamento do caso.
             </>
           )}
         </p>

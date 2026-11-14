@@ -3,7 +3,10 @@
  * Conteúdo didático de referência (anatomia descritiva e cirúrgica clássica); deve ser revisado
  * por especialistas antes de uso formal. Lado descrito: o do modelo (direito).
  */
+import anatomy from "@/data/breastAnatomy.json";
 import { planDetails } from "@/data/mammaplasty";
+import { tubeLengths } from "@/lib/breastAnatomy";
+import { breastStates } from "@/lib/breastStates";
 
 export type AnatomyDetail = {
   summary: string;
@@ -390,3 +393,18 @@ export const anatomyDetails: Record<string, AnatomyDetail> = {
     landmarks: ["Terço posterior da crista: origem do GD e limite inferior da colheita"],
   },
 };
+
+// Schematic vessels and nerves: the length of every branch at rest and in each breast state (the map carries the centre
+// line, the calibre is kept), measured by build_breast_anatomy.py.
+const mm = (value: number) => Math.round(value).toLocaleString("pt-BR");
+const diameter = (radiusMm: number) => ((2 * radiusMm) / 1.35).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+for (const mesh of anatomy.meshes) {
+  const entry = tubeLengths[mesh.name];
+  const detail = anatomyDetails[mesh.structure];
+  if (!entry || !detail) continue;
+  const states = [`sem ptose ${mm(entry.lengths.rest)}`, ...breastStates.filter((state) => entry.lengths[state.id]).map((state) => `${state.short} ${mm(entry.lengths[state.id])}`)];
+  detail.landmarks = [
+    ...(detail.landmarks ?? []),
+    `${mesh.sourceName}: ${states.join(" · ")} mm da origem ao fim; calibre de desenho Ø ${diameter(entry.radiusMm[0])} → ${diameter(entry.radiusMm[1])} mm, o mesmo em todas as formas da mama`,
+  ];
+}

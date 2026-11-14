@@ -58,9 +58,11 @@ LEFT_ON_FASCIA = 5.0  # tissue left on the pectoral fascia under a resection
 # --------------------------------------------------------------------------------------------------
 class Standing:
     """Skin of one breast in a state, unrolled: X = mm across (lateral +), s = mm of skin down each meridian
-    from the horizontal through the reference height (the fold height on the breast meridian)."""
+    from the horizontal through the reference height: the fold height on the breast meridian (point A of the
+    markings, the projection of the fold) or, where the nipple is already about that high (ptosis grade I),
+    the height `min_rise` mm of skin above the nipple, so that point A is never less than that above it."""
 
-    def __init__(self, breast: bb.Breast, state: int, samples: int = 500):
+    def __init__(self, breast: bb.Breast, state: int, samples: int = 500, min_rise: float = 0.0):
         self.b, self.k = breast, state
         ch = breast.ch
         lo, hi = breast.fold_range
@@ -77,15 +79,29 @@ class Standing:
         self.S = np.concatenate([np.zeros((len(self.us), 1)), np.cumsum(steps, 1)], 1)
         im = int(np.argmin(np.abs(self.us - self.um)))
         self.fold_height = float(fold[im])
-        ref = np.empty(len(self.us))
-        for i in range(len(self.us)):
-            below = np.nonzero(moved[i, :, 1] <= self.fold_height)[0]
-            if len(below) and below[0] > 0:
-                j = below[0]
-                f = (moved[i, j - 1, 1] - self.fold_height) / max(moved[i, j - 1, 1] - moved[i, j, 1], 1e-9)
-                ref[i] = self.S[i, j - 1] + f * (self.S[i, j] - self.S[i, j - 1])
-            else:
-                ref[i] = self.S[i, -1]  # the skin of this column never comes down to that height
+
+        def crossing(height: float) -> np.ndarray:
+            """Skin length, down every column, at which it comes down to a height."""
+            ref = np.empty(len(self.us))
+            for i in range(len(self.us)):
+                below = np.nonzero(moved[i, :, 1] <= height)[0]
+                if len(below) and below[0] > 0:
+                    j = below[0]
+                    f = (moved[i, j - 1, 1] - height) / max(moved[i, j - 1, 1] - moved[i, j, 1], 1e-9)
+                    ref[i] = self.S[i, j - 1] + f * (self.S[i, j] - self.S[i, j - 1])
+                else:
+                    ref[i] = self.S[i, -1]  # the skin of this column never comes down to that height
+            return ref
+
+        self.ref_height = self.fold_height
+        ref = crossing(self.ref_height)
+        nipple_s = float(np.interp(0.0, -self.V[im], self.S[im]))  # skin length down the meridian to the nipple
+        self.rise = nipple_s - float(ref[im])  # mm of skin from point A down to the nipple
+        if self.rise < min_rise:
+            # the nipple is already (about) as high as the fold: point A goes min_rise above it
+            self.ref_height = float(np.interp(nipple_s - min_rise, self.S[im], moved[im, :, 1]))
+            ref = crossing(self.ref_height)
+            self.rise = nipple_s - float(ref[im])
         self.Sref = gaussian_filter1d(ref, 3.0, mode="nearest")
         at_ref = int(np.argmin(np.abs(self.S[im] - self.Sref[im])))
         self.rho = float(moved[im, at_ref, 2] / RREF)  # mm of skin per mm of u at point A
