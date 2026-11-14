@@ -123,11 +123,12 @@ Se a revisão pedir mais realismo de forma, o passo seguinte é trocar o mapa ci
 |---|---|---|---|
 | 0 | Avaliação do app e do modelo | Este documento; medidas da mama; correção do reset de câmera | feito |
 | 1 | **Mama ptótica** | Carta dos dois lados; ptose graus I–III com hipertrofia leve, moderada e acentuada; seletor **Forma da mama**; pack **Ptose mamária** (7 vistas); medidas clínicas; marcações e zonas acompanham a mama | feito |
-| 2 | **Marcação pré-operatória** | Linha média, meridiano, sulco, ponto A pela projeção do sulco; padrões: T invertido de Pitanguy (A–B–C–D–E), Wise (fechadura) e vertical com cúpula; medidas nas vistas e nas fichas | feito para os três padrões; periareolar pendente |
-| 3 | **Pedículos e ressecções em 3D** | Pedículos superior, inferior e superomedial e as ressecções em quilha, em ferradura e inferior-lateral; volume e peso estimados; o que cada técnica conserva e secciona | feito para três técnicas; medial, lateral, central e bipediculado pendentes |
-| 4 | **Remanejamento e resultado** | Sequência por etapas (marcação com medidas → areolótomo → incisão e desepitelização → ressecção → transposição com os vasos do pedículo → fechamento em etapas com os pontos → resultado), animada entre os passos; no Pitanguy, a aréola aberta no fim; resultado esperado em pé; cicatrizes; medidas antes e depois | feito para as três técnicas |
+| 2 | **Marcação pré-operatória** | Linha média, meridiano, sulco, ponto A pela projeção do sulco (nunca a menos de 2 cm do mamilo); padrões: T invertido de Pitanguy (A–B–C–D–E), Wise (fechadura), vertical com cúpula e anel periareolar; medidas nas vistas e nas fichas | feito para os quatro padrões |
+| 3 | **Pedículos e ressecções em 3D** | Pedículos superior, inferior, superomedial e central e as ressecções em quilha, em ferradura, inferior-lateral, central inferior e em cunha; amputação com enxerto livre; volume e peso estimados; o que cada técnica conserva e secciona | feito para sete técnicas; medial, lateral e bipediculado pendentes |
+| 4 | **Remanejamento e resultado** | Sequência por etapas (marcação com medidas → areolótomo → incisão e desepitelização → ressecção → transposição com os vasos do pedículo → fechamento em etapas com os pontos → resultado), animada entre os passos; no Pitanguy, a aréola aberta no fim; no Thorek, o leito e o enxerto; resultado esperado em pé; cicatrizes; medidas antes e depois | feito para as 19 combinações de técnica e grau |
 | 5 | **Enriquecimento anatômico** | Camada esquemática: perfurantes da torácica interna (2º–4º EIC), ramos da torácica lateral, perfurantes intercostais anteriores (4º–6º), ramo da toracoacromial; septo de Würinger e ligamentos; ligamento do sulco; ramos cutâneos dos intercostais para o complexo areolopapilar | feito (10 estruturas); zonas de segurança por pedículo pendentes |
-| 5b | **G3 e G4** | Mamas com ptose grau III e hipertrofia grau III (G3) e gigantomastia (G4) de Berrocal Revueltas, com as três técnicas, os passos e os vasos e nervos alongados: `plano-mamoplastia-g3-g4.md` | feito; enxerto livre do complexo areolopapilar pendente |
+| 5b | **G3 e G4** | Mamas com ptose grau III e hipertrofia grau III (G3) e gigantomastia (G4) de Berrocal Revueltas, com as técnicas, os passos e os vasos e nervos alongados: `plano-mamoplastia-g3-g4.md` | feito |
+| 5c | **Técnicas por grau de ptose** | Cada mama com as técnicas que o grau pede: periareolar de Benelli e Lejour na ptose I; Lejour também na II; Wise com pedículo superomedial da ptose III ao G4; enxerto livre (Thorek) em G4. Um grupo da biblioteca por grau: `plano-mamoplastia-tecnicas.md` | feito |
 | 6 | **Oncoplastia** | Tumor por quadrante → padrão de ressecção e pedículo (níveis de Clough); mamoplastia terapêutica; simetrização | planejado |
 | 7 | Validação | Revisão do especialista sobre marcações, peças e resultado; comparação das medidas com a literatura | pendente |
 
@@ -318,7 +319,7 @@ Vasos e nervos que acompanham cada pedículo (camada esquemática): Pitanguy, pe
 
 ### Técnicas como combinações
 
-As três primeiras linhas com pedículo superior, inferior e superomedial (Pitanguy, Wise com pedículo inferior, vertical no modelo de Hall-Findlay) estão no app. As demais são combinações das mesmas peças com outros pedículos ou padrões.
+Pitanguy, Wise com pedículo inferior, vertical no modelo de Hall-Findlay, Lejour, Orlando e Guthrie e Benelli estão no app, cada uma nos graus de ptose que a indicam, e também o enxerto livre de Thorek (`plano-mamoplastia-tecnicas.md`). As demais são combinações das mesmas peças com outros pedículos ou padrões.
 
 | Técnica | Padrão de pele | Pedículo | Ressecção | Cicatriz |
 |---|---|---|---|---|
@@ -357,7 +358,7 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 - **Resultado esperado, não previsão.** O fechamento é resolvido na pele, sem tensão, sem orelhas de cachorro e sem o franzido no fim da cicatriz vertical; a forma é a da mama em pé logo depois, sem edema, sem acomodação do polo inferior nas semanas seguintes. A transposição é uma interpolação entre a posição inicial e a final (o pedículo gira no caminho), não a dobra física do tecido, e os vasos a acompanham do mesmo jeito. As etapas intermediárias do fechamento são interpolações guiadas pelas suturas, não estados de equilíbrio. A peça ressecada é afastada para baixo e para o lado só para ser vista.
 - **Aréola.** A aréola alargada de 5,6 cm é da sequência (a do modelo tem 3,5 cm na ptose II); fora dos passos, a aréola é a do modelo.
 - **Só o que acompanha a cirurgia aparece nos passos.** Glândula, gordura, ligamentos e a camada esquemática do modelo seguem apenas a forma da mama; nos passos ficam ocultos, e apenas a pele, as peças, a aréola, os vasos e os nervos da sequência acompanham a operação.
-- **Ptose grau II, G3 e G4** têm os passos (G3 e G4 em `plano-mamoplastia-g3-g4.md`); a forma da mama fica travada nessas vistas.
+- **Todos os graus têm passos** (ptose I a III, G3 e G4: `plano-mamoplastia-tecnicas.md` e `plano-mamoplastia-g3-g4.md`); a forma da mama fica travada nessas vistas.
 - **Camada esquemática.** Mostra trajetos típicos. A irrigação do complexo areolopapilar varia muito entre pessoas (a própria literatura diverge sobre a ordem das fontes), e o ligamento do sulco é contestado. O quadro "conserva × secciona" herda essas simplificações.
 - **Só o lado operado** tem marcação, peças e camada esquemática.
 - **Pele do modelo de celular**: refinada sobre a mama, mas ainda mais grossa que a do desktop; restam facetas discretas no grau III.
@@ -392,8 +393,8 @@ Larguras de base, comprimento das hastes (5–7 cm no Wise), diâmetro da aréol
 
 1. **Resultado.** O mamilo ficou 1,5 cm acima do sulco, com pilar vertical de 4,8 a 5,6 cm e projeção de 6,5 a 7,2 cm. É o resultado que se espera ensinar, ou o caso deve mostrar também a acomodação das semanas seguintes (polo inferior que desce, mamilo que sobe em relação ao sulco)?
 2. **Padrão vertical**: a cúpula e a largura dos ramos são desenho meu; como o especialista os marca neste caso?
-3. **Próxima fase**: mais pedículos (medial, lateral, central, bipediculado), a oncoplastia, ou o padrão periareolar?
-4. **"Lejour"** continua lido como a mamoplastia vertical; a vertical que entrou é com pedículo superomedial (modelo de Hall-Findlay). Entra também a de Lejour, com pedículo superior?
+3. **Próxima fase**: mais pedículos (medial, lateral, bipediculado) ou a oncoplastia? O padrão periareolar e o pedículo central já entraram (`plano-mamoplastia-tecnicas.md`).
+4. ~~**"Lejour"**~~: entrou também a de Lejour, com pedículo superior, nas ptoses I e II, ao lado da vertical com pedículo superomedial (Hall-Findlay).
 5. Marcação, peças e passos **bilaterais** (simetrização), ou só no lado operado como o resto do atlas?
 6. **Aréola do caso**: 5,6 cm antes e areolótomo de 4,2 cm. Servem para o ensino, ou outro par (por exemplo 6,5 cm e 3,8 cm)?
 

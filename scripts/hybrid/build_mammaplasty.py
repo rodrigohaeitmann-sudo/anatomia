@@ -728,16 +728,15 @@ class Planner:
     # ---- Wise pattern with superomedial pedicle (Orlando and Guthrie) ------------------------------------------
     def orlando(self) -> dict:
         # Full-thickness pedicle (thinned from behind in the large cases) based on the medial half of the keyhole and
-        # the start of the medial vertical limb; it turns into the keyhole. The rest of the pattern and the wedges under
-        # the skin flaps come out.
+        # the whole medial vertical limb (about 9 cm: the perforators of the internal thoracic artery reach a long
+        # breast low on that limb); it turns into the keyhole. The rest of the pattern and the wedges under the skin
+        # flaps come out.
         st, front = self.st, self.front
         points, lines, _ = inverted_t(st, keyhole=True, fold_margin=self.design["foldMarginMm"])
         pattern = frontal_pattern(front, lines["fechadura"], lines["ramo lateral"], lines["ramo medial"])
         arc = lines["fechadura"]  # from the medial limb, over the top, to the lateral limb
         medial_border = np.vstack([arc[: len(arc) // 2 + 1][::-1], lines["ramo medial"]])
-        model_border = st.model(st.skin(medial_border))
-        travelled = np.r_[0, np.cumsum(np.linalg.norm(np.diff(model_border, axis=0), axis=1))]
-        base = front.project(medial_border[travelled <= SUPEROMEDIAL_BASE])
+        base = front.project(medial_border)
         superomedial = hull(base, np.array(self.rim.exterior.coords)).intersection(pattern).buffer(0)
         floor, thinned = self.pedicle_floor("orlando")
         wedges = self.wedges(points, pattern.union(superomedial))
@@ -893,10 +892,19 @@ def neurovascular(st: Standing, front: Front, plan: dict) -> dict:
             crossings = 1 if item.get("graft") else 0
             base = item.get("base", item["footprint"]).buffer(1.5)
             for i in np.nonzero(in_pattern[1:] != in_pattern[:-1])[0]:
-                mid = (standing[i] + standing[i + 1]) / 2
-                skin = front.top(mid[None, :2])[0]
-                superficial = skin - FLAP_THICKNESS <= mid[2] <= skin + 1.0
-                at_base = item["baseOnOutline"] and base.contains(Point(mid[:2]))
+                # the point where the course crosses the outline (the samples are some mm apart)
+                lo, hi = 0.0, 1.0
+                for _ in range(10):
+                    half = (lo + hi) / 2
+                    point = standing[i] + half * (standing[i + 1] - standing[i])
+                    if bool(shapely.contains_xy(item["pattern"], point[0], point[1])) == bool(in_pattern[i]):
+                        lo = half
+                    else:
+                        hi = half
+                cross = standing[i] + (lo + hi) / 2 * (standing[i + 1] - standing[i])
+                skin = front.top(cross[None, :2])[0]
+                superficial = skin - FLAP_THICKNESS <= cross[2] <= skin + 1.0
+                at_base = item["baseOnOutline"] and base.contains(Point(cross[:2]))
                 crossings += int(superficial and not at_base)
             result[name][key] = {"insideMm": round(inside_mm, 1), "incisions": crossings}
     return result

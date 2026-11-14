@@ -4,7 +4,8 @@
  *  - schematic breast anatomy (src/data/breastAnatomy.json, scripts/hybrid/build_breast_anatomy.py): arteries
  *    that enter the breast, nerves of the nipple-areola complex, the horizontal septum and its ligaments;
  *  - surgical plans (src/data/mammaplasty<-case>.json + mammaplasty<-case>.bin, scripts/hybrid/build_mammaplasty.py):
- *    pre-operative markings (pen lines) and the pedicle and resection of every technique, in every case;
+ *    pre-operative markings (pen lines) and the pedicle and resection of every technique, in every case; the pieces
+ *    start empty and are filled, case by case, when a view shows one (loadPlan);
  *  - the step-by-step sequences (src/lib/mammaplastySteps.ts): empty meshes here, filled by the viewer with the
  *    key frames of a technique when one of its views opens.
  *
@@ -26,32 +27,89 @@ type SheetData = { kind: "sheet"; size: number[]; points: number[]; thicknessMm:
 /** closed mesh in a plan's binary (`plan`: which case): positions as uint16 between min and max, then uint16 indices */
 type SolidData = { kind: "solid"; byteOffset: number; vertices: number; triangles: number; min: number[]; max: number[]; plan?: number };
 
-const plans = planFiles as { bin: string; geometry: Record<string, TubeData | SolidData> }[];
+const plans = planFiles as { bin: string; geometry: Record<string, TubeData | SolidData>; structures: Record<string, { meshNames: string[] }> }[];
 const geometryData = { ...data.geometry } as unknown as Record<string, TubeData | SheetData | SolidData>;
 plans.forEach((plan, index) => {
   for (const [name, item] of Object.entries(plan.geometry)) geometryData[name] = item.kind === "solid" ? { ...item, plan: index } : item;
 });
-let planBins: ArrayBuffer[] | null = null;
-let planRequest: Promise<void> | null = null;
+
+/** Pieces (closed meshes) of each plan: their vertices are in the binary of the plan, downloaded when a view shows one. */
+const planPieces = plans.map((plan) => Object.keys(plan.geometry).filter((name) => plan.geometry[name].kind === "solid"));
+/** Every piece of every plan (they are left out of what is prepared with the model). */
+export const planPieceMeshes = new Set(planPieces.flat());
+/** Plan (case, by index in planCases.ts) of every structure of the plans: markings, reference lines and pieces. */
+const planOfStructure = new Map<string, number>();
+/** Structures made of pieces, with their plan. */
+const pieceStructures = new Map<string, number>();
+plans.forEach((plan, index) => {
+  const pieces = new Set(planPieces[index]);
+  for (const [id, structure] of Object.entries(plan.structures)) {
+    planOfStructure.set(id, index);
+    if (structure.meshNames.some((name) => pieces.has(name))) pieceStructures.set(id, index);
+  }
+});
+export const planCaseOf = (id: string) => planOfStructure.get(id);
+/** Structures made of pieces of a plan (pedicles, resections). */
+export const planPieceStructures = [...pieceStructures.keys()];
+/** Plans (cases) whose pieces the structures `ids` are made of. */
+export function plansOf(ids: string[]): number[] {
+  const found = new Set<number>();
+  for (const id of ids) {
+    const index = pieceStructures.get(id);
+    if (index !== undefined) found.add(index);
+  }
+  return [...found].sort((a, b) => a - b);
+}
+
+/** Geometries of the pieces, shared by every mount of the model: one triangle until their plan is loaded. */
+const pieceGeometries = new Map<string, THREE.BufferGeometry>();
+function pieceGeometry(name: string) {
+  let geometry = pieceGeometries.get(name);
+  if (!geometry) {
+    geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(9), 3));
+    geometry.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(9), 3));
+    geometry.setIndex([0, 1, 2]);
+    pieceGeometries.set(name, geometry);
+  }
+  return geometry;
+}
+/** Vertices (model units) and triangles of a piece. */
+export type PlanPiece = { positions: Float32Array; index: Uint16Array };
+const planRequests = new Map<number, Promise<Map<string, PlanPiece>>>();
 
 /**
- * Binaries with the pieces of the surgical plans, one per case. Suspends the calling component until they are loaded
- * (requested once, with the model). A binary that cannot be loaded leaves its pieces out; the model still opens.
+ * Pieces of a plan, from its binary (downloaded once): the viewer fills their geometries and gives them the breast
+ * states when a view shows one (HybridModel.preparePlans). A plan that cannot be loaded is tried again the next time.
  */
-export function readPlanBin(): ArrayBuffer[] {
-  if (planBins) return planBins;
-  if (!planRequest) {
-    planRequest = Promise.all(
-      plans.map((plan) =>
-        fetch(plan.bin)
-          .then((response) => (response.ok ? response.arrayBuffer() : new ArrayBuffer(0)))
-          .catch(() => new ArrayBuffer(0)),
-      ),
-    ).then((buffers) => {
-      planBins = buffers;
-    });
+export function loadPlan(index: number): Promise<Map<string, PlanPiece>> {
+  let request = planRequests.get(index);
+  if (!request) {
+    request = fetch(plans[index].bin)
+      .then((response) => {
+        if (!response.ok) throw new Error(`surgical plan: ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((buffer) => {
+        const pieces = new Map<string, PlanPiece>();
+        for (const name of planPieces[index]) {
+          const item = geometryData[name] as SolidData;
+          const end = item.byteOffset + item.vertices * 6 + item.triangles * 6;
+          if (buffer.byteLength < end) continue;
+          const quantised = new Uint16Array(buffer.slice(item.byteOffset, item.byteOffset + item.vertices * 6));
+          const positions = new Float32Array(item.vertices * 3);
+          for (let i = 0; i < positions.length; i++) positions[i] = item.min[i % 3] + (quantised[i] / 65535) * (item.max[i % 3] - item.min[i % 3]);
+          pieces.set(name, { positions, index: new Uint16Array(buffer.slice(item.byteOffset + item.vertices * 6, end)) });
+        }
+        return pieces;
+      })
+      .catch((error) => {
+        planRequests.delete(index);
+        throw error;
+      });
+    planRequests.set(index, request);
   }
-  throw planRequest;
+  return request;
 }
 
 /** Centre line and calibre kept on a tube mesh (`mesh.userData.tube`), in model units. */
@@ -209,15 +267,20 @@ const cache = new Map<string, { geometry: THREE.BufferGeometry; tube?: TubeSpec;
 const stepCache = new Map<string, THREE.BufferGeometry>();
 
 /**
- * One mesh per generated part, in model space, named as in the manifests (`sides`: tube resolution;
- * `planBins`: contents of the plans' binaries, for the pieces; the step meshes start empty).
+ * One mesh per generated part, in model space, named as in the manifests (`sides`: tube resolution). The pieces of
+ * the plans and the step meshes start empty: see loadPlan and HybridModel.prepareSurgery.
  */
-export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBins: ArrayBuffer[]): THREE.Mesh[] {
+export function buildSchematicMeshes(unitsPerMm: number, sides: number): THREE.Mesh[] {
   const meshes = schematicMeshNames.map((name) => {
+    const item = geometryData[name];
+    if (item.kind === "solid") {
+      const mesh = new THREE.Mesh(pieceGeometry(name));
+      mesh.name = name;
+      return mesh;
+    }
     const key = `${name}|${sides}`;
     let entry = cache.get(key);
     if (!entry) {
-      const item = geometryData[name];
       const geometry = new THREE.BufferGeometry();
       let tube: TubeSpec | undefined;
       let sheet: SheetSpec | undefined;
@@ -225,14 +288,6 @@ export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBins
         tube = { points: Float32Array.from(item.points), radii: [item.radiusMm[0] * unitsPerMm, item.radiusMm[1] * unitsPerMm], sides };
         geometry.setAttribute("position", new THREE.BufferAttribute(tubeVertices(tube.points, tube.radii, sides), 3));
         geometry.setIndex(tubeIndex(tube.points.length / 3, sides));
-      } else if (item.kind === "solid") {
-        const planBin = planBins[item.plan ?? 0] ?? new ArrayBuffer(0);
-        if (planBin.byteLength < item.byteOffset + item.vertices * 6 + item.triangles * 6) return null;
-        const quantised = new Uint16Array(planBin.slice(item.byteOffset, item.byteOffset + item.vertices * 6));
-        const positions = new Float32Array(item.vertices * 3);
-        for (let i = 0; i < positions.length; i++) positions[i] = item.min[i % 3] + (quantised[i] / 65535) * (item.max[i % 3] - item.min[i % 3]);
-        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(planBin.slice(item.byteOffset + item.vertices * 6, item.byteOffset + item.vertices * 6 + item.triangles * 6)), 1));
       } else {
         sheet = { points: Float32Array.from(item.points), size: [item.size[0], item.size[1]], thickness: item.thicknessMm * unitsPerMm };
         geometry.setAttribute("position", new THREE.BufferAttribute(sheetVertices(sheet.points, sheet.size, sheet.thickness), 3));
@@ -264,5 +319,5 @@ export function buildSchematicMeshes(unitsPerMm: number, sides: number, planBins
     mesh.name = name;
     meshes.push(mesh);
   }
-  return meshes.filter((mesh): mesh is THREE.Mesh => mesh !== null);
+  return meshes;
 }

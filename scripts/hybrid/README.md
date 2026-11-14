@@ -78,7 +78,7 @@ Alturas das costelas e dos espaços, troncos de origem, borda do peitoral maior,
 npm run mammaplasty:hybrid   # decode_model.mjs → build_breast_anatomy.py → build_mammaplasty.py (~1 min; `-- --figures DIR` grava renders)
 ```
 
-Gera, por caso (`CASES`: ptose II, G3, G4), `src/data/mammaplasty<-caso>.json` (linhas das marcações, pontos nomeados, medidas, desenho, o que cada técnica conserva e secciona) e `public/models/hybrid/mammaplasty<-caso>.bin` (pedículos e ressecções: posições em repouso em 16 bits e índices; o endereço leva o hash). Três técnicas: Pitanguy (pedículo superior), Wise com pedículo inferior, vertical com pedículo superomedial. `--case g3` gera um caso só.
+Gera, por caso (`CASES`: ptose I, II e III, G3, G4), `src/data/mammaplasty<-caso>.json` (linhas das marcações, pontos nomeados, medidas, desenho, o que cada técnica conserva e secciona) e `public/models/hybrid/mammaplasty<-caso>.bin` (pedículos e ressecções: posições em repouso em 16 bits e índices; o endereço leva o hash; o app baixa cada um quando uma peça do caso fica visível). Cada técnica é um padrão de pele (T invertido, Wise, vertical, anel periareolar), um pedículo e uma ressecção (`TECHNIQUES`): Pitanguy, Wise com pedículo inferior, vertical com pedículo superomedial, Lejour, Wise com pedículo superomedial, periareolar de Benelli e Thorek (enxerto livre); cada caso tem as técnicas do seu grau (`CASES[caso]["techniques"]`, `docs/plano-mamoplastia-tecnicas.md`). O ponto A fica pelo menos 20 mm acima do mamilo (`MIN_RISE`). `--case g3` gera um caso só.
 
 | Etapa | Como |
 |---|---|
@@ -99,7 +99,7 @@ python3 scripts/hybrid/build_mammaplasty_steps.py                 # ~3 min por c
 python3 scripts/hybrid/build_mammaplasty_steps.py --figures DIR   # renders dos quadros e do resultado, para conferência (requer matplotlib)
 ```
 
-Gera, por caso, `src/data/mammaplastySteps<-caso>.json` (os quadros de cada técnica, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas da marcação e medidas antes e depois, vasos e nervos do pedículo) e `public/models/hybrid/mammaplasty-<técnica><-caso>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro. Os quadros de cada técnica e quanto cada grupo de suturas fecha em cada um estão em `SCHEDULES`, no topo do script.
+Gera, por caso, `src/data/mammaplastySteps<-caso>.json` (os quadros de cada técnica, contorno da área operada na carta da mama, estruturas, âncoras dos rótulos, medidas da marcação e medidas antes e depois, vasos e nervos do pedículo) e `public/models/hybrid/mammaplasty-<técnica><-caso>.bin` (para cada malha, as posições nos quadros em que ela muda, em 16 bits sobre a caixa da técnica, e os índices). O endereço leva o hash do conteúdo (`?v=`), porque o service worker serve modelos do cache primeiro. Os quadros de cada técnica e quanto cada grupo de suturas fecha em cada um estão em `SCHEDULES`, no topo do script (o Lejour usa os da vertical e o Wise superomedial os do Wise; a periareolar tem a cerclagem em bolsa e o Thorek o leito e o enxerto, sem transposição).
 
 | Etapa | Como (`mammaplasty_result.py`) |
 |---|---|

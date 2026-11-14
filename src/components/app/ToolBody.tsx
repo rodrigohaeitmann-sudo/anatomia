@@ -41,7 +41,7 @@ export function ToolBody({ ctl, wide = false }: { ctl: ViewerController; wide?: 
     case "dissection":
       return <DissectionPanel dissection={ctl.dissection} onChange={ctl.setDissection} />;
     case "structures":
-      return <StructureToggleList visibility={ctl.visibility} onToggle={ctl.toggleStructure} embedded steps={ctl.stepStructures} allow={ctl.view.surgery ? ctl.allowed : undefined} />;
+      return <StructureToggleList visibility={ctl.visibility} onToggle={ctl.toggleStructure} embedded steps={ctl.stepStructures} allow={ctl.allowed} />;
     default:
       return null;
   }

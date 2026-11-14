@@ -4,7 +4,7 @@
 
 Levar tudo o que o app faz com a mama de ptose grau II (forma da mama, marcação, pedículos, ressecções, passo a passo animado, resultado esperado, vasos e nervos que acompanham o tecido) para duas mamas muito maiores e mais pendentes: **G3** e **G4**.
 
-**Situação: implementado**, a partir do plano aprovado, com as recomendações do plano onde as decisões ficaram em aberto (lista em "Decisões tomadas"). Os números abaixo são os do app. Ficou pendente o **enxerto livre do complexo areolopapilar** (fase E do plano, que era opcional).
+**Situação: implementado**, a partir do plano aprovado, com as recomendações do plano onde as decisões ficaram em aberto (lista em "Decisões tomadas"). Os números abaixo são os do app para as três técnicas da ptose II. Depois, com as técnicas por grau de ptose (`docs/plano-mamoplastia-tecnicas.md`), G3 e G4 ganharam o **Wise com pedículo superomedial** e G4 o **enxerto livre do complexo areolopapilar (Thorek)**, que tinha ficado pendente (fase E deste plano).
 
 > **Leitura do pedido.** "Modelos de reconstrução" foi lido como a **remodelação da mama na mamoplastia redutora** (marcação → pedículo → ressecção → transposição → fechamento → resultado), replicada para as duas mamas novas. "G3 e G4" foi lido como os **graus III e IV de hipertrofia da classificação de Berrocal Revueltas**, com ptose grau III de Regnault.
 
@@ -35,7 +35,7 @@ Parâmetros (`scripts/hybrid/build_breast.py`, mm de descida do fluxo; inclinaç
 
 *Perfil no meridiano da mama (lado operado; mm na carta, sulco em azul). O sulco não se move, o polo superior esvazia e a bolsa cresce e pende.*
 
-No app: chips **G3** e **G4** no seletor **Forma da mama**, que mostra também o peso que a redução retiraria e o grau de Berrocal; perfis de G3 e G4, "Frente: G4" e "Corte sagital: G4" no pack **Ptose mamária**; e um grupo novo na biblioteca, **Mamoplastia em G3 e G4**, com oito packs: "Mamoplastia redutora em G3" e "em G4", e o passo a passo de cada técnica em cada caso.
+No app: chips **G3** e **G4** no seletor **Forma da mama**, que mostra também o peso que a redução retiraria e o grau de Berrocal; perfis de G3 e G4, "Frente: G4" e "Corte sagital: G4" no pack **Ptose mamária**; e, na biblioteca, os grupos **Mamoplastia redutora: G3** e **Mamoplastia redutora: G4** (eram um grupo só, "Mamoplastia em G3 e G4"), cada um com o pack do plano e o passo a passo de cada técnica.
 
 ## Correções no modelo
 
@@ -73,6 +73,8 @@ O alvo de volume final do plano (500 e 525 mL) não é alcançável assim: com r
 
 O **pedículo inferior** é o limite: para conservar as perfurantes intercostais e o ramo da toracoacromial, que sobem pelo septo, ele mantém o tecido em volta dos vasos ao longo de toda a bolsa e fica com 370 e 435 mL. A peça fica um grau abaixo do caso e a mama que sobra é a maior das três. O app mostra isso nas vistas e nas fichas: é o pedículo de base larga que mais carrega tecido numa mama pendente.
 
+Técnicas acrescentadas depois (`docs/plano-mamoplastia-tecnicas.md`): **Wise com pedículo superomedial** em G3 (pedículo de 224 mL afinado a 38,7 mm; peça de 913 mL, 867 g, grau III; fica 771 mL) e em G4 (272 mL a 40,4 mm; 1.152 mL, 1.095 g, grau IV; fica 952 mL), e **Thorek** em G4 (sem pedículo; retalhos de 46,5 mm; peça de 1.255 mL, 1.192 g, grau IV; fica 850 mL).
+
 ## Marcação
 
 | Medida (pele em pé) | Ptose II | G3 | G4 |
@@ -105,7 +107,8 @@ O ponto A segue a projeção do sulco no meridiano. Os ramos da vertical de 19 a
 - **Pitanguy:** o pedículo superior longo (subida de 11,2 e 13,0 cm) perde as perfurantes da torácica interna, que chegam ao complexo areolopapilar pela face medial e cruzam o padrão. A literatura descreve o pedículo superior longo como pouco confiável em mamas muito grandes, e as fichas e vistas dizem isso.
 - **Wise:** o pedículo inferior, de 18 e 19 cm do sulco ao mamilo para uma base de 8 cm, conserva os vasos do septo. Há séries sem relação entre necrose e distância mamilo–sulco acima de 15 cm.
 - **Vertical:** o pedículo superomedial afinado a 32 mm conserva as perfurantes altas da torácica interna.
-- **G4:** fúrcula–mamilo de 44 cm, mamilo–sulco de 19 cm e peças acima de 1 kg, faixa em que muitos autores indicam o enxerto livre. Está nas fichas.
+- **G4:** fúrcula–mamilo de 44 cm, mamilo–sulco de 19 cm e peças acima de 1 kg, faixa em que muitos autores indicam o enxerto livre. Está nas fichas, e o enxerto livre (Thorek) agora está no app.
+- **Wise com pedículo superomedial** (acrescentado depois): conserva as perfurantes da torácica interna do 2º e 3º espaços em G3 e a do 2º em G4, como a vertical, com a base na metade medial da fechadura e em todo o ramo vertical medial. **Thorek:** nenhum vaso ou nervo chega ao enxerto.
 
 ## Vasos e nervos: trajeto e tamanho
 
@@ -166,6 +169,8 @@ O pilar vertical fica acima dos 5 cm pretendidos. Com mamas de 0,7 a 1,1 L, o po
 
 Arquivos: `src/data/planCases.ts` junta os casos; `mammaplasty.ts` gera vistas, fichas e packs por caso; `mammaplastySteps.ts` e `breastAnatomy.ts` leem todos os casos; `HybridModel.tsx` recorta a pele do tronco pelo contorno do caso aberto.
 
+Depois desta rodada (`docs/plano-mamoplastia-tecnicas.md`): cinco casos (ptose I a III, G3, G4), um grupo da biblioteca por grau, peças dos planos baixadas por caso quando ficam visíveis, primeira carga de 645 kB e cache v9.
+
 ## Decisões tomadas
 
 As decisões que ficaram em aberto no plano seguiram as recomendações dele:
@@ -184,9 +189,9 @@ As decisões que ficaram em aberto no plano seguiram as recomendações dele:
 
 ## Pendências e decisões que dependem de você
 
-1. **Enxerto livre do complexo areolopapilar (Thorek) em G4.** Não foi feito. A sequência proposta no plano (coleta do disco de 4,2 cm, amputação, fechamento em T, leito receptor, enxerto com curativo de Brown) entra como uma quarta técnica se você quiser.
+1. ~~**Enxerto livre do complexo areolopapilar (Thorek) em G4.**~~ Feito, com a sequência proposta no plano (coleta do disco de 4,2 cm, amputação, fechamento em T, leito receptor, enxerto com curativo de Brown): `docs/plano-mamoplastia-tecnicas.md`.
 2. **Pedículo inferior volumoso.** Mantido assim para conservar os vasos do septo. Se preferir chegar ao grau do caso, a alternativa é afinar além da camada dos vasos (o app então mostraria esses vasos cortados).
-3. **Vertical em G4.** Mantida como réplica. Pode ser trocada por Wise com pedículo superomedial (Orlando e Guthrie) ou retirada.
+3. **Vertical em G4.** Mantida como réplica, e o Wise com pedículo superomedial (Orlando e Guthrie) foi acrescentado ao lado dela em G3 e G4. A vertical pode ser retirada dessas mamas se você preferir.
 4. **Volumes finais de 700 e 850 mL.** Para chegar mais perto de 500 mL seria preciso um padrão de pele maior (ramos horizontais estendidos para a axila, ângulo do T mais aberto).
 5. Os nomes dos estados antigos ("hipertrofia leve, moderada, acentuada") ficaram; o seletor agora mostra ao lado o grau de Berrocal que a redução daria.
 

@@ -15,6 +15,7 @@ import { layerAttachments, layerFibres, layerLandmarks, partById, perforatorZone
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { boneMatrices, posedLandmark } from "@/lib/armPoses";
 import type { BreastSide } from "@/lib/breastMap";
+import { planPieceStructures, plansOf } from "@/lib/breastAnatomy";
 import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
 import { stepArrows, stepFramesOf } from "@/lib/mammaplastySteps";
 import { hiddenInSteps } from "@/lib/surgeryVisibility";
@@ -573,6 +574,32 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     },
     [],
   );
+  // ---- pieces of the surgical plans (pedicles, resections): downloaded and prepared case by case, when one is shown;
+  // until they are in place the labels and pins wait, as during an animation
+  const planKey = useMemo(() => plansOf(planPieceStructures.filter(visible)).join(","), [visible]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const plansDone = useRef<{ root: THREE.Object3D | null; key: string }>({ root: null, key: "" });
+  useEffect(() => {
+    if (!handle || !planKey || (plansDone.current.root === handle.root && plansDone.current.key === planKey)) {
+      setPlansLoading(false);
+      return;
+    }
+    let live = true;
+    setPlansLoading(true);
+    handle
+      .preparePlans(planKey.split(",").map(Number))
+      .then((added) => {
+        if (!live) return;
+        plansDone.current = { root: handle.root, key: planKey };
+        setPlansLoading(false);
+        // new pieces in the scene: the anchors of their labels have to be found again
+        if (added) handle.refresh();
+      })
+      .catch(() => live && setPlansLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [planKey, handle]);
   // ---- step-by-step sequence (reduction mammaplasty): animate the key frame, on the breast it was planned on ---
   const surgery = view.surgery ?? null;
   const [surgeryAnimating, setSurgeryAnimating] = useState(false);
@@ -655,7 +682,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     [],
   );
   const canReplay = Boolean(surgery && surgery.replayFrom !== null && surgery.frame > 0);
-  const animating = poseAnimating || breastAnimating || surgeryAnimating;
+  const animating = poseAnimating || breastAnimating || surgeryAnimating || plansLoading;
   // the chart itself, to carry loose overlay points (skin markings, perforator zones) with the breast
   const [breastSides, setBreastSides] = useState<Record<BreastSideId, BreastSide> | null>(null);
   useEffect(() => {

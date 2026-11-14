@@ -24,9 +24,9 @@ import shapely
 from scipy import sparse
 from scipy.ndimage import map_coordinates
 from scipy.sparse.linalg import spsolve
-from scipy.spatial import Delaunay, cKDTree
+from scipy.spatial import Delaunay
 from shapely.geometry import LineString, Point, Polygon
-from shapely.ops import polygonize, unary_union
+from shapely.ops import unary_union
 
 import build_breast as bb
 

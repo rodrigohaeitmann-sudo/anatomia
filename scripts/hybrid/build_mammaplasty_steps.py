@@ -40,15 +40,13 @@ from pathlib import Path
 import fast_simplification
 import numpy as np
 import shapely
-from scipy.ndimage import map_coordinates
-from shapely.geometry import LineString, MultiPoint, Point, Polygon, box
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import unary_union
 
 sys.path.insert(0, str(Path(__file__).parent))
 import build_breast as bb  # noqa: E402
 import build_mammaplasty as bm  # noqa: E402
 import mammaplasty_result as mr  # noqa: E402
-from pilot_mammaplasty import tube  # noqa: E402
 
 OUT_JSON = bb.ROOT / "src/data/mammaplastySteps{suffix}.json"
 OUT_BIN = bb.ROOT / "public/models/hybrid/mammaplasty-{key}.bin"

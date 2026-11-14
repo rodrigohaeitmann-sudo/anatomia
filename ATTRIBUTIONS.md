@@ -8,7 +8,7 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 - Fonte: https://github.com/hubmapconsortium/ccf-3d-reference-object-library (`VH_Female/v1.3`).
 - Licença: Creative Commons Attribution 4.0 International (CC BY 4.0).
 - Modificações: transformação rígida para o referencial do BodyParts3D, recorte da pele ao tronco, compressão em profundidade da base posterior da mama sobre a parede torácica, redução de malha da gordura mamária contralateral (20%), reflexão global e compressão meshopt.
-- No aplicativo, a pele e as mamas também são exibidas deformadas (ptose graus I–III, `docs/plano-mamoplastia.md`). A deformação é calculada na exibição; o arquivo distribuído não muda.
+- No aplicativo, a pele e as mamas também são exibidas deformadas (ptose graus I–III e as mamas G3 e G4, `docs/plano-mamoplastia.md`). A deformação é calculada na exibição; o arquivo distribuído não muda.
 
 ## BodyParts3D 4.3 – The Database Center for Life Science (DBCLS)
 
@@ -39,8 +39,8 @@ O arquivo `public/models/hybrid/torso-female-hybrid.glb` é uma obra derivada qu
 
 ## Planos cirúrgicos (este projeto)
 
-- Uso: marcações pré-operatórias, pedículos e ressecções da mamoplastia redutora, na ptose II e nas mamas G3 e G4 (`src/data/mammaplasty<-caso>.json`, `public/models/hybrid/mammaplasty<-caso>.bin`) e os passos com o resultado esperado (`src/data/mammaplastySteps<-caso>.json`, `public/models/hybrid/mammaplasty-<técnica><-caso>.bin`, gerados por `scripts/hybrid/build_mammaplasty_steps.py`: pele, peças, aréola, suturas, medidas e cicatrizes nos quadros-chave de cada técnica, e os vasos e nervos que o pedículo conserva, tirados da camada esquemática acima).
-- Origem: gerados por `scripts/hybrid/build_mammaplasty.py` sobre a pele e a mama do HRA deformadas pelo mapa da mama. As peças são porções do volume da mama do modelo; as linhas seguem sua pele. Técnicas pelas descrições originais (Pitanguy 1967; Wise 1956; Robbins 1977; Courtiss & Goldwyn 1977; Hall-Findlay 1999), com dimensões propostas neste projeto. No aplicativo aparecem com a fonte "Plano cirúrgico (este projeto)" e com aviso na ficha.
+- Uso: marcações pré-operatórias, pedículos e ressecções da mamoplastia redutora, nas ptoses I a III e nas mamas G3 e G4 (`src/data/mammaplasty<-caso>.json`, `public/models/hybrid/mammaplasty<-caso>.bin`) e os passos com o resultado esperado (`src/data/mammaplastySteps<-caso>.json`, `public/models/hybrid/mammaplasty-<técnica><-caso>.bin`, gerados por `scripts/hybrid/build_mammaplasty_steps.py`: pele, peças, aréola, suturas, medidas e cicatrizes nos quadros-chave de cada técnica, e os vasos e nervos que o pedículo conserva, tirados da camada esquemática acima).
+- Origem: gerados por `scripts/hybrid/build_mammaplasty.py` sobre a pele e a mama do HRA deformadas pelo mapa da mama. As peças são porções do volume da mama do modelo; as linhas seguem sua pele. Técnicas pelas descrições originais (Pitanguy 1967; Wise 1956; Robbins 1977; Courtiss & Goldwyn 1977; Hall-Findlay 1999; Lejour 1994; Orlando & Guthrie 1975; Benelli 1990; Thorek 1922), com dimensões propostas neste projeto. No aplicativo aparecem com a fonte "Plano cirúrgico (este projeto)" e com aviso na ficha.
 - Licença: como dependem das malhas do modelo combinado, seguem a licença da obra derivada.
 
 ## Licença da obra derivada

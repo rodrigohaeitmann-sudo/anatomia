@@ -219,8 +219,13 @@ const text: Record<TechniqueId, { markingSummary: string; markingSteps: string[]
   orlando: {
     markingSummary: "Padrão de Wise na mama em pé: abertura circular para a nova aréola em torno do ponto A (a fechadura), dois ramos verticais e dois ramos horizontais até os extremos da incisão no sulco. A cicatriz final é um T invertido.",
     markingSteps: ["O ponto A, na projeção do sulco sobre o meridiano, é o centro da nova aréola", "A soma dos ramos horizontais é maior que a incisão no sulco: a diferença é compensada no fechamento"],
-    pedicleSummary: `Pedículo superomedial (Orlando e Guthrie), com base de ${dims.superomedialBaseMm / 10} cm na metade medial da fechadura e no começo do ramo vertical medial. Gira para levar o complexo areolopapilar à fechadura.`,
-    pedicleNotes: ["Irrigação pelos perfurantes da torácica interna do 2º e 3º espaços, que entram pela base", "Na mama longa é mais curto que o pedículo inferior: o complexo areolopapilar gira até a fechadura em vez de subir do sulco", "Os ramos cutâneos anteriores entram pela base"],
+    pedicleSummary: `Pedículo superomedial (Orlando e Guthrie), com base de ${cm((techniques.wise.measurements.linesMm.fechadura ?? 88) / 2 + dims.limbMm)} cm: a metade medial da fechadura e todo o ramo vertical medial. Gira para levar o complexo areolopapilar à fechadura.`,
+    pedicleNotes: [
+      "Irrigação pelos perfurantes da torácica interna do 2º e 3º espaços, que entram pela base",
+      "Na mama longa esses perfurantes chegam baixo, na altura do ramo vertical medial: por isso a base o inclui inteiro",
+      "É mais curto que o pedículo inferior: o complexo areolopapilar gira até a fechadura em vez de subir do sulco",
+      "Os ramos cutâneos anteriores entram pela base",
+    ],
     resectionSummary: "Ressecção inferior e lateral: todo o padrão fora do pedículo, em espessura total, e as cunhas sob os retalhos medial e lateral. O polo inferior sai inteiro.",
     resectionNotes: ["O polo inferior, que é o que mais pesa na mama pendente, sai com a peça", "Os retalhos medial e lateral cobrem o pedículo no fechamento"],
   },
@@ -497,7 +502,7 @@ const stepText: Record<TechniqueId, StepText> = {
     },
   },
   orlando: {
-    incision: "Incisão em toda a marcação, em volta da fechadura e dos ramos. O pedículo superomedial, com base na metade medial da fechadura e no começo do ramo vertical medial, é desepitelizado: a derme fica sobre ele. O anel da aréola além do areolótomo é desepitelizado com ele.",
+    incision: "Incisão em toda a marcação, em volta da fechadura e dos ramos. O pedículo superomedial, com base na metade medial da fechadura e em todo o ramo vertical medial, é desepitelizado: a derme fica sobre ele. O anel da aréola além do areolótomo é desepitelizado com ele.",
     resection: "Saem a pele dentro do padrão, fora do pedículo, e a ressecção inferior e lateral: o polo inferior em espessura total, o tecido lateral ao pedículo e as cunhas sob os retalhos.",
     transposition: "O pedículo superomedial gira sobre a base e leva o complexo areolopapilar até a fechadura, em volta do ponto A. Os perfurantes da torácica interna que entram pela base giram com ele.",
     closure: {
@@ -975,7 +980,7 @@ export const mammaplastyOverviewPack: Pack = {
       solid: ["skin"],
       orientation: "anterior" as const,
       anchor: "nipple",
-      distance: 0.5 * zoomOf(main),
+      distance: 0.62 * zoomOf(main),
       breast: main.state,
       labels: pointLabels(main.key, ["A"]),
       relations: [
