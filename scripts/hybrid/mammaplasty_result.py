@@ -366,7 +366,7 @@ class Closure:
     vertical limb leaves the areola edge becomes a right angle), a harmonic displacement cannot help folding a few
     triangles: there the vertices are relaxed, those of the marking sliding along their own suture line."""
 
-    def __init__(self, patch: SkinPatch, labels: tuple[str, ...], targets: dict, areola_radius: float, method: str = "blend", blend: tuple[float, float] = (30.0, 55.0), seam: str | None = None) -> None:
+    def __init__(self, patch: SkinPatch, labels: tuple[str, ...], targets: dict, areola_radius: float, method: str = "blend", blend: tuple[float, float] = (30.0, 55.0), seam: str | None = None, seam_top: float | None = None) -> None:
         self.patch = patch
         self.rest = patch.rest
         tri = patch.faces(*labels)
@@ -447,6 +447,11 @@ class Closure:
             cut_fixed = np.r_[fixed | on_seam, np.ones(len(order), bool)]
             rho_r = np.hypot(self.iso[:, 0], self.iso[:, 1])
             tau_r = (rho_r - areola_radius) / (self.outer(np.full(len(used), np.pi)) - areola_radius)
+            if seam_top is not None:
+                # the seam starts on a line that closes onto the areola border (periareolar ring): its top goes to tau 0
+                # and the skin below it follows in proportion
+                tau_top = (seam_top - areola_radius) / (float(self.outer(np.pi)) - areola_radius)
+                tau_r = np.clip((tau_r - tau_top) / max(1 - tau_top, 1e-9), 0, 1)
             cut_polar = np.vstack([polar, np.zeros((len(order), 2))])
             cut_polar[np.nonzero(on_seam)[0]] = np.c_[np.full(int(on_seam.sum()), -np.pi), tau_r[on_seam]]
             cut_polar[len(used):] = np.c_[np.full(len(order), np.pi), tau_r[order]]

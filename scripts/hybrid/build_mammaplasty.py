@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Reduction mammaplasty on the model: marking, pedicle and resection of three techniques
-(docs/plano-mamoplastia.md, fases 2 e 3; docs/plano-mamoplastia-g3-g4.md).
+"""Reduction mammaplasty on the model: marking, pedicle and resection of every technique on the breasts it is
+meant for (docs/plano-mamoplastia.md, fases 2 e 3; docs/plano-mamoplastia-g3-g4.md;
+docs/plano-mamoplastia-tecnicas.md).
 
 Everything is designed on a standing ptotic breast, as in the consulting room, and shipped in rest
 coordinates: the breast map of the app (src/lib/breastMap.ts) carries markings and pieces to the standing
-breast together with skin, gland and vessels. Three cases (CASES): ptosis grade II with moderate
-hypertrophy, with the dimensions accepted in review, and the hypertrophies G3 and G4, where a reduction
-aims at a breast of the size of that result: the pedicle is thinned and the tissue under the skin flaps is
-taken (`design_for`, by bisection on the measured volumes).
+breast together with skin, gland and vessels. Five cases (CASES), one per breast state: ptosis grades I, II
+and III with the dimensions accepted in review, and the hypertrophies G3 and G4, where a reduction aims at
+a smaller breast: the pedicle is thinned and the tissue under the skin flaps is taken (`design_for`, by
+bisection on the measured volumes). A technique (TECHNIQUES) is a skin pattern, a pedicle and a resection;
+each case lists the techniques that suit its degree of ptosis.
 
 1. Marking. Lines are drawn on the unrolled standing skin (pilot_mammaplasty.Standing) with true lengths.
    Point A, the new position of the nipple, is the projection of the inframammary fold on the breast
-   meridian. Patterns: inverted T without keyhole (Pitanguy), keyhole (Wise), vertical with dome.
+   meridian, and never less than MIN_RISE above the nipple (ptosis grade I, where the nipple is already at
+   the height of the fold). Patterns: inverted T without keyhole (Pitanguy, free nipple graft), keyhole
+   (Wise), vertical with dome, periareolar ring.
 2. Pieces. A pedicle or a resection is the tissue behind a region of the breast seen from the front,
    from the skin straight back towards the chest (the way the textbooks draw them): to the chest wall,
    to the skin of the underside where the breast hangs below the fold, or to a flap thickness. Under the
@@ -82,17 +86,41 @@ DOME_HALF = 34.0  # half-width of the dome at its base
 VERTICAL_HALF = 48.0  # widest half-width of the vertical pattern
 VERTICAL_STOP = 30.0  # the vertical pattern ends this far above the fold (skin length)
 
+MIN_RISE = 20.0  # mm of skin: point A (the new nipple) is never less than this above the nipple (ptosis grade I)
+RING_BELOW = 10.0  # periareolar ring: mm of skin taken below the areolotome's circle
+RING_SIDE = 12.0  # ... and on each side of it (its top is the upper border of the new areola, AREOLA_D / 2 above A)
+CENTRAL_THICKNESS = 20.0  # dermoglandular layer that carries the areola over the wedge of a periareolar reduction
+WEDGE_START = -25.0  # the wedge of the periareolar reduction starts this far below the nipple, seen from the front (negative: above it, behind the areola)
+WEDGE_TOP_HALF = 20.0  # half-width of that wedge at its top
+WEDGE_BASE_HALF = 50.0  # ... and at the lowest contour of the breast
 KEEL_BASE = -160.0  # the sides of Pitanguy's keel run from its apex to B and C at this height (mm about the nipple at rest)
 
 # The cases: the breast (state of build_breast.py) that is marked and operated. `resultMl`: the breast a reduction aims at
 # (None: the dimensions above, as accepted); `areolaNowMm`: the areola of the case on the standing skin, stretched by the
-# hypertrophy (the areolotome is AREOLA_D); `foldMarginMm`: how far from each end of the fold its incision stops.
+# hypertrophy (the areolotome is AREOLA_D); `foldMarginMm`: how far from each end of the fold its incision stops;
+# `techniques`: the techniques shown on this breast, those its degree of ptosis calls for (ptosis I: periareolar and
+# vertical; II: vertical and inverted T; III and beyond: inverted T, and the free nipple graft for gigantomastia);
+# `spacing`: mm between vertices of the pieces.
 CASES = {
-    "ptose-2": {"suffix": "", "areolaNowMm": 56.0, "foldMarginMm": FOLD_MARGIN, "resultMl": None},
-    "g3": {"suffix": "-g3", "areolaNowMm": 75.0, "foldMarginMm": 5.0, "resultMl": float(next(s["resultMl"] for s in bb.STATES if s["id"] == "g3"))},
-    "g4": {"suffix": "-g4", "areolaNowMm": 90.0, "foldMarginMm": 5.0, "resultMl": float(next(s["resultMl"] for s in bb.STATES if s["id"] == "g4"))},
+    "ptose-1": {"suffix": "-p1", "areolaNowMm": 50.0, "foldMarginMm": FOLD_MARGIN, "resultMl": None, "spacing": 5.0, "techniques": ["periareolar", "lejour"]},
+    "ptose-2": {"suffix": "", "areolaNowMm": 56.0, "foldMarginMm": FOLD_MARGIN, "resultMl": None, "spacing": 3.5, "techniques": ["pitanguy", "wise", "vertical", "lejour"]},
+    "ptose-3": {"suffix": "-p3", "areolaNowMm": 65.0, "foldMarginMm": FOLD_MARGIN, "resultMl": None, "spacing": 5.0, "techniques": ["pitanguy", "wise", "vertical", "orlando"]},
+    "g3": {"suffix": "-g3", "areolaNowMm": 75.0, "foldMarginMm": 5.0, "resultMl": float(next(s["resultMl"] for s in bb.STATES if s["id"] == "g3")), "spacing": 5.5, "techniques": ["pitanguy", "wise", "vertical", "orlando"]},
+    "g4": {"suffix": "-g4", "areolaNowMm": 90.0, "foldMarginMm": 5.0, "resultMl": float(next(s["resultMl"] for s in bb.STATES if s["id"] == "g4")), "spacing": 5.5, "techniques": ["pitanguy", "wise", "vertical", "orlando", "thorek"]},
 }
-PEDICLE_SHARE = {"wise": 0.47, "vertical": 0.32}  # the pedicle's share of the result in the case of ptosis II
+# A technique: skin pattern (`skin`: t = inverted T without keyhole, keyhole = Wise, dome = vertical, ring = periareolar),
+# pedicle and resection. The words go into labels: "Pedículo <pedicle>", "Ressecção <resection>".
+TECHNIQUES = {
+    "periareolar": {"label": "Periareolar de Benelli (round block)", "short": "Periareolar", "pattern": "anel periareolar excêntrico", "pedicle": "central", "resection": "em cunha central inferior", "marking": "Marcação periareolar (anel)", "skin": "ring"},
+    "lejour": {"label": "Lejour (vertical com pedículo superior)", "short": "Lejour", "pattern": "padrão vertical com cúpula", "pedicle": "superior", "resection": "central inferior", "marking": "Marcação vertical (cúpula)", "skin": "dome"},
+    "vertical": {"label": "Vertical com pedículo superomedial", "short": "Vertical", "pattern": "padrão vertical com cúpula", "pedicle": "superomedial", "resection": "inferior e lateral", "marking": "Marcação vertical (cúpula)", "skin": "dome"},
+    "pitanguy": {"label": "Pitanguy", "short": "Pitanguy", "pattern": "T invertido, marcação pelos pontos A–B–C–D–E", "pedicle": "superior", "resection": "em quilha", "marking": "Marcação de Pitanguy (T invertido)", "skin": "t"},
+    "wise": {"label": "Wise com pedículo inferior", "short": "Wise", "pattern": "padrão de Wise (fechadura)", "pedicle": "inferior", "resection": "em ferradura", "marking": "Marcação de Wise (fechadura)", "skin": "keyhole"},
+    "orlando": {"label": "Wise com pedículo superomedial", "short": "Wise superomedial", "pattern": "padrão de Wise (fechadura)", "pedicle": "superomedial", "resection": "inferior e lateral", "marking": "Marcação de Wise (fechadura)", "skin": "keyhole"},
+    "thorek": {"label": "Thorek (enxerto livre do complexo areolopapilar)", "short": "Thorek", "pattern": "T invertido, sem abertura para a aréola", "pedicle": "", "resection": "do polo inferior (amputação)", "marking": "Marcação em T invertido (enxerto livre)", "skin": "t"},
+}
+# the pedicle's share of the result in the case of ptosis II (what a thinned pedicle of the large cases aims at)
+PEDICLE_SHARE = {"wise": 0.47, "vertical": 0.32, "orlando": 0.32}
 MIN_PEDICLE_DEPTH = 20.0  # mm of tissue a thinned pedicle keeps under its skin (de-epithelialised dermis included)
 SEPTUM_MARGIN = 12.0  # mm kept under the plane of the horizontal septum when the inferior pedicle is thinned (its vessels)
 MIN_FLAP = FLAP_THICKNESS  # mm: the thinnest skin flap left over the tissue that is taken round the pattern
@@ -103,6 +131,10 @@ PEDICLE_SUPPLY = {
     "pitanguy": ["lit_ita_perforator_2", "lit_ita_perforator_3", "lit_acb_3"],
     "wise": ["lit_intercostal_perforator_4", "lit_intercostal_perforator_5", "lit_intercostal_perforator_6", "lit_thoracoacromial_branch", "lit_lcb4_deep"],
     "vertical": ["lit_ita_perforator_2", "lit_ita_perforator_3", "lit_ita_perforator_4", "lit_acb_3", "lit_acb_4"],
+    "orlando": ["lit_ita_perforator_2", "lit_ita_perforator_3", "lit_ita_perforator_4", "lit_acb_3", "lit_acb_4"],
+    "lejour": ["lit_ita_perforator_2", "lit_ita_perforator_3", "lit_acb_3"],
+    "periareolar": [],
+    "thorek": [],
 }
 SUPPLY_CORRIDOR = 12.0  # mm on each side of those courses, seen from the front
 SUPPLY_DEPTH = 8.0  # mm of tissue kept behind those courses when a pedicle is thinned
@@ -116,7 +148,7 @@ def case_key(technique: str, case: str) -> str:
 
 def default_design(case: str) -> dict:
     spec = CASES[case]
-    return {"foldMarginMm": spec["foldMarginMm"], "resultMl": spec["resultMl"], "pedicleDepthMm": {}, "flapMm": {}}
+    return {"foldMarginMm": spec["foldMarginMm"], "resultMl": spec["resultMl"], "pieceSpacingMm": spec["spacing"], "pedicleDepthMm": {}, "flapMm": {}}
 
 
 MARK_LIFT = 0.5  # the pen line sits on the skin
@@ -322,6 +354,21 @@ def vertical(st: Standing):
     return points, lines, visible
 
 
+def ring(st: Standing, nipple: np.ndarray):
+    """Periareolar pattern (round block): an eccentric ellipse round the areola. Its top is the upper border of the new
+    areola (AREOLA_D / 2 above point A); below and beside the areola it runs RING_BELOW and RING_SIDE outside the
+    areolotome's circle. The line starts at its lowest point and goes up the medial side."""
+    a = np.array([0.0, 0.0])
+    top = -AREOLA_D / 2
+    bottom = float(nipple[1]) + AREOLA_D / 2 + RING_BELOW
+    half = AREOLA_D / 2 + RING_SIDE
+    centre, semi = (top + bottom) / 2, (bottom - top) / 2
+    t = np.linspace(0, 2 * np.pi, 97)
+    line = np.c_[-half * np.sin(t), centre + semi * np.cos(t)]
+    points = {"A": a, "S": np.array([0.0, top]), "I": np.array([0.0, bottom]), "M": np.array([-half, centre]), "L": np.array([half, centre])}
+    return points, {"anel": line}, [line]
+
+
 # --------------------------------------------------------------------------------------------------
 # pieces
 # --------------------------------------------------------------------------------------------------
@@ -422,6 +469,20 @@ class Piece:
         return inside
 
 
+class EmptyPiece:
+    """No tissue: the pedicle of a technique that has none (the free nipple graft)."""
+
+    def __init__(self) -> None:
+        self.parts: list = []
+        self.standing = np.zeros((0, 3))
+        self.rest = np.zeros((0, 3))
+        self.faces = np.zeros((0, 3), int)
+        self.volume, self.closed, self.residual = 0.0, True, 0.0
+
+    def contains(self, standing_points: np.ndarray) -> np.ndarray:
+        return np.zeros(len(standing_points), bool)
+
+
 # --------------------------------------------------------------------------------------------------
 # techniques
 # --------------------------------------------------------------------------------------------------
@@ -440,7 +501,7 @@ def frontal_pattern(front: Front, top: np.ndarray, lateral: np.ndarray, medial: 
 
 
 class Planner:
-    """The three techniques on one standing breast. `design` (default_design / design_for): where the fold incision
+    """The techniques on one standing breast (one method per technique of TECHNIQUES). `design` (default_design / design_for): where the fold incision
     stops, how thin each pedicle is cut (pedicleDepthMm: mm of tissue under its skin; absent = full thickness) and how
     thick the skin flaps are left round the pattern (flapMm: the tissue under them is taken, down to the layer left on
     the fascia; absent = only the wedges of the technique)."""
@@ -454,8 +515,8 @@ class Planner:
         self.new_areola = Polygon(front.project(st.ring(np.array([0.0, 0.0]), AREOLA_D / 2)))
         self.nipple_uv = front.project(self.nipple[None])[0]
         self.a_uv = front.project(np.array([[0.0, 0.0]]))[0]
-        # the pieces of the large breasts are meshed a little coarser, so that every case weighs about the same
-        self.spacing = 3.5 if self.design["resultMl"] is None else 5.5
+        # the pieces of the larger breasts are meshed a little coarser, so that every case weighs about the same
+        self.spacing = self.design.get("pieceSpacingMm", 3.5 if self.design["resultMl"] is None else 5.5)
 
     # ---- shared ---------------------------------------------------------------------------------------------
     def piece(self, parts) -> Piece:
@@ -638,15 +699,119 @@ class Planner:
             ]),
         }
 
+    # ---- vertical pattern with superior pedicle (Lejour) -------------------------------------------------------
+    def lejour(self) -> dict:
+        # The pedicle is the dermoglandular flap of Pitanguy's technique, from the areola up to the dome. The lower
+        # central part of the pattern comes out in full thickness and, under the flap, a keel that tapers upwards; the
+        # medial and lateral pillars stay and are sutured to each other.
+        st, front = self.st, self.front
+        points, lines, _ = vertical(st)
+        pattern = frontal_pattern(front, lines["cúpula"], lines["ramo lateral"], lines["ramo medial"])
+        superior = hull(np.array(self.rim.exterior.coords), np.array(self.new_areola.exterior.coords)).intersection(pattern).buffer(0)
+        dome_base = front.project(np.array([points["M"], points["L"]]))
+        below_dome = pattern.intersection(box(pattern.bounds[0], front.v0, pattern.bounds[2], float(dome_base[:, 1].min())))
+        apex_v = self.nipple_uv[1] + AREOLA_D / 2 + 30.0
+        apex = np.array([self.nipple_uv[0], apex_v if apex_v > self.a_uv[1] else self.a_uv[1] + 25.0])
+        wide = front.project(np.array([[-VERTICAL_HALF, DOME_BASE + 20.0], [VERTICAL_HALF, DOME_BASE + 20.0]]))
+        keel = Polygon([apex, [wide[1, 0], KEEL_BASE], [wide[0, 0], KEEL_BASE]]).buffer(0)
+        return {
+            "points": points, "lines": lines, "pattern": pattern, "footprint": superior, "baseOnOutline": True,
+            # the skin of the dome is only de-epithelialised: the whole dome is the base of the pedicle
+            "base": pattern.difference(below_dome).buffer(0),
+            "pedicle": self.piece([(superior, front.top, front.flap(SUPERIOR_THICKNESS))]),
+            "resection": self.piece([
+                (below_dome.difference(superior), front.top, front.bottom_spare),
+                (superior.intersection(keel), front.flap(SUPERIOR_THICKNESS), front.bottom_spare),
+            ]),
+        }
+
+    # ---- Wise pattern with superomedial pedicle (Orlando and Guthrie) ------------------------------------------
+    def orlando(self) -> dict:
+        # Full-thickness pedicle (thinned from behind in the large cases) based on the medial half of the keyhole and
+        # the start of the medial vertical limb; it turns into the keyhole. The rest of the pattern and the wedges under
+        # the skin flaps come out.
+        st, front = self.st, self.front
+        points, lines, _ = inverted_t(st, keyhole=True, fold_margin=self.design["foldMarginMm"])
+        pattern = frontal_pattern(front, lines["fechadura"], lines["ramo lateral"], lines["ramo medial"])
+        arc = lines["fechadura"]  # from the medial limb, over the top, to the lateral limb
+        medial_border = np.vstack([arc[: len(arc) // 2 + 1][::-1], lines["ramo medial"]])
+        model_border = st.model(st.skin(medial_border))
+        travelled = np.r_[0, np.cumsum(np.linalg.norm(np.diff(model_border, axis=0), axis=1))]
+        base = front.project(medial_border[travelled <= SUPEROMEDIAL_BASE])
+        superomedial = hull(base, np.array(self.rim.exterior.coords)).intersection(pattern).buffer(0)
+        floor, thinned = self.pedicle_floor("orlando")
+        wedges = self.wedges(points, pattern.union(superomedial))
+        extra = self.thinned("orlando", pattern, superomedial, wedges)
+        behind = [(superomedial, floor, front.bottom_spare)] if thinned else []
+        return {
+            "points": points, "lines": lines, "pattern": pattern, "footprint": superomedial, "baseOnOutline": True,
+            "pedicle": self.piece([(superomedial, front.top, floor)]),
+            "resection": self.piece([
+                (pattern.difference(superomedial), front.top, front.bottom_spare),
+                (wedges, front.flap(FLAP_THICKNESS), front.bottom_spare),
+                *extra,
+                *behind,
+            ]),
+        }
+
+    # ---- periareolar ring (Benelli's round block) with an inferior wedge -----------------------------------------
+    def periareolar(self) -> dict:
+        # The skin between the areolotome's circle and the ring is only de-epithelialised: the areola stays on the gland
+        # (central pedicle, not lifted off the fascia). Through the lower half of the ring an inferior wedge is taken,
+        # under the skin of the lower pole and under a dermoglandular layer that carries the areola.
+        st, front = self.st, self.front
+        points, lines, _ = ring(st, self.nipple)
+        region = Polygon(front.project(lines["anel"])).buffer(0)
+        nu, nv = float(self.nipple_uv[0]), float(self.nipple_uv[1])
+        k = RREF / float(front.sample(front.front_filled, np.array([[nu, nv]]))[0])  # mm of u per mm across the breast
+        top_v = nv - WEDGE_START
+        wedge = Polygon([
+            [nu - WEDGE_TOP_HALF * k, top_v], [nu + WEDGE_TOP_HALF * k, top_v],
+            [nu + WEDGE_BASE_HALF * k, front.v0], [nu - WEDGE_BASE_HALF * k, front.v0],
+        ]).intersection(front.domain).buffer(0)
+        under_ring, below_ring = wedge.intersection(region).buffer(0), wedge.difference(region).buffer(0)
+        return {
+            "points": points, "lines": lines, "pattern": region, "footprint": region, "baseOnOutline": True,
+            # the dermis is cut along the lower half of the ring (the way in); above the nipple it is left whole
+            "base": region.intersection(box(-1e4, nv, 1e4, 1e4)).buffer(0),
+            "pedicle": self.piece([(region.difference(wedge), front.top, front.bottom_full), (under_ring, front.top, front.flap(CENTRAL_THICKNESS))]),
+            "resection": self.piece([
+                (under_ring, front.flap(CENTRAL_THICKNESS), front.bottom_spare),
+                (below_ring, front.flap(FLAP_THICKNESS), front.bottom_spare),
+            ]),
+        }
+
+    # ---- inverted T with a free nipple graft (Thorek) ---------------------------------------------------------------
+    def thorek(self) -> dict:
+        # No pedicle: the nipple-areola complex is taken as a full-thickness skin graft and the lower pole is amputated
+        # whole, with the wedges under the skin flaps. The flaps are closed as an inverted T and the graft is laid on a
+        # de-epithelialised bed at the apex of the cone (round point A).
+        st, front = self.st, self.front
+        points, lines, _ = inverted_t(st, keyhole=False, fold_margin=self.design["foldMarginMm"])
+        pattern = frontal_pattern(front, points["A"][None], lines["ramo lateral"], lines["ramo medial"])
+        site = self.new_areola.buffer(0)
+        wedges = self.wedges(points, pattern)
+        extra = self.thinned("thorek", pattern.union(site), Polygon(), wedges)
+        return {
+            "points": points, "lines": lines, "pattern": pattern, "footprint": site, "baseOnOutline": False, "graft": True,
+            "pedicle": EmptyPiece(),
+            "resection": self.piece([
+                (pattern.difference(site), front.top, front.bottom_spare),
+                (wedges, front.flap(FLAP_THICKNESS), front.bottom_spare),
+                *extra,
+            ]),
+        }
+
     def build(self, key: str) -> dict:
         item = getattr(self, key)()
         item["nipple"], item["areolaNow"], item["a"] = self.nipple, self.areola_now, self.a_uv
         return item
 
 
-def techniques(st: Standing, front: Front, inverse: Inverse, design: dict | None = None) -> dict:
+def techniques(st: Standing, front: Front, inverse: Inverse, design: dict | None = None, keys=None) -> dict:
+    """The techniques `keys` (default: the three of ptosis II, as accepted in review) on a standing breast."""
     planner = Planner(st, front, inverse, design)
-    return {key: planner.build(key) for key in TECHNIQUES}
+    return {key: planner.build(key) for key in (keys or ("pitanguy", "wise", "vertical"))}
 
 
 def bisect(f, lo: float, hi: float, target: float, rising: bool, steps: int = 9) -> float:
@@ -670,7 +835,7 @@ def design_for(case: str, st: Standing, front: Front, inverse: Inverse, mound_ml
     if target is None:
         return design
     report = {}
-    for key in TECHNIQUES:
+    for key in CASES[case]["techniques"]:
         def build(**change):
             for field, value in change.items():
                 if value is None:
@@ -708,7 +873,8 @@ def neurovascular(st: Standing, front: Front, plan: dict) -> dict:
     """Follows every schematic vessel and nerve to the nipple. A branch is cut by a technique when it runs inside
     the resection, or when it crosses the outline of the skin pattern while superficial (within FLAP_THICKNESS of
     the skin: the incision and the plane under the skin flaps), unless it crosses where the pedicle is attached
-    (its base, only de-epithelialised). Deeper tissue is only cut where it belongs to the resection.
+    (its base, only de-epithelialised: the footprint of the pedicle, or the part of it the technique names as `base`).
+    Deeper tissue is only cut where it belongs to the resection. A free graft keeps nothing: every branch counts as cut.
     Returns, per branch and technique, the mm of course inside the resection and the number of incisions crossed."""
     if not ANATOMY_JSON.exists():
         return {}
@@ -724,12 +890,13 @@ def neurovascular(st: Standing, front: Front, plan: dict) -> dict:
         for key, item in plan.items():
             inside_mm = float(step[item["resection"].contains(standing)].sum())
             in_pattern = shapely.contains_xy(item["pattern"], standing[:, 0], standing[:, 1])
-            crossings = 0
+            crossings = 1 if item.get("graft") else 0
+            base = item.get("base", item["footprint"]).buffer(1.5)
             for i in np.nonzero(in_pattern[1:] != in_pattern[:-1])[0]:
                 mid = (standing[i] + standing[i + 1]) / 2
                 skin = front.top(mid[None, :2])[0]
                 superficial = skin - FLAP_THICKNESS <= mid[2] <= skin + 1.0
-                at_base = item["baseOnOutline"] and item["footprint"].buffer(1.5).contains(Point(mid[:2]))
+                at_base = item["baseOnOutline"] and base.contains(Point(mid[:2]))
                 crossings += int(superficial and not at_base)
             result[name][key] = {"insideMm": round(inside_mm, 1), "incisions": crossings}
     return result
@@ -738,11 +905,6 @@ def neurovascular(st: Standing, front: Front, plan: dict) -> dict:
 # --------------------------------------------------------------------------------------------------
 # output
 # --------------------------------------------------------------------------------------------------
-TECHNIQUES = {
-    "pitanguy": {"label": "Pitanguy", "pattern": "T invertido, marcação pelos pontos A–B–C–D–E", "pedicle": "superior", "resection": "em quilha", "marking": "Marcação de Pitanguy (T invertido)"},
-    "wise": {"label": "Wise com pedículo inferior", "pattern": "padrão de Wise (fechadura)", "pedicle": "inferior", "resection": "em ferradura", "marking": "Marcação de Wise (fechadura)"},
-    "vertical": {"label": "Vertical com pedículo superomedial", "pattern": "padrão vertical com cúpula", "pedicle": "superomedial", "resection": "inferior e lateral", "marking": "Marcação vertical (cúpula)"},
-}
 POINT_NOTES = {
     "A": "novo mamilo: projeção do sulco no meridiano",
     "B": "fim do ramo medial",
@@ -754,6 +916,13 @@ POINT_NOTES = {
     "L": "base lateral da cúpula",
     "F": "encontro dos ramos, acima do sulco",
 }
+RING_NOTES = {
+    "S": "borda superior do anel: borda superior da nova aréola",
+    "I": "borda inferior do anel",
+    "M": "borda medial do anel",
+    "L": "borda lateral do anel",
+}
+A_RISEN = "novo mamilo: 2 cm acima do atual, que já está na altura do sulco"
 
 
 def resample_course(points: np.ndarray, step: float) -> np.ndarray:
@@ -779,7 +948,7 @@ def case_setup(case: str) -> tuple:
     """Standing breast, frontal grid and inverse map of a case."""
     state = [s["id"] for s in bb.STATES].index(case)
     breast = bb.Breast("op", bb.trunk_axis())
-    st = Standing(breast, state)
+    st = Standing(breast, state, min_rise=MIN_RISE)
     return breast, st, Front(st), Inverse(breast, state), state
 
 
@@ -804,8 +973,9 @@ def write_case(case: str) -> None:
     ch = breast.ch
     mound_ml = bb.mound_volumes(breast)[state + 1]
     design = design_for(case, st, front, inverse, mound_ml)
-    plan = techniques(st, front, inverse, design)
+    plan = techniques(st, front, inverse, design, CASES[case]["techniques"])
     cut = neurovascular(st, front, plan)
+    a_risen = st.ref_height > st.fold_height + 0.5  # point A above the projection of the fold (ptosis grade I)
     r4 = lambda values: [round(float(x), 4) for x in np.asarray(values).ravel()]  # noqa: E731
     model_of = lambda xs, lift=0.0: st.model(st.skin(np.atleast_2d(xs), lift))  # noqa: E731
     rest_of = lambda xs, lift=0.0: ch.to_model(st.skin(np.atleast_2d(xs), lift))  # noqa: E731
@@ -876,11 +1046,13 @@ def write_case(case: str) -> None:
             for n, (dx, ds) in enumerate(((1, 1), (1, -1))):
                 arm = np.array([xs + np.array([dx, ds]) * t for t in np.linspace(-3.5, 3.5, 5)])
                 add_tube(marking, f"mamo_{key}_ponto_{point_name}_{n}", f"{info['label']}: ponto {point_name}", rest_of(arm, MARK_LIFT + 0.2), COLORS["marking"], 0.6)
-            points_out[f"mamo:{key}:{point_name}"] = {"rest": r4(rest_of(xs, MARK_LIFT)[0] * MM), "label": point_name, "note": POINT_NOTES[point_name]}
+            notes = {**POINT_NOTES, **(RING_NOTES if info["skin"] == "ring" else {}), **({"A": A_RISEN} if a_risen else {})}
+            points_out[f"mamo:{key}:{point_name}"] = {"rest": r4(rest_of(xs, MARK_LIFT)[0] * MM), "label": point_name, "note": notes[point_name]}
         pedicle, resection = item["pedicle"], item["resection"]
-        structure(f"mamo-pedicle-{key}", f"Pedículo {info['pedicle']}", ch.to_model(pedicle.rest.mean(0)[None])[0])
-        add_piece(f"mamo-pedicle-{key}", f"mamo_{key}_pediculo", f"Pedículo {info['pedicle']}", pedicle, COLORS["pedicle"], 0.88)
-        structure(f"mamo-resection-{key}", f"Ressecção {info['resection']} (pedículo {info['pedicle']})", ch.to_model(resection.rest.mean(0)[None])[0])
+        if pedicle.volume > 0:
+            structure(f"mamo-pedicle-{key}", f"Pedículo {info['pedicle']}", ch.to_model(pedicle.rest.mean(0)[None])[0])
+            add_piece(f"mamo-pedicle-{key}", f"mamo_{key}_pediculo", f"Pedículo {info['pedicle']}", pedicle, COLORS["pedicle"], 0.88)
+        structure(f"mamo-resection-{key}", f"Ressecção {info['resection']}" + (f" (pedículo {info['pedicle']})" if info["pedicle"] else ""), ch.to_model(resection.rest.mean(0)[None])[0])
         add_piece(f"mamo-resection-{key}", f"mamo_{key}_resseccao", f"Ressecção {info['resection']}", resection, COLORS["resection"], 0.82)
         # measurements, as a tape on the standing skin
         t = np.linspace(0, 1, 160)[:, None]
@@ -908,9 +1080,14 @@ def write_case(case: str) -> None:
             m["horizontalMinusFoldMm"] = round(m["linesMm"]["horizontal medial"] + m["linesMm"]["horizontal lateral"] - m["linesMm"]["sulco"], 0)
         if "F" in pts:
             m["openingMm"] = m["linesMm"]["cúpula"]
+        if info["skin"] == "ring":
+            # skin taken between the areolotome's circle and the ring: above, below and beside the areola
+            m["openingMm"] = m["linesMm"]["anel"]
+            m["ringMarginsMm"] = {"top": round(float(item["nipple"][1]), 0), "bottom": RING_BELOW, "side": RING_SIDE}
         measures[technique] = m
         print(f"[{case}] {info['label']}: fúrcula–A {m['notchToAMm']:.0f} mm · subida do CAP {m['nippleRiseMm']:.0f} mm · linhas {m['linesMm']}")
-        print(f"   pedículo {info['pedicle']}: {pedicle.volume:.0f} mL ≈ {m['pedicleG']} g ({'fechada' if pedicle.closed else 'ABERTA'}, {len(pedicle.rest)} vértices, inverso {pedicle.residual:.3f} mm)")
+        if pedicle.volume > 0:
+            print(f"   pedículo {info['pedicle']}: {pedicle.volume:.0f} mL ≈ {m['pedicleG']} g ({'fechada' if pedicle.closed else 'ABERTA'}, {len(pedicle.rest)} vértices, inverso {pedicle.residual:.3f} mm)")
         print(f"   ressecção {info['resection']}: {resection.volume:.0f} mL ≈ {m['resectionG']} g = {m['resectionPct']}% do monte, Berrocal {m['berrocal']}; fica {m['leftMl']} mL ({'fechada' if resection.closed else 'ABERTA'}, {len(resection.rest)} vértices, inverso {resection.residual:.3f} mm)")
         print(f"   secciona: {', '.join(m['cut']) or '—'}")
 
@@ -921,7 +1098,7 @@ def write_case(case: str) -> None:
         "version": 2, "source": SOURCE, "case": case, "state": case, "side": "op",
         # the content hash keeps the service worker (cache first) from serving an older binary with newer data
         "bin": f"models/hybrid/{out_bin.name}?v={hashlib.sha1(out_bin.read_bytes()).hexdigest()[:10]}", "byteLength": offset,
-        "dimensions": {"areolaMm": AREOLA_D, "areolaNowMm": CASES[case]["areolaNowMm"], "limbMm": LIMB, "limbAngleDeg": T_ANGLE, "rimMm": RIM, "inferiorBaseMm": INFERIOR_BASE, "superiorThicknessMm": SUPERIOR_THICKNESS, "superomedialBaseMm": SUPEROMEDIAL_BASE, "leftOnFasciaMm": LEFT_ON_FASCIA, "flapMm": FLAP_THICKNESS, "densityGPerMl": DENSITY, "moundMl": round(mound_ml), "resultMl": CASES[case]["resultMl"]},
+        "dimensions": {"areolaMm": AREOLA_D, "areolaNowMm": CASES[case]["areolaNowMm"], "limbMm": LIMB, "limbAngleDeg": T_ANGLE, "rimMm": RIM, "inferiorBaseMm": INFERIOR_BASE, "superiorThicknessMm": SUPERIOR_THICKNESS, "superomedialBaseMm": SUPEROMEDIAL_BASE, "leftOnFasciaMm": LEFT_ON_FASCIA, "flapMm": FLAP_THICKNESS, "centralThicknessMm": CENTRAL_THICKNESS, "minRiseMm": MIN_RISE, "densityGPerMl": DENSITY, "moundMl": round(mound_ml), "resultMl": CASES[case]["resultMl"], "aRisenMm": round(st.rise) if a_risen else 0},
         "design": design,
         "techniques": {case_key(key, case): {**TECHNIQUES[key], "technique": key, "measurements": measures[key]} for key in plan},
         "points": points_out,

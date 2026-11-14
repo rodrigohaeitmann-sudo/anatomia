@@ -35,11 +35,20 @@ const viewCovers: Record<string, string> = {
 export const coverOf = (packId: string): string | null => covers[packId] ?? null;
 export const viewCoverOf = (packId: string, viewId: string): string | null => viewCovers[`${packId}/${viewId}`] ?? covers[packId] ?? null;
 
-export const groupIcons: Record<string, IconName> = { mama: "heart", axila: "target", retalhos: "layers", "parede-ombro": "cube" };
+/** Groups of the reduction mammaplasty, one per degree of ptosis (src/data/mammaplasty.ts). */
+const mammaplastyShort: Record<string, string> = {
+  "mamoplastia-ptose-1": "Redutora: ptose I",
+  "mamoplastia-ptose-2": "Redutora: ptose II",
+  "mamoplastia-ptose-3": "Redutora: ptose III",
+  "mamoplastia-g3": "Redutora: G3",
+  "mamoplastia-g4": "Redutora: G4",
+};
+const mammaplastyIcons = Object.fromEntries(Object.keys(mammaplastyShort).map((id) => [id, "scalpel" as IconName]));
+export const groupIcons: Record<string, IconName> = { mama: "heart", ...mammaplastyIcons, axila: "target", retalhos: "layers", "parede-ombro": "cube" };
 export const groupIcon = (groupId: string): IconName => groupIcons[groupId] ?? "book";
 
 /** Short title of each group for filter chips. */
-export const groupShort: Record<string, string> = { mama: "Mama", axila: "Axila", retalhos: "Retalhos", "parede-ombro": "Parede e ombro" };
+export const groupShort: Record<string, string> = { mama: "Mama", ...mammaplastyShort, axila: "Axila", retalhos: "Retalhos", "parede-ombro": "Parede e ombro" };
 
 export const packEntry = (packId: string) => allPacks.find((entry) => entry.pack.id === packId) ?? null;
 export const viewCount = (group: PackGroup) => group.packs.reduce((sum, pack) => sum + pack.views.length, 0);

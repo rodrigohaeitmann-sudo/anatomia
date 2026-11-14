@@ -4,7 +4,7 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
-import { largeBreastPacks, mammaplastyPack, mammaplastyStepPacks } from "@/data/mammaplasty";
+import { mammaplastyGroups, mammaplastyOverviewPack } from "@/data/mammaplasty";
 import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
@@ -305,8 +305,8 @@ export const packGroups: PackGroup[] = [
           },
         ],
       },
-      mammaplastyPack,
-      ...mammaplastyStepPacks,
+      // which technique for which breast; the techniques themselves are in the groups by degree, after this one
+      mammaplastyOverviewPack,
       {
         id: "vascular-mama",
         title: "Irrigação e inervação da mama",
@@ -540,12 +540,8 @@ export const packGroups: PackGroup[] = [
       },
     ],
   },
-  {
-    id: "mamoplastia-g3-g4",
-    title: "Mamoplastia em G3 e G4",
-    description: "Mamas com ptose grau III e hipertrofia grau III (G3) ou gigantomastia (G4) de Berrocal Revueltas: marcação, pedículos, ressecção e passo a passo das três técnicas, com os vasos e nervos alongados.",
-    packs: largeBreastPacks,
-  },
+  // reduction mammaplasty: one group per degree of ptosis (I, II, III) and per hypertrophy (G3, G4)
+  ...mammaplastyGroups,
   {
     id: "axila",
     title: "Axila",

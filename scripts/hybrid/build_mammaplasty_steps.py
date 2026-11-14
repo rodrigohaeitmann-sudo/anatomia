@@ -83,13 +83,40 @@ SCHEDULES = {
         ("vertical", "Sutura vertical", {"global": 0.65, "deep": 1.0, "T": 0.0, "vertical": 1.0, "fold": 0.0, "areola": 0.7}),
         ("areola", "Sutura da aréola", ONE),
     ],
+    # periareolar: the ring is only de-epithelialised, the wedge leaves through its lower half, the gland is closed and
+    # the purse-string suture brings the ring to the areola
+    "periareolar": [
+        ("marcacao", "Marcação", ZERO),
+        ("incisao", "Desepitelização do anel", ZERO),
+        ("resseccao", "Ressecção em cunha", ZERO),
+        ("transposicao", "Montagem da glândula", ZERO),
+        ("round-block", "Cerclagem (round block)", {"global": 0.55, "deep": 1.0, "T": 0.0, "vertical": 0.0, "fold": 0.0, "areola": 0.55}),
+        ("areola", "Sutura da aréola", ONE),
+    ],
+    # free nipple graft: the graft is taken at the incision, the lower pole is amputated, the flaps are closed as an
+    # inverted T and the graft is laid on a de-epithelialised bed at the apex of the cone (no transposition)
+    "thorek": [
+        ("marcacao", "Marcação", ZERO),
+        ("incisao", "Incisão e coleta do enxerto", ZERO),
+        ("resseccao", "Amputação do polo inferior", ZERO),
+        ("ponto-t", "Ponto em T", {"global": 0.3, "deep": 0.6, "T": 1.0, "vertical": 0.45, "fold": 0.45, "areola": 0.3}),
+        ("vertical", "Sutura vertical", {"global": 0.55, "deep": 0.9, "T": 1.0, "vertical": 1.0, "fold": 0.65, "areola": 0.55}),
+        ("sulco", "Sutura no sulco: pele fechada", ONE),
+        ("leito", "Leito do enxerto", ONE),
+        ("enxerto", "Enxertia do complexo areolopapilar", ONE),
+    ],
 }
-# lines of the marking that border the skin that stays, by suture group
+SCHEDULES["lejour"] = SCHEDULES["vertical"]  # same skin pattern and closure, another pedicle
+SCHEDULES["orlando"] = SCHEDULES["wise"]
+# lines of the marking that border the skin that stays, by suture group, for each skin pattern (bm.TECHNIQUES[...]["skin"])
 LINE_GROUPS = {
-    "pitanguy": {"edge": "areola", "med": "vertical", "lat": "vertical", "bd": "fold", "ce": "fold"},
-    "wise": {"arc": "areola", "med": "vertical", "lat": "vertical", "bd": "fold", "ce": "fold"},
-    "vertical": {"dome": "areola", "med": "vertical", "lat": "vertical"},
+    "t": {"edge": "areola", "med": "vertical", "lat": "vertical", "bd": "fold", "ce": "fold"},
+    "keyhole": {"arc": "areola", "med": "vertical", "lat": "vertical", "bd": "fold", "ce": "fold"},
+    "dome": {"dome": "areola", "med": "vertical", "lat": "vertical"},
+    "ring": {"ring": "areola"},
 }
+OPENING_LINE = {"t": "edge", "keyhole": "arc", "dome": "dome", "ring": "ring"}  # the line sutured round the areola
+FLAP_TECHNIQUES = ("wise", "orlando", "thorek")  # what stays beside the pattern is a skin flap, not a pillar
 # the areola of each case on the standing skin, stretched by the hypertrophy: bm.CASES[case]["areolaNowMm"]
 AREOLA_NEW = bm.AREOLA_D  # mm, the areolotome: diameter of the new areola
 INSET = 9.0  # mm: in Pitanguy's technique the nipple-areola complex (its nipple stands 7.5 mm proud) and the pedicle
@@ -100,7 +127,7 @@ PILLAR = 50.0  # mm, the vertical pillar of the result: lower border of the areo
 NIPPLE_ABOVE_FOLD = 15.0  # mm, the new nipple in the standing result: a little above point A, the projection of the fold
 # mm of trunk skin round the breast outline over which the result fades into the skin that stays (the large breasts
 # change their outline more: a wider skirt)
-SKIRTS = {"ptose-2": 15.0, "g3": 25.0, "g4": 25.0}
+SKIRTS = {"ptose-1": 15.0, "ptose-2": 15.0, "ptose-3": 20.0, "g3": 25.0, "g4": 25.0}
 AREOLA_R = 13.2  # mm, the areola of the model in the rest chart (its radius on the skin)
 BURY = bm.FLAP_THICKNESS  # the pedicle goes this deep under the flaps, except under the areola
 SCAR_RADIUS = 0.55
@@ -111,7 +138,9 @@ OUT_OFFSET = {"radial": 30.0, "medial": 65.0, "down": 95.0}  # for the specimen 
 OUT_REFERENCE_ML = 180.0  # the specimen those offsets were made for (they grow with its cube root)
 # the lower pole of the result may be shortened down to this share of its length in the map (ptosis II: 40%; the long
 # lower poles of G3 and G4 need more to bring the vertical pillar to PILLAR)
-MIN_LOWER_POLE = {"ptose-2": 0.4, "g3": 0.12, "g4": 0.12}
+MIN_LOWER_POLE = {"ptose-1": 0.4, "ptose-2": 0.4, "ptose-3": 0.15, "g3": 0.12, "g4": 0.12}
+# mm: a free graft waits here (forwards, laterally and up from the breast) between its harvest and the grafting
+GRAFT_ASIDE = {"radial": 60.0, "lateral": 75.0, "up": 55.0}
 COLORS = {
     "skin": "#e7b8a0", "excised": "#e9a27f", "dermis": "#d97a82", "nac": "#9b5a47", "areola-ring": "#b07a64",
     "pedicle": "#3fae6b", "resection": "#e08a2e", "pillar-medial": "#4f7fd6", "pillar-lateral": "#9a6fd6", "scar": "#7d2f32",
@@ -165,8 +194,11 @@ def smooth01(x):
 # --------------------------------------------------------------------------------------------------
 class Technique:
     def __init__(self, kind: str, case: str, item: dict, st, front: bm.Front, inverse: bm.Inverse, rest: mr.Rest, mound_ml: float) -> None:
-        # kind: the technique (pitanguy, wise, vertical); key: its name in this case (the names of meshes and structures)
+        # kind: the technique (bm.TECHNIQUES); skin: its skin pattern; key: its name in this case (the names of meshes and
+        # structures); graft: the nipple-areola complex travels as a free graft (no pedicle)
         self.kind, self.case, self.key = kind, case, bm.case_key(kind, case)
+        self.skin, self.graft = bm.TECHNIQUES[kind]["skin"], bool(item.get("graft"))
+        self.seam_top = None
         self.item, self.st, self.front, self.inverse, self.rest = item, st, front, inverse, rest
         self.breast = st.b
         self.ch = st.b.ch
@@ -179,8 +211,9 @@ class Technique:
         self.regions_and_lines(lines)
         self.skirt = SKIRTS[case]
         self.patch = mr.SkinPatch(rest, [("nac", Point(0, 0).buffer(self.areola_r + 0.6, 64)), ("dermis", self.dermis), ("excised", self.pattern), ("stay", None)], self.named, skirt=self.skirt)
-        self.closure = mr.Closure(self.patch, ("stay",), self.targets, self.areola_r, seam="seam" if "seam" in self.named else None)
-        rho = np.hypot(*rest.iso(item["pedicle"].rest[:, :2]).T)
+        self.closure = mr.Closure(self.patch, ("stay",), self.targets, self.areola_r, seam="seam" if "seam" in self.named else None, seam_top=self.seam_top)
+        pedicle_rest = item["pedicle"].rest
+        rho = np.hypot(*rest.iso(pedicle_rest[:, :2]).T) if len(pedicle_rest) else np.zeros(1)
         self.reach = max(float(np.percentile(rho, 98)), self.areola_r + 10)  # how far the pedicle reaches from the nipple
         self.field = self.displacement_field()
 
@@ -195,8 +228,11 @@ class Technique:
     def solve_result(self, volume_ml: float) -> tuple[dict, float]:
         """The result state with the remaining volume, the nipple NIPPLE_ABOVE_FOLD above the fold and a vertical pillar
         (nipple to fold on the skin, less the radius of the new areola) of PILLAR: the length of the lower pole is solved
-        for it (secant)."""
-        target = PILLAR + AREOLA_NEW / 2
+        for it (secant). A periareolar closure takes no skin between the ring and the fold: its pillar is the skin from
+        the lower border of the ring to the fold, as it is on the standing breast."""
+        pillar = PILLAR if self.skin != "ring" else float(self.st.fold_s(0.0)) - float(self.item["points"]["I"][1])
+        self.pillar = pillar
+        target = pillar + AREOLA_NEW / 2
         g0, g1 = 1.0, 0.8
         l0 = self.nipple_to_fold(mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g0))
         result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g1)
@@ -232,8 +268,21 @@ class Technique:
     # ---- regions of the skin, in the isotropic rest chart -------------------------------------------------------
     def regions_and_lines(self, lines: dict) -> None:
         rest, item = self.rest, self.item
-        key = self.kind
-        if key == "wise":
+        key = self.skin
+        if key == "ring":
+            # periareolar: the whole ring is de-epithelialised and closes round the areola; below it the skin that stays
+            # is cut along the meridian only for the solution (a seam, as below the vertical pattern)
+            ring = lines["anel"]
+            ring[-1] = ring[0]
+            self.pattern = Polygon(ring).buffer(0)
+            self.dermis = self.pattern
+            bottom = np.array([0.0, float(np.interp(self.st.um, self.st.us, self.st.V[:, -1]))])
+            seam = np.array([[0.0, float(ring[0, 1])], bottom + [0, 0.5]])
+            self.seam_top = float(abs(ring[0, 1]))
+            self.named = {"ring": ring, "seam": seam}
+            self.targets = {"ring": lambda f: (-np.pi + 2 * np.pi * f, 0.0)}
+            self.fold_ends = None
+        elif key == "keyhole":
             arc, med, lat, bd, ce = (lines[k] for k in ("fechadura", "ramo medial", "ramo lateral", "horizontal medial", "horizontal lateral"))
             bd[-1], ce[-1] = rest.snap(bd[-1]), rest.snap(ce[-1])
             fold = rest.outline_between(ce[-1], bd[-1], below=True)
@@ -248,13 +297,16 @@ class Technique:
                 "ce": mr.horizontal_target(rest, 1, ce, ce[-1], blend=(0.5, 1.5)),
             }
             self.fold_ends = (bd[-1], ce[-1])
-        elif key == "pitanguy":
+        elif key == "t":
             med, lat, bd, ce = (lines[k] for k in ("ramo medial", "ramo lateral", "horizontal medial", "horizontal lateral"))
             bd[-1], ce[-1] = rest.snap(bd[-1]), rest.snap(ce[-1])
             fold = rest.outline_between(ce[-1], bd[-1], below=True)
             self.pattern = Polygon(np.vstack([lat, ce, fold[1:-1], bd[::-1], med[::-1]])).buffer(0)
-            # the superior pedicle: from the areola up to the new areola site round A, de-epithelialised
+            # the superior pedicle: from the areola up to the new areola site round A, de-epithelialised (free graft: only
+            # the site round A, outside the pattern: the bed of the graft)
             self.dermis = front_to_iso(self.front, self.inverse, rest, biggest(item["footprint"]))
+            if self.graft:
+                self.dermis = biggest(self.dermis.difference(self.pattern).buffer(0))
             edge = biggest(self.dermis.exterior.difference(self.pattern.buffer(1e-3)))
             edge = np.array(edge.coords)
             if edge[0, 0] > edge[-1, 0]:
@@ -375,7 +427,7 @@ class Technique:
 # --------------------------------------------------------------------------------------------------
 # pillars: the tissue that stays under the skin of the lower pole, medial and lateral of the pattern
 # --------------------------------------------------------------------------------------------------
-def pillars(key: str, item: dict, front: bm.Front, inverse: bm.Inverse, st) -> dict:
+def pillars(flaps: bool, item: dict, front: bm.Front, inverse: bm.Inverse, st) -> dict:
     a_uv = item["a"]
     nipple_u = float(front.project(st.chart_of_rest(st.um, 0.0)[None])[0, 0])
     lower = front.domain.intersection(box(front.u0 - 50, front.v0 - 50, front.u0 + 500, float(a_uv[1])))
@@ -384,7 +436,7 @@ def pillars(key: str, item: dict, front: bm.Front, inverse: bm.Inverse, st) -> d
 
     def bottom(uv):
         floor = front.bottom_full(uv)
-        if key == "wise":
+        if flaps:
             return np.maximum(floor, front.top(uv) - bm.FLAP_THICKNESS)
         cover = np.full(len(uv), -np.inf)
         for region, top, _ in resection.parts:
@@ -416,6 +468,8 @@ class Writer:
     def add(self, name: str, structure: str, label: str, color: str, opacity: float, tissue: str, faces: np.ndarray, frames: list) -> None:
         assert len(frames) == self.count, name
         faces = np.asarray(faces)
+        if not len(faces):
+            return  # a part this technique does not have (no excised skin in a periareolar pattern, say)
         used = np.unique(faces)
         remap = -np.ones(max(int(faces.max()) + 1, 1), int)
         remap[used] = np.arange(len(used))
@@ -549,6 +603,17 @@ def polar_faces(rings: int, n: int, centre: bool) -> np.ndarray:
     return np.array(faces)
 
 
+def sector_faces(rings: int, rays: int) -> np.ndarray:
+    """Triangles of a polar sector: centre vertex (index 0), then `rings` rings of `rays` vertices from one border ray
+    to the other (not joined: the two border rays meet only when the sector is closed into a cone)."""
+    faces = [[0, 1 + j, 2 + j] for j in range(rays - 1)]
+    for r in range(rings - 1):
+        a, b = 1 + r * rays, 1 + (r + 1) * rays
+        for j in range(rays - 1):
+            faces += [[a + j, a + j + 1, b + j], [a + j + 1, b + j + 1, b + j]]
+    return np.array(faces)
+
+
 def nac_meshes(breast: bb.Breast, keep: float = 0.12):
     """The real nipple and tubercles of the operated side, simplified, in rest model space (mm). The areola itself is
     drawn by the sequence (it is larger in this case and the areolotome reduces it)."""
@@ -599,7 +664,7 @@ def staged_skin(tech: Technique, k0: np.ndarray, final: np.ndarray, schedule: li
     disp = final - k0
     verts = closure.vertices
     group = np.full(n, "", object)
-    for name, g in LINE_GROUPS[tech.kind].items():
+    for name, g in LINE_GROUPS[tech.skin].items():
         if name in patch.lines:
             ids, _ = patch.on_line(name)
             group[ids] = g
@@ -658,7 +723,7 @@ def sutures(tech: Technique, skin: list[np.ndarray], disc: list[np.ndarray], rim
     patch, closure = tech.patch, tech.closure
     outline_ids = np.nonzero(patch.on_outline)[0]
     out = {}
-    tracks = {name: line_track(patch, name) for name in LINE_GROUPS[tech.kind]}
+    tracks = {name: line_track(patch, name) for name in LINE_GROUPS[tech.skin]}
 
     def outline_point(theta: float) -> int:
         goal = closure.polar_to_iso(theta, 1.0)
@@ -676,9 +741,10 @@ def sutures(tech: Technique, skin: list[np.ndarray], disc: list[np.ndarray], rim
         ids, _ = tracks[name]
         return [frame[ids] for frame in skin]
 
-    # vertical: the two limbs meet along the meridian, fraction to fraction
-    stitches = [(on_line("med", f), on_line("lat", f)) for f in spaced("med")]
-    out["vertical"] = (stitches, [line_frames("med"), line_frames("lat")])
+    # vertical: the two limbs meet along the meridian, fraction to fraction (a periareolar ring has none)
+    if "med" in tracks:
+        stitches = [(on_line("med", f), on_line("lat", f)) for f in spaced("med")]
+        out["vertical"] = (stitches, [line_frames("med"), line_frames("lat")])
     if tech.fold_ends is not None:
         bottom = outline_point(np.pi)
         b_end, c_end = on_line("med", 1.0), on_line("lat", 1.0)
@@ -694,7 +760,7 @@ def sutures(tech: Technique, skin: list[np.ndarray], disc: list[np.ndarray], rim
                     lip.append(v)
             out[side] = (stitches, [line_frames(name), [frame[np.array(lip)] for frame in skin]])
     # areola: the opening of the pattern round the border of the new areola
-    opening = {"pitanguy": "edge", "wise": "arc", "vertical": "dome"}[tech.kind]
+    opening = OPENING_LINE[tech.skin]
     stitches = []
     for f in np.arange(0, 1, 1 / 16):
         theta = -np.pi + 2 * np.pi * f
@@ -743,7 +809,8 @@ def neurovascular_tracks(tech: Technique, item: dict, pillar_pieces: dict, anato
     key = tech.kind
     ids = [fid for fid, _, _ in schedule]
     fr = [f for _, _, f in schedule]
-    t2, t3 = ids.index("resseccao"), ids.index("transposicao")
+    t2 = ids.index("resseccao")
+    t3 = ids.index("transposicao") if "transposicao" in ids else t2  # free graft: nothing is transposed
     tissue_of = {m["name"]: m["tissue"] for m in anatomy["meshes"]}
 
     def smooth(x: np.ndarray, width: int = 7) -> np.ndarray:
@@ -843,6 +910,17 @@ KINDS = {
     "disc-ring": "Marcação da nova aréola ({label})",
     "scars": "Cicatrizes ({label})",
 }
+# the parts that mean something else with a free graft or in a periareolar pattern
+GRAFT_KINDS = {
+    "dermis": "Leito do enxerto ({label})",
+    "nac": "Enxerto do complexo areolopapilar ({label})",
+    "disc-ring": "Marcação do leito do enxerto ({label})",
+    "sutures-areola": "Sutura do enxerto ({label})",
+}
+RING_KINDS = {
+    "dermis": "Anel desepitelizado ({label})",
+    "sutures-areola": "Cerclagem e sutura da aréola ({label})",
+}
 
 
 def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: float, nacs: list, anatomy: dict, report: dict, before: dict, notch: np.ndarray):
@@ -855,8 +933,11 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     ids = [fid for fid, _, _ in schedule]
     fr = [f for _, _, f in schedule]
     nf = len(schedule)
-    t2, t3 = ids.index("resseccao"), ids.index("transposicao")
-    pillar_word = "Retalho" if kind == "wise" else "Pilar"
+    t2 = ids.index("resseccao")
+    t3 = ids.index("transposicao") if "transposicao" in ids else t2  # free graft: nothing is transposed
+    t_harvest = ids.index("incisao")
+    graft = tech.graft
+    pillar_word = "Retalho" if kind in FLAP_TECHNIQUES else "Pilar"
     print(f"{info['label']}: pele {len(patch.iso)} vértices; aréola nova {2 * tech.areola_r:.1f} na carta; fechamento: {closure.unassigned} sem condição, {closure.flipped} triângulos invertidos (degenerados no sulco)")
     print(f"   resultado: descida {tech.result['descent']} mm, crescimento {tech.result['growth']}")
     w = Writer(nf)
@@ -890,6 +971,15 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     def static(points):
         return [points] * nf
 
+    # where a free graft waits between its harvest and the grafting: forwards, laterally and up from the breast
+    nipple_now = ch.to_model(bb.deform(breast, ch.nipple[None])[st.k])[0]
+    graft_dir = radial_of(ch, nipple_now) * GRAFT_ASIDE["radial"] + np.array([-ch.s, 0.0, 0.0]) * GRAFT_ASIDE["lateral"] + np.array([0.0, GRAFT_ASIDE["up"], 0.0])
+
+    def graft_like(k0, final):
+        """Free graft: lifted off at the incision, kept aside while the breast is amputated and closed, laid on its bed
+        in the last frame."""
+        return [k0 if i < t_harvest else (final if i == nf - 1 else k0 + graft_dir) for i in range(nf)]
+
     # ---- skin -------------------------------------------------------------------------------------------------
     k0 = tech.standing(patch.rest_chart)
     uv_final = patch.rest_uv.copy()
@@ -907,13 +997,22 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     skin = staged_skin(tech, k0, stay_final, schedule)
     w.add(f"mamo_{key}_step_skin", sid("skin"), "Pele que fica", COLORS["skin"], 1.0, "skin", patch.faces("stay", "skirt"), skin)
     nac_final = tech.skin_final(patch.rest_chart)
-    w.add(f"mamo_{key}_step_nac_skin", sid("skin"), "Pele sob a aréola", COLORS["skin"], 1.0, "skin", patch.faces("nac"), nac_like(patch.rest_chart, k0, nac_final))
-    out_dir = out_direction(ch, k0[np.unique(patch.faces("excised"))].mean(0), st, item["resection"].volume)
+    excised_ids = np.unique(patch.faces("excised"))
+    res_k0 = ch.to_model(item["resection"].standing)
+    # where the specimen is put aside (a periareolar pattern excises no skin: the wedge alone shows the way)
+    out_dir = out_direction(ch, (k0[excised_ids] if len(excised_ids) else res_k0).mean(0), st, item["resection"].volume)
+    if graft:
+        # free graft: the skin the graft was taken from leaves with the specimen
+        w.add(f"mamo_{key}_step_nac_skin", sid("excised"), "Área doadora do enxerto", COLORS["skin"], 1.0, "skin", patch.faces("nac"), removed(k0, out_dir))
+    else:
+        w.add(f"mamo_{key}_step_nac_skin", sid("skin"), "Pele sob a aréola", COLORS["skin"], 1.0, "skin", patch.faces("nac"), nac_like(patch.rest_chart, k0, nac_final))
     # skin coloured: the views of the incision onwards tint them (excised skin, de-epithelialised dermis)
     w.add(f"mamo_{key}_step_excised", sid("excised"), "Pele ressecada", COLORS["skin"], 1.0, "skin", patch.faces("excised"), removed(k0, out_dir))
-    # the dermis lies on the pedicle: a little off its surface, or the two would flicker into each other
+    # the dermis lies on the pedicle: a little off its surface, or the two would flicker into each other (the bed of a
+    # free graft is drawn further on, as a sector that closes into a cone)
     dermis_faces = patch.faces("dermis")
-    w.add(f"mamo_{key}_step_dermis", sid("dermis"), "Derme desepitelizada do pedículo", COLORS["skin"], 1.0, "skin", dermis_faces, [outward(f, dermis_faces, 0.8) for f in pedicle_like(patch.rest_chart, k0)])
+    if not graft:
+        w.add(f"mamo_{key}_step_dermis", sid("dermis"), "Derme desepitelizada do pedículo", COLORS["skin"], 1.0, "skin", dermis_faces, [outward(f, dermis_faces, 0.8) for f in pedicle_like(patch.rest_chart, k0)])
 
     # ---- the areola: the areolotome marks the new one on the larger areola of the case ----------------------------
     nipple = st.chart_of_rest(st.um, 0.0)
@@ -933,7 +1032,7 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     uv = rest.uv(final_iso)
     disc_chart = np.c_[uv, st.skin_r(uv[:, 0], uv[:, 1]) + lift_areola]
     disc_final = tech.skin_final(disc_chart)
-    disc = nac_like(disc_chart, disc_k0, disc_final)
+    disc = graft_like(disc_k0, disc_final) if graft else nac_like(disc_chart, disc_k0, disc_final)
     disc_faces = polar_faces(6, n, centre=True)
     w.add(f"mamo_{key}_step_areola", sid("nac"), "Nova aréola", COLORS["nac"], 1.0, "areola", disc_faces, disc)
     rim = 1 + 5 * n + np.arange(n)
@@ -942,25 +1041,27 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     q_ring = st.skin(ring_xs, lift_areola)
     ring_k0 = st.model(q_ring)
     ring_faces = polar_faces(4, n, centre=False)
+    # the areola beyond the areolotome is de-epithelialised with the pedicle (free graft: it leaves with the specimen)
     w.add(f"mamo_{key}_step_areola_ring", sid("areola-ring"), "Aréola além do areolótomo", COLORS["areola-ring"], 1.0, "areola", ring_faces,
-          [outward(f, ring_faces, 0.8) for f in pedicle_like(q_ring, ring_k0)])
+          [outward(f, ring_faces, 0.8) for f in (removed(ring_k0, out_dir) if graft else pedicle_like(q_ring, ring_k0))])
     tome = st.model(st.skin(grid[5], 0.6))
     v_, f_ = tube_mesh(np.vstack([tome, tome[:1]]), 0.5, 6)
     w.add(f"mamo_{key}_step_areolotome", sid("areolotome"), "Areolótomo", COLORS["marking"], 1.0, "marking", f_, static(v_))
     for name, pos, idx in nacs:
         q = ch.to_chart(pos)
         a = ch.to_model(bb.deform(breast, q)[st.k])
-        w.add(f"mamo_{key}_step_{name.split('_')[-2]}", sid("nac"), "Complexo areolopapilar", COLORS["nac"], 1.0, "areola", idx, nac_like(q, a, tech.skin_final(q)))
+        w.add(f"mamo_{key}_step_{name.split('_')[-2]}", sid("nac"), "Complexo areolopapilar", COLORS["nac"], 1.0, "areola", idx, graft_like(a, tech.skin_final(q)) if graft else nac_like(q, a, tech.skin_final(q)))
 
     # ---- pieces -------------------------------------------------------------------------------------------------
     ped, res = item["pedicle"], item["resection"]
-    ped_k0 = ch.to_model(ped.standing)
-    pedicle_frames = pedicle_like(ped.rest, ped_k0)
-    w.add(f"mamo_{key}_step_pedicle", sid("pedicle"), f"Pedículo {info['pedicle']}", COLORS["pedicle"], 0.9, "piece", ped.faces, pedicle_frames)
-    res_k0 = ch.to_model(res.standing)
+    pedicle_frames = None
+    if ped.volume > 0:
+        ped_k0 = ch.to_model(ped.standing)
+        pedicle_frames = pedicle_like(ped.rest, ped_k0)
+        w.add(f"mamo_{key}_step_pedicle", sid("pedicle"), f"Pedículo {info['pedicle']}", COLORS["pedicle"], 0.9, "piece", ped.faces, pedicle_frames)
     w.add(f"mamo_{key}_step_resection", sid("resection"), f"Ressecção {info['resection']}", COLORS["resection"], 0.9, "piece", res.faces, removed(res_k0, out_dir))
     volumes, pillar_frames = {}, {}
-    pillar_pieces = pillars(kind, item, front, inverse, st)
+    pillar_pieces = pillars(kind in FLAP_TECHNIQUES, item, front, inverse, st)
     for side, piece in pillar_pieces.items():
         k0p = ch.to_model(piece.standing)
         finalp = tech.final(piece.rest, "pillar")
@@ -1010,6 +1111,39 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
         extra_points["cover"] = [round(float(x) * MM, 5) for x in frames[0][1 + 2 * n + n // 4]]
         extra_points["cover-ring"] = [round(float(x) * MM, 5) for x in v_[len(v_) // 4]]
 
+    # ---- free graft: its bed, the skin round point A outside the pattern, closes into the apex of the cone --------------
+    if graft:
+        e_ids, e_frac = line_track(patch, "edge")
+        rays, rings_ = n + 1, 6
+        t_ray = np.linspace(0, 1, rays)
+        headings = -bm.T_ANGLE / 2 - (360 - bm.T_ANGLE) * t_ray  # from the medial limb, over the top, to the lateral one
+        site_r = AREOLA_NEW / 2
+        ray_points = [st.march(np.array([0.0, 0.0]), heading, site_r) for heading in headings]
+        bed_xs = [np.array([0.0, 0.0])]
+        for k in range(1, rings_ + 1):
+            bed_xs += [ray[min(int(round(site_r * k / rings_)), len(ray) - 1)] for ray in ray_points]
+        bed_k0 = st.model(st.skin(np.array(bed_xs), 0.25))
+        rho_b = np.r_[0.0, np.repeat(np.arange(1, rings_ + 1) / rings_, rays)]
+        th_b = np.r_[0.0, np.tile(-np.pi + 2 * np.pi * t_ray, rings_)]
+        b_uv = rest.uv(np.c_[rho_b * tech.areola_r * np.sin(th_b), rho_b * tech.areola_r * np.cos(th_b)])
+        bed_final = tech.skin_final(np.c_[b_uv, st.skin_r(b_uv[:, 0], b_uv[:, 1]) + 0.25])
+        rim_b = 1 + (rings_ - 1) * rays + np.arange(rays)
+        ray_of = np.r_[0, np.tile(np.arange(rays), rings_)]
+        frames = []
+        for i, f in enumerate(fr):
+            blend = bed_k0 + f["areola"] * (bed_final - bed_k0)
+            edge_now = skin[i][e_ids]
+            edge_at = np.stack([np.interp(t_ray, e_frac, edge_now[:, c]) for c in range(3)], 1)
+            # the border of the bed is the edge of the skin that stays: it follows that edge in every frame
+            frames.append(blend + rho_b[:, None] * (edge_at[ray_of] - blend[rim_b][ray_of]))
+        w.add(f"mamo_{key}_step_bed", sid("dermis"), "Leito do enxerto", COLORS["skin"], 1.0, "skin", sector_faces(rings_, rays), frames)
+        ring_theta = np.linspace(0, 2 * np.pi, 97)
+        ring_uv = rest.uv(np.c_[0.97 * tech.areola_r * np.sin(ring_theta), 0.97 * tech.areola_r * np.cos(ring_theta)])
+        v_, f_ = tube_mesh(tech.skin_final(np.c_[ring_uv, st.skin_r(ring_uv[:, 0], ring_uv[:, 1]) + 0.7]), 0.5, 6)
+        w.add(f"mamo_{key}_step_bed_ring", sid("disc-ring"), "Marcação do leito do enxerto", COLORS["marking"], 1.0, "marking", f_, static(v_))
+        extra_points["bed"] = [round(float(x) * MM, 5) for x in frames[0][1 + 2 * rays + rays // 2]]
+        extra_points["cover-ring"] = [round(float(x) * MM, 5) for x in v_[len(v_) // 4]]
+
     # ---- sutures --------------------------------------------------------------------------------------------------
     seams = sutures(tech, skin, disc, rim, rim_theta, pillar_frames)
     for group, (stitches, edges) in seams.items():
@@ -1028,7 +1162,12 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
             arrows.append({"frame": frame, "from": [round(float(x) * MM, 5) for x in a], "to": [round(float(x) * MM, 5) for x in b], "color": color})
 
     arrow(t2, res_k0.mean(0), res_k0.mean(0) + out_dir, COLORS["resection"])
-    arrow(t3, disc[t3 - 1][0], disc[t3][0], COLORS["nac"])
+    if graft:
+        # the graft is lifted off at the incision and laid on its bed in the last frame
+        arrow(t_harvest, disc_k0[0], disc[t_harvest][0], COLORS["nac"])
+        arrow(nf - 1, disc[nf - 2][0], disc[nf - 1][0], COLORS["nac"])
+    else:
+        arrow(t3, disc[t3 - 1][0], disc[t3][0], COLORS["nac"])
     for i in range(t3 + 1, nf):
         for side, frames_ in pillar_frames.items():
             arrow(i, frames_[i - 1].mean(0), frames_[i].mean(0), COLORS[f"pillar-{side}"])
@@ -1096,7 +1235,8 @@ def anchors(tech: Technique, writer: Writer) -> dict:
         t = p.mean(0) if target is None else target
         return [round(float(x) * MM, 5) for x in p[np.argmin(np.linalg.norm(p - t, axis=1))]]
 
-    out = {name: nearest(f"mamo_{key}_step_{name}") for name in ("pedicle", "resection", "excised", "dermis")}
+    # a technique may lack a part (no pedicle with a free graft, no excised skin in a periareolar pattern)
+    out = {name: nearest(f"mamo_{key}_step_{name}") for name in ("pedicle", "resection", "excised", "dermis") if f"mamo_{key}_step_{name}" in by_name}
     disc = by_name[f"mamo_{key}_step_areola"]["full"]
     out["nac"] = [round(float(x) * MM, 5) for x in disc[0][1 + 48 * 3]]
     ring = by_name[f"mamo_{key}_step_areola_ring"]["full"][0]
@@ -1128,7 +1268,7 @@ def write_case(case: str) -> None:
     breast, st, front, inverse, state = bm.case_setup(case)
     rest = mr.Rest(st)
     # the very pieces of build_mammaplasty.py: same design (pedicle thinning, undermining) for this case
-    plan = bm.techniques(st, front, inverse, bm.load_design(case))
+    plan = bm.techniques(st, front, inverse, bm.load_design(case), bm.CASES[case]["techniques"])
     mound_ml = bb.mound_volumes(breast)[state + 1]
     model = json.loads(bb.OUT_JSON.read_text())
     before = model["measurements"]["op"][case]
@@ -1158,10 +1298,11 @@ def write_case(case: str) -> None:
             "points": {**anchors(tech, writer), **extra_points},
             "meshes": records,
         }
-        words = {"label": info["label"], "pedicle": info["pedicle"], "resection": info["resection"], "pillar": "Retalho" if kind == "wise" else "Pilar"}
+        words = {"label": info["label"], "pedicle": info["pedicle"], "resection": info["resection"], "pillar": "Retalho" if kind in FLAP_TECHNIQUES else "Pilar"}
+        labels = {**KINDS, **(GRAFT_KINDS if tech.graft else {}), **(RING_KINDS if tech.skin == "ring" else {})}
         for mesh in writer.meshes:
             part = mesh["structure"][len("mamo-step-"): -len(key) - 1]
-            structures.setdefault(mesh["structure"], {"label": KINDS[part].format(**words), "group": "Mamoplastia", "visible": False, "labelAnchor": [round(float(x) * MM, 4) for x in mesh["full"][0].mean(0)], "meshNames": []})["meshNames"].append(mesh["name"])
+            structures.setdefault(mesh["structure"], {"label": labels[part].format(**words), "group": "Mamoplastia", "visible": False, "labelAnchor": [round(float(x) * MM, 4) for x in mesh["full"][0].mean(0)], "meshNames": []})["meshNames"].append(mesh["name"])
             manifest.append({"name": mesh["name"], "structure": mesh["structure"], "tissue": mesh["tissue"], "source": bm.SOURCE, "sourceName": mesh["label"], "license": bm.LICENSE, "triangles": int(len(mesh["faces"])), "color": mesh["color"], "opacity": mesh["opacity"]})
         if figures_dir is not None:
             review(tech, writer, figures_dir)
@@ -1193,6 +1334,8 @@ def scar_lines(tech: Technique) -> list[tuple[str, np.ndarray]]:
     circle = np.c_[r * np.sin(np.linspace(0, 2 * np.pi, 120)), r * np.cos(np.linspace(0, 2 * np.pi, 120))]
     fold_bottom = np.array([0.0, float(np.interp(tech.st.um, tech.st.us, tech.st.V[:, -1]))])
     out = [("Cicatriz periareolar", circle)]
+    if tech.skin == "ring":
+        return out  # the only scar of a periareolar pattern
     if tech.fold_ends is not None:
         out.append(("Cicatriz vertical", np.c_[np.zeros(60), np.linspace(-r, fold_bottom[1] + 0.5, 60)]))
         d, e = tech.fold_ends
