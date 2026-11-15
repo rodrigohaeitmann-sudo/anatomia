@@ -4,7 +4,7 @@
  * estruturas reais e, quando útil, um corte, um espaço cirúrgico, uma manipulação rígida ou uma
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
-import { mammaplastyGroups, mammaplastyOverviewPack } from "@/data/mammaplasty";
+import { mammaplastyFolder, mammaplastyGroups, mammaplastyOverviewPack } from "@/data/mammaplasty";
 import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
@@ -66,6 +66,11 @@ export type PackView = {
 
 export type Pack = { id: string; title: string; summary: string; views: PackView[] };
 export type PackGroup = { id: string; title: string; description: string; packs: Pack[] };
+/**
+ * A folder of groups: on phones the library shows it as one entry whose groups are its subfolders (the reduction
+ * mammaplasty: one subfolder per degree of ptosis, each with its techniques). The desktop lists the groups themselves.
+ */
+export type PackFolder = { id: string; title: string; short: string; description: string; groups: string[] };
 
 const breastParts = ["breast", "breast-fat", "breast-ligaments", "nipple-areola"];
 const thoracicCage = ["chest-wall", "costal-cartilages"];
@@ -926,3 +931,4 @@ export const packGroups: PackGroup[] = [
 ];
 
 export const allPacks = packGroups.flatMap((group) => group.packs.map((pack) => ({ group, pack })));
+export const packFolders: PackFolder[] = [mammaplastyFolder];

@@ -146,15 +146,15 @@ As mesmas etapas da ptose II (11, 10 e 9 vistas), com a aréola do caso, a peça
 | | Ptose II (3 técnicas) | G3: Pitanguy · Wise · vertical | G4: Pitanguy · Wise · vertical |
 |---|---|---|---|
 | Mamilo × sulco | 1,5 cm acima | 1,5 cm acima | 1,5 cm acima |
-| Fúrcula–mamilo | 25,6 · 26,2 · 26,2 cm | 27,7 · 29,5 · 28,1 cm | 29,1 · 31,4 · 29,6 cm |
-| Mamilo–sulco (pele) | 7,1 · 7,5 · 7,5 cm | 8,6 · 10,1 · 9,0 cm | 9,8 · 11,5 · 10,1 cm |
-| Pilar vertical (cicatriz) | 5,1 · 5,6 · 4,8 cm | 6,8 · 8,4 · 6,6 cm | 8,1 · 10,0 · 7,8 cm |
-| Projeção | 6,4 · 7,1 · 7,2 cm | 8,8 · 10,7 · 9,3 cm | 10,3 · 12,4 · 10,7 cm |
+| Fúrcula–mamilo | 25,5 · 26,0 · 26,0 cm | 27,0 · 28,3 · 27,4 cm | 28,1 · 29,9 · 28,4 cm |
+| Mamilo–sulco (pele) | 7,6 · 8,5 · 8,5 cm | 10,2 · 12,0 · 10,7 cm | 11,7 · 13,0 · 12,1 cm |
+| Pilar vertical (cicatriz) | 5,6 · 6,5 · 5,3 cm | 8,3 · 10,3 · 7,8 cm | 9,9 · 11,4 · 9,3 cm |
+| Projeção | 6,3 · 6,9 · 6,9 cm | 8,1 · 9,5 · 8,5 cm | 9,2 · 11,0 · 9,5 cm |
 | Volume | 460 · 532 · 535 mL | 702 · 918 · 756 mL | 871 · 1.136 · 924 mL |
 | Pilares ou retalhos (medial / lateral) | 33/46 · 21/31 · 22/37 mL | 64/76 · 44/75 · 26/41 mL | 73/95 · 57/94 · 30/42 mL |
-| Aréola no resultado | 4,1 cm | 3,7 a 3,8 cm | 3,7 a 3,8 cm |
+| Aréola no resultado | 4,1 cm | 3,8 a 3,9 cm | 3,7 a 3,8 cm |
 
-O pilar vertical fica acima dos 5 cm pretendidos. Com mamas de 0,7 a 1,1 L, o polo inferior já está no mínimo que o modelo permite (12% do comprimento do mapa) e a distância mamilo–sulco do resultado é de 8,6 a 11,5 cm.
+Números com a forma do resultado da revisão das técnicas por grau (`docs/plano-mamoplastia-tecnicas.md`, "Forma do resultado"). O pilar vertical fica acima dos 5 cm pretendidos: com mamas de 0,7 a 1,1 L, o caminho do mamilo ao sulco contornando um polo inferior redondo é longo. Antes da revisão, o polo inferior era comprimido até o mínimo que o modelo permitia (12% do comprimento do mapa) na tentativa de chegar aos 5 cm, o que o achatava numa base reta na altura do sulco e só encurtava o pilar para 6,6 a 10,0 cm; agora ele é escolhido pela forma (redondo, com altura de 0,72 da projeção).
 
 ## No app
 

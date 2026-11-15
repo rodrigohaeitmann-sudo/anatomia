@@ -1,7 +1,25 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { groupIcon, groupShort, packEntry, packGroups, search, viewCount, type Pack, type PackGroup, type SearchHit } from "@/lib/catalog";
+import {
+  folderById,
+  folderOf,
+  folderTechniqueCount,
+  folderViewCount,
+  groupById,
+  groupIcon,
+  groupShort,
+  libraryEntries,
+  packEntry,
+  search,
+  techniquesOf,
+  viewCount,
+  type LibraryEntry,
+  type MammaplastyTechnique,
+  type Pack,
+  type PackGroup,
+  type SearchHit,
+} from "@/lib/catalog";
 import { setSettings, toggleSaved, useNotes, useSettings, type Quality, type StartScreen, type TextSize } from "@/lib/store";
 import { Cover } from "@/components/ui/Cover";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -111,20 +129,21 @@ export function MHome({ nav }: { nav: AppNav }) {
         <div>
           <Lbl className="mb-2.5">Áreas</Lbl>
           <Group>
-            {packGroups.map((group) => (
-              <button key={group.id} type="button" onClick={() => nav.go({ name: "library", group: group.id })} className="flex w-full items-center gap-3.5 px-4 py-3 text-left active:bg-surface-alt">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-tint text-rose-deep">
-                  <Icon name={groupIcon(group.id)} size={19} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-base font-semibold tracking-[-0.2px]">{group.title}</div>
-                  <div className="mt-0.5 text-[13.5px] text-muted">
-                    {group.packs.length} packs · {viewCount(group)} vistas
+            {libraryEntries.map((entry) => {
+              const id = entry.kind === "group" ? entry.group.id : entry.folder.id;
+              return (
+                <button key={id} type="button" onClick={() => nav.go({ name: "library", group: id })} className="flex w-full items-center gap-3.5 px-4 py-3 text-left active:bg-surface-alt">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-tint text-rose-deep">
+                    <Icon name={entry.kind === "group" ? groupIcon(entry.group.id) : "scalpel"} size={19} />
                   </div>
-                </div>
-                <Icon name="chevR" size={18} color="#B6ADB1" />
-              </button>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-base font-semibold tracking-[-0.2px]">{entry.kind === "group" ? entry.group.title : entry.folder.title}</div>
+                    <div className="mt-0.5 text-[13.5px] text-muted">{entryCounts(entry)}</div>
+                  </div>
+                  <Icon name="chevR" size={18} color="#B6ADB1" />
+                </button>
+              );
+            })}
           </Group>
         </div>
       </Page>
@@ -154,11 +173,45 @@ function PackRow({ pack, group, first, onOpen }: { pack: Pack; group: PackGroup;
   );
 }
 
+/** "3 packs · 20 vistas", or for a folder "5 graus · 19 técnicas · 230 vistas". */
+function entryCounts(entry: LibraryEntry) {
+  if (entry.kind === "group") return `${entry.group.packs.length} packs · ${viewCount(entry.group)} vistas`;
+  return `${entry.groups.length} graus · ${folderTechniqueCount(entry.folder)} técnicas · ${folderViewCount(entry.folder)} vistas`;
+}
+
+/** Title of a group inside its folder: "Mamoplastia redutora: ptose grau II" → "Ptose grau II". */
+function subTitle(group: PackGroup) {
+  const folder = folderOf(group.id);
+  const short = folder && group.title.startsWith(`${folder.title}: `) ? group.title.slice(folder.title.length + 2) : group.title;
+  return short.charAt(0).toUpperCase() + short.slice(1);
+}
+
+/** A subfolder of the library: a degree of the reduction mammaplasty, with its techniques. */
+function FolderRow({ group, first, onOpen }: { group: PackGroup; first: boolean; onOpen: () => void }) {
+  const items = techniquesOf(group.id);
+  return (
+    <button type="button" onClick={onOpen} className={cx("flex w-full items-center gap-3.5 px-3.5 py-3 text-left active:bg-surface-alt", !first && "border-t border-line-soft")}>
+      <Cover packId={group.packs[0]?.id ?? ""} groupId={group.id} className="h-[60px] w-[60px]" />
+      <div className="min-w-0 flex-1">
+        <div className="text-[15.5px] font-semibold tracking-[-0.2px]">{subTitle(group)}</div>
+        <div className="mt-0.5 text-[13px] leading-[1.35] text-ink-2" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {items.map((item) => item.short).join(" · ")}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-muted">
+        {items.length} técnicas
+        <Icon name="chevR" size={16} color="#B6ADB1" />
+      </div>
+    </button>
+  );
+}
+
 export function MLibrary({ nav, group }: { nav: AppNav; group: string | null }) {
   const settings = useSettings();
   const [filter, setFilter] = useState<string | null>(group);
   const saved = settings.saved.map((id) => packEntry(id)).filter((entry): entry is NonNullable<ReturnType<typeof packEntry>> => Boolean(entry));
-  const groups = packGroups.filter((item) => !filter || filter === item.id);
+  const entries = libraryEntries.filter((entry) => !filter || filter === (entry.kind === "group" ? entry.group.id : entry.folder.id));
+  const folderAlone = filter ? folderById(filter) : null;
   return (
     <>
       <Page header={<div className="shrink-0 px-[22px] pt-2.5"><H1>Biblioteca</H1></div>}>
@@ -171,11 +224,14 @@ export function MLibrary({ nav, group }: { nav: AppNav; group: string | null }) 
             <Pick on={!filter} onClick={() => setFilter(null)}>
               Todos
             </Pick>
-            {packGroups.map((item) => (
-              <Pick key={item.id} on={filter === item.id} onClick={() => setFilter(item.id)}>
-                {groupShort[item.id] ?? item.title}
-              </Pick>
-            ))}
+            {libraryEntries.map((entry) => {
+              const id = entry.kind === "group" ? entry.group.id : entry.folder.id;
+              return (
+                <Pick key={id} on={filter === id} onClick={() => setFilter(id)}>
+                  {entry.kind === "group" ? groupShort[id] ?? entry.group.title : entry.folder.short}
+                </Pick>
+              );
+            })}
             {saved.length > 0 && (
               <Pick on={filter === "salvos"} onClick={() => setFilter("salvos")}>
                 Salvos
@@ -193,18 +249,32 @@ export function MLibrary({ nav, group }: { nav: AppNav; group: string | null }) 
             </Card>
           </section>
         ) : (
-          groups.map((item) => (
-            <section key={item.id}>
-              <Lbl className="mb-2.5 mt-1">
-                {item.title} · {item.packs.length} packs
-              </Lbl>
-              <Card padded={false} className="overflow-hidden">
-                {item.packs.map((pack, index) => (
-                  <PackRow key={pack.id} pack={pack} group={item} first={index === 0} onOpen={() => nav.openPack(pack.id)} />
-                ))}
-              </Card>
-            </section>
-          ))
+          entries.map((entry) =>
+            entry.kind === "group" ? (
+              <section key={entry.group.id}>
+                <Lbl className="mb-2.5 mt-1">
+                  {entry.group.title} · {entry.group.packs.length} packs
+                </Lbl>
+                <Card padded={false} className="overflow-hidden">
+                  {entry.group.packs.map((pack, index) => (
+                    <PackRow key={pack.id} pack={pack} group={entry.group} first={index === 0} onOpen={() => nav.openPack(pack.id)} />
+                  ))}
+                </Card>
+              </section>
+            ) : (
+              <section key={entry.folder.id}>
+                <Lbl className="mb-2.5 mt-1">
+                  {entry.folder.title} · {entry.groups.length} graus de ptose
+                </Lbl>
+                {folderAlone && <p className="mb-3 text-pretty text-[14.5px] leading-normal text-ink-2">{entry.folder.description}</p>}
+                <Card padded={false} className="overflow-hidden">
+                  {entry.groups.map((item, index) => (
+                    <FolderRow key={item.id} group={item} first={index === 0} onOpen={() => nav.go({ name: "library", group: item.id })} />
+                  ))}
+                </Card>
+              </section>
+            ),
+          )
         )}
       </Page>
       <MTabs nav={nav} />
@@ -359,6 +429,138 @@ export function MPack({ nav, packId }: { nav: AppNav; packId: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ---- Mamoplastia: um grau de ptose e as suas técnicas (subpastas) ---------------------------------------------------
+
+/** Pushed screen of the phone app: back header and a scrolling column. */
+function Pushed({ header, children }: { header: ReactNode; children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 flex flex-col bg-paper pt-safe">
+      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col overflow-hidden">
+        {header}
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-[22px] pb-8">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Views of the technique in a pack (all of them, or `only` those ids), with what was seen. */
+function useViewsOf(packId: string, only?: string[]) {
+  const entry = packEntry(packId);
+  const progress = usePackProgress(packId);
+  const views = (entry?.pack.views ?? []).map((view, index) => ({ view, index })).filter(({ view }) => !only || only.includes(view.id));
+  return { views, progress, total: views.length, seen: views.filter(({ view }) => progress.seen.includes(view.id)).length };
+}
+
+function TechniqueRow({ item, group, first, onOpen }: { item: MammaplastyTechnique; group: PackGroup; first: boolean; onOpen: () => void }) {
+  const plan = useViewsOf(item.planPack, item.planViews);
+  const steps = useViewsOf(item.stepPack);
+  const seen = plan.seen + steps.seen;
+  const total = plan.total + steps.total;
+  return (
+    <button type="button" onClick={onOpen} className={cx("flex w-full items-center gap-3.5 px-3.5 py-3 text-left active:bg-surface-alt", !first && "border-t border-line-soft")}>
+      <Cover packId={item.stepPack} groupId={group.id} className="h-[60px] w-[60px]" />
+      <div className="min-w-0 flex-1">
+        <div className="text-[15.5px] font-semibold tracking-[-0.2px]">{item.title}</div>
+        <div className="mt-0.5 text-[13px] leading-[1.35] text-ink-2" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {item.summary}
+        </div>
+      </div>
+      <div className="shrink-0 whitespace-nowrap text-right text-xs font-semibold text-muted">
+        {total} vistas
+        {seen > 0 && <div className="mt-0.5 font-medium text-rose-deep">{seen}/{total}</div>}
+      </div>
+    </button>
+  );
+}
+
+/** A degree of ptosis of the reduction mammaplasty: its techniques, each a subfolder, and the plan that compares them. */
+export function MDegree({ nav, group }: { nav: AppNav; group: string }) {
+  const entry = groupById(group);
+  const folder = folderOf(group);
+  if (!entry || !folder) return null;
+  const items = techniquesOf(group);
+  const plan = items[0] ? packEntry(items[0].planPack) : null;
+  return (
+    <Pushed header={<BackHeader eyebrow={folder.title} title={subTitle(entry)} onBack={() => nav.back({ name: "library", group: folder.id })} />}>
+      <p className="text-pretty text-[15px] leading-normal text-ink-2">{entry.description}</p>
+      <section>
+        <Lbl className="mb-2.5">Técnicas · {items.length}</Lbl>
+        <Card padded={false} className="overflow-hidden">
+          {items.map((item, index) => (
+            <TechniqueRow key={item.key} item={item} group={entry} first={index === 0} onOpen={() => nav.go({ name: "library", group, technique: item.key })} />
+          ))}
+        </Card>
+      </section>
+      {plan && (
+        <section>
+          <Lbl className="mb-2.5">Comparar as técnicas</Lbl>
+          <Card padded={false} className="overflow-hidden">
+            <PackRow pack={plan.pack} group={entry} first onOpen={() => nav.openPack(plan.pack.id)} />
+          </Card>
+        </section>
+      )}
+    </Pushed>
+  );
+}
+
+/** One technique of a degree: its marking, pedicle and resection (in the plan of the degree) and its step by step. */
+export function MTechnique({ nav, group, technique }: { nav: AppNav; group: string; technique: string }) {
+  const entry = groupById(group);
+  const item = techniquesOf(group).find((candidate) => candidate.key === technique);
+  const plan = useViewsOf(item?.planPack ?? "", item?.planViews ?? []);
+  const steps = useViewsOf(item?.stepPack ?? "");
+  if (!entry || !item) return null;
+  const resume = steps.progress.lastIndex >= 0 ? steps.progress.lastIndex : 0;
+  const strip = (title: string) => {
+    const text = title.startsWith(`${item.short}: `) ? title.slice(item.short.length + 2) : title;
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+  // the views of the plan are numbered in the technique; the steps carry their number in the title ("3. Incisão")
+  const rows = (packId: string, list: typeof plan, label: (title: string, position: number) => [string, string]) =>
+    list.views.map(({ view, index }, position) => {
+      const seen = list.progress.seen.includes(view.id);
+      const here = index === list.progress.lastIndex;
+      const [number, text] = label(view.title, position);
+      return (
+        <button key={view.id} type="button" onClick={() => nav.openView(packId, index)} className={cx("flex w-full items-center gap-3.5 px-4 py-3 text-left active:bg-surface-alt", here && "bg-surface-alt")}>
+          <span className={cx("grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full text-[13px] font-bold", here ? "bg-ink text-on-ink" : seen ? "bg-sage-tint text-sage-deep" : "border border-line bg-surface-alt text-muted")}>
+            {seen && !here ? <Icon name="check" size={15} stroke={2.2} /> : number}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15.5px] font-semibold leading-snug">{text}</span>
+            {here && <span className="mt-px block text-[13px] font-medium text-rose-deep">Você parou aqui</span>}
+          </span>
+          <Icon name="chevR" size={17} color="#B6ADB1" />
+        </button>
+      );
+    });
+  return (
+    <Pushed header={<BackHeader eyebrow={subTitle(entry)} title={item.short} onBack={() => nav.back({ name: "library", group })} />}>
+      <Cover packId={item.stepPack} groupId={group} className="h-[170px] w-full" rounded="rounded-[22px]" label={item.title} />
+      <div>
+        <div className="text-[19px] font-semibold tracking-[-0.3px]">{item.title}</div>
+        <p className="mt-1 text-pretty text-[14.5px] leading-normal text-ink-2">{item.summary}</p>
+      </div>
+      <section>
+        <Lbl className="mb-2.5">Planejamento · {plan.total} vistas</Lbl>
+        <Group>{rows(item.planPack, plan, (title, position) => [String(position + 1), strip(title)])}</Group>
+      </section>
+      <section>
+        <Lbl className="mb-2.5">Passo a passo · {steps.total} vistas</Lbl>
+        <Group>
+          {rows(item.stepPack, steps, (title, position) => {
+            const match = /^(\d+)\. (.*)$/.exec(title);
+            return match ? [match[1], match[2]] : [String(position + 1), title];
+          })}
+        </Group>
+      </section>
+      <Btn icon="arrowR" onClick={() => nav.openView(item.stepPack, resume)}>
+        {steps.progress.lastIndex >= 0 ? `Continuar o passo a passo na vista ${resume + 1}` : "Começar o passo a passo"}
+      </Btn>
+    </Pushed>
   );
 }
 

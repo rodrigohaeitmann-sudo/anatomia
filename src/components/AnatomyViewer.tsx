@@ -648,7 +648,13 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         if (replaying) from = surgery.replayFrom ?? Math.max(0, surgery.frame - 1);
         run.technique = surgery.technique;
         const to = surgery.frame;
-        const duration = Math.min(SURGERY_MAX_MS, SURGERY_MS * Math.abs(to - from));
+        // an in-between frame ("transposicao:1") counts half a step: the way through it is part of the step
+        const lo = Math.floor(Math.min(from, to));
+        const hi = Math.ceil(Math.max(from, to));
+        const weight = stepFramesOf(surgery.technique)
+          .slice(lo + 1, hi + 1)
+          .reduce((sum, item) => sum + (item.id.includes(":") ? 0.5 : 1), 0);
+        const duration = Math.min(SURGERY_MAX_MS, SURGERY_MS * weight);
         motion.current = { technique: surgery.technique, from, to, level: from, active: duration > 0, end: 0 };
         await new Promise<void>((resolve) => {
           const start = performance.now();

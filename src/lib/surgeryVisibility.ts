@@ -21,9 +21,9 @@ breastAsScanned.delete("");
 export function hiddenInSteps(id: string, frame: number, cutFrame: number) {
   if (breastAsScanned.has(id)) return true;
   if (id.startsWith("mamo-pedicle-") || id.startsWith("mamo-resection-")) return true;
-  if ((id.startsWith("mamo-marking-") || id === "mamo-reference-lines") && frame >= cutFrame) return true;
+  if ((id.startsWith("mamo-marking-") || id.startsWith("mamo-reference-lines")) && frame >= cutFrame) return true;
   return false;
 }
 
 /** Listed in the structure list while a step view is open. */
-export const listedInSteps = (id: string) => !hiddenInSteps(id, 0, Infinity) && !id.startsWith("mamo-marking-") && id !== "mamo-reference-lines";
+export const listedInSteps = (id: string) => !hiddenInSteps(id, 0, Infinity) && !id.startsWith("mamo-marking-") && !id.startsWith("mamo-reference-lines");
