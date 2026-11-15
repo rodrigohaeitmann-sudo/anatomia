@@ -9,7 +9,7 @@
 import anatomy from "@/data/breastAnatomy.json";
 import type { AnatomyDetail } from "@/data/anatomyDetails";
 import { planCaseIds, planCaseSuffix, planFiles, type PlanCaseId } from "@/data/planCases";
-import type { Pack, PackGroup, PackLabel, PackView } from "@/data/packs";
+import type { Pack, PackFolder, PackGroup, PackLabel, PackView } from "@/data/packs";
 import { measurementsOf } from "@/lib/breastStates";
 import { stepBranches, stepFramesOf, stepMeasurements, stepMeasures, stepPillarVolumes, stepPoints, stepStructuresOf, type StepMeasurements } from "@/lib/mammaplastySteps";
 
@@ -630,7 +630,13 @@ function stepViews(key: string): PackView[] {
   const common = { orientation: "frontal" as const, anchor: `step:${key}:centre`, distance: (ringSkin ? 0.48 : 0.55) * zoom, breast: t.state, follow: false };
   // the lower pole is seen from below; the periareolar ring, on the front of the breast, from the front
   const below = (distance: number) => (ringSkin ? {} : { orientation: "inferior" as const, distance: distance * zoom });
-  const surgery = (frame: number, extra: Partial<NonNullable<PackView["surgery"]>> = {}) => ({ technique: key, frame, ...extra });
+  // the views stop at the stages; the in-between frames ("transposicao:1") only shape the way from one to the next, and
+  // "Rever" replays from the stage before
+  const stageBefore = (frame: number) => {
+    for (let k = frame - 1; k >= 0; k--) if (!frames[k].id.includes(":")) return k;
+    return 0;
+  };
+  const surgery = (frame: number, extra: Partial<NonNullable<PackView["surgery"]>> = {}) => ({ technique: key, frame, replayFrom: stageBefore(frame), ...extra });
   const areolaText = `Aréola: ${cm(sizes.areolaNowMm)} cm, alargada pela hipertrofia → ${cm(sizes.areolaNewMm)} cm com o areolótomo`;
   const ascension = `Ascensão do complexo areolopapilar (mamilo → A, sobre a pele): ${cm(sizes.ascensionMm)} cm`;
   const lineLabels = Object.entries(s.lines).map(([line, text]) => ({ structure: marking, near: `step:${key}:line:${line}`, text: text.replace("{mm}", `${cm(m.linesMm[line] ?? 0)} cm`) }));
@@ -737,40 +743,43 @@ function stepViews(key: string): PackView[] {
   // the closure, stage by stage: what is sutured to what
   // the areola is sutured at the end where the skin is closed first (Pitanguy, free graft), from the start in the others
   const lateAreola = technique === "pitanguy" || graft;
-  frames.slice(Math.max(frameOf("transposicao"), frameOf("resseccao")) + 1).forEach((frame, index, stages) => {
-    const stage = s.closure[frame.id];
-    const covered = technique === "pitanguy" && ["sulco", "marca-areola"].includes(frame.id);
-    // with the skin opaque only the surface counts: pieces and vessels stay inside
-    const structures = stage.solid
-      ? ["skin", "contralateral-breast", skin, nac, sutures, ...(graft ? [dermis] : [])]
-      : ["skin", "contralateral-breast", skin, dermis, nac, ...(graft ? [] : [ring]), pedicle, medial, lateral, arteries, sutures];
-    if (!lateAreola || index === stages.length - 1) structures.push(areolaSuture);
-    if (technique === "pitanguy" && ["sulco", "marca-areola", "abertura"].includes(frame.id)) structures.push(cover);
-    if (frame.id === "marca-areola" || frame.id === "leito") structures.push(coverRing);
-    const labels = [...seamLabels(stage.seams)];
-    // where the pillars (or the flaps of an inverted T) come together
-    if (frame.id === "pilares" || frame.id === "round-block" || (s.pillar === "Retalho" && frame.id === (graft ? "ponto-t" : "sulco"))) labels.push(...pillarLabels);
-    if (covered) labels.push(label(cover, "cover", frame.id === "sulco" ? "Pele fechada sobre o complexo areolopapilar" : "Pele a retirar"));
-    if (frame.id === "marca-areola") labels.push(label(coverRing, "cover-ring", `Nova aréola: ${cm(sizes.areolaNewMm)} cm no vértice do cone`));
-    if (frame.id === "abertura") labels.push(label(cover, "cover", "Disco de pele retirado"));
-    if (frame.id === "leito") labels.push(label(coverRing, "cover-ring", `Leito do enxerto: ${cm(sizes.areolaNewMm)} cm no vértice do cone`), label(dermis, "bed", "Derme desepitelizada"));
-    if (frame.id === "enxerto") labels.push(label(nac, "nac", "Enxerto do complexo areolopapilar"));
-    views.push({
-      ...common,
-      ...below(0.42),
-      id: `${key}-passo-${frame.id}`,
-      title: `${views.length + 1}. ${stage.title}`,
-      description: stage.text,
-      structures,
-      ...(stage.solid ? { solid: ["skin", skin, dermis, cover] } : { translucent: [skin, ...(graft ? [dermis] : [])] }),
-      // the bed of the graft turns to dermis when it is de-epithelialised
-      tint: graft && ["leito", "enxerto"].includes(frame.id) ? { ...tint, [dermis]: tints.dermis } : tint,
-      focus: stage.seams.includes("deep") ? [medial, lateral] : [],
-      labels,
-      surgery: surgery(frameOf(frame.id)),
-      relations: [...stage.notes, ...(stage.seams.length ? ["Cada cor liga as duas bordas que se encontram; os fios mostram os pontos, que se fecham quando a sutura é feita"] : []), stepNote],
+  frames
+    .slice(Math.max(frameOf("transposicao"), frameOf("resseccao")) + 1)
+    .filter((frame) => !frame.id.includes(":"))
+    .forEach((frame, index, stages) => {
+      const stage = s.closure[frame.id];
+      const covered = technique === "pitanguy" && ["sulco", "marca-areola"].includes(frame.id);
+      // with the skin opaque only the surface counts: pieces and vessels stay inside
+      const structures = stage.solid
+        ? ["skin", "contralateral-breast", skin, nac, sutures, ...(graft ? [dermis] : [])]
+        : ["skin", "contralateral-breast", skin, dermis, nac, ...(graft ? [] : [ring]), pedicle, medial, lateral, arteries, sutures];
+      if (!lateAreola || index === stages.length - 1) structures.push(areolaSuture);
+      if (technique === "pitanguy" && ["sulco", "marca-areola", "abertura"].includes(frame.id)) structures.push(cover);
+      if (frame.id === "marca-areola" || frame.id === "leito") structures.push(coverRing);
+      const labels = [...seamLabels(stage.seams)];
+      // where the pillars (or the flaps of an inverted T) come together
+      if (frame.id === "pilares" || frame.id === "round-block" || (s.pillar === "Retalho" && frame.id === (graft ? "ponto-t" : "sulco"))) labels.push(...pillarLabels);
+      if (covered) labels.push(label(cover, "cover", frame.id === "sulco" ? "Pele fechada sobre o complexo areolopapilar" : "Pele a retirar"));
+      if (frame.id === "marca-areola") labels.push(label(coverRing, "cover-ring", `Nova aréola: ${cm(sizes.areolaNewMm)} cm no vértice do cone`));
+      if (frame.id === "abertura") labels.push(label(cover, "cover", "Disco de pele retirado"));
+      if (frame.id === "leito") labels.push(label(coverRing, "cover-ring", `Leito do enxerto: ${cm(sizes.areolaNewMm)} cm no vértice do cone`), label(dermis, "bed", "Derme desepitelizada"));
+      if (frame.id === "enxerto") labels.push(label(nac, "nac", "Enxerto do complexo areolopapilar"));
+      views.push({
+        ...common,
+        ...below(0.42),
+        id: `${key}-passo-${frame.id}`,
+        title: `${views.length + 1}. ${stage.title}`,
+        description: stage.text,
+        structures,
+        ...(stage.solid ? { solid: ["skin", skin, dermis, cover] } : { translucent: [skin, ...(graft ? [dermis] : [])] }),
+        // the bed of the graft turns to dermis when it is de-epithelialised
+        tint: graft && ["leito", "enxerto"].includes(frame.id) ? { ...tint, [dermis]: tints.dermis } : tint,
+        focus: stage.seams.includes("deep") ? [medial, lateral] : [],
+        labels,
+        surgery: surgery(frameOf(frame.id)),
+        relations: [...stage.notes, ...(stage.seams.length ? ["Cada cor liga as duas bordas que se encontram; os fios mostram os pontos, que se fecham quando a sutura é feita"] : []), stepNote],
+      });
     });
-  });
   const scarWords = s.scars.map((item) => item.toLowerCase().replace("cicatriz ", "")).join(", ");
   views.push({
     ...common,
@@ -1000,3 +1009,38 @@ export const mammaplastyGroups: PackGroup[] = planCaseIds.map((planCase) => ({
   description: `${caseWords[planCase].group} ${countWords[keysOf(planCase).length] ?? "Técnicas"}: ${techniqueList(planCase)}.`,
   packs: [mammaplastyPackOf(planCase), ...mammaplastyStepPacksOf(planCase)],
 }));
+
+/** The reduction mammaplasty as a folder of the library on phones: one subfolder per degree of ptosis. */
+export const mammaplastyFolder: PackFolder = {
+  id: "mamoplastia",
+  title: "Mamoplastia redutora",
+  short: "Mamoplastia",
+  description: "As técnicas por grau de ptose, da ptose grau I à gigantomastia. Em cada grau, cada técnica com a sua marcação, o pedículo, a ressecção e o passo a passo até o resultado.",
+  groups: mammaplastyGroups.map((group) => group.id),
+};
+
+/** A technique of a degree, as a subfolder: its views in the plan of the degree and its own step-by-step pack. */
+export type MammaplastyTechnique = { key: string; title: string; short: string; summary: string; planPack: string; planViews: string[]; stepPack: string };
+/** The techniques of every degree (by group id), in the order of the plan. */
+export const mammaplastyTechniques: Record<string, MammaplastyTechnique[]> = Object.fromEntries(
+  planCaseIds.map((planCase) => {
+    const plan = mammaplastyPackOf(planCase);
+    return [
+      `mamoplastia-${planCase}`,
+      keysOf(planCase).map((key) => {
+        const t = techniques[key];
+        const m = t.measurements;
+        const pedicle = hasPedicle(t) ? `Pedículo ${t.pedicle}` : "Sem pedículo: enxerto livre do complexo areolopapilar";
+        return {
+          key,
+          title: t.label,
+          short: t.short,
+          summary: `${pedicle} · ressecção ${t.resection} · peça de ${m.resectionG.toLocaleString("pt-BR")} g; fica uma mama de ${(m.leftMl ?? t.dims.moundMl - m.resectionMl).toLocaleString("pt-BR")} mL`,
+          planPack: plan.id,
+          planViews: plan.views.filter((view) => view.id.startsWith(`${key}-`)).map((view) => view.id),
+          stepPack: `mamoplastia-${key}-passo-a-passo`,
+        };
+      }),
+    ];
+  }),
+);

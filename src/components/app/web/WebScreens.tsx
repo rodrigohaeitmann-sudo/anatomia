@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { groupShort, packGroups, type Pack, type PackGroup } from "@/lib/catalog";
+import { groupShort, inFilter, packGroups, type Pack, type PackGroup } from "@/lib/catalog";
 import { setSettings, useNotes, useSettings } from "@/lib/store";
 import { fold } from "@/lib/text";
 import { Cover } from "@/components/ui/Cover";
@@ -136,7 +136,7 @@ export function WLibrary({ nav, group }: { nav: AppNav; group: string | null }) 
   const groups = useMemo(
     () =>
       packGroups
-        .filter((item) => !filter || item.id === filter)
+        .filter((item) => inFilter(item, filter))
         .map((item) => ({ group: item, packs: item.packs.filter((pack) => !q || fold(`${pack.title} ${pack.summary} ${pack.views.map((view) => view.title).join(" ")}`).includes(q)) }))
         .filter((item) => item.packs.length > 0),
     [filter, q],

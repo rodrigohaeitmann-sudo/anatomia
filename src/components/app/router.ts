@@ -9,7 +9,7 @@ import { allPacks } from "@/data/packs";
  */
 export type Route =
   | { name: "home" }
-  | { name: "library"; group?: string | null }
+  | { name: "library"; group?: string | null; technique?: string | null }
   | { name: "search" }
   | { name: "notes" }
   | { name: "profile" }
@@ -24,7 +24,7 @@ export function parseHash(hash: string): Route | null {
     const [head, a, b] = raw.slice(1).split("/");
     switch (head) {
       case "biblioteca":
-        return { name: "library", group: a || null };
+        return { name: "library", group: a || null, technique: b || null };
       case "busca":
         return { name: "search" };
       case "anotacoes":
@@ -52,7 +52,7 @@ export function formatRoute(route: Route): string {
     case "home":
       return "#/";
     case "library":
-      return route.group ? `#/biblioteca/${route.group}` : "#/biblioteca";
+      return route.group ? `#/biblioteca/${route.group}${route.technique ? `/${route.technique}` : ""}` : "#/biblioteca";
     case "search":
       return "#/busca";
     case "notes":

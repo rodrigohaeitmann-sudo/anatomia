@@ -1,29 +1,36 @@
 #!/usr/bin/env python3
-"""Tissue rearrangement of a reduction mammaplasty, step by step (docs/plano-mamoplastia.md, fase 4).
+"""Tissue rearrangement of a reduction mammaplasty, step by step (docs/plano-mamoplastia.md, fase 4;
+docs/plano-mamoplastia-tecnicas.md).
 
-For each technique of build_mammaplasty.py (Pitanguy, Wise with inferior pedicle, vertical with superomedial
-pedicle) and each case (bm.CASES: ptosis II, hypertrophies G3 and G4) this script works out where every part of the
-operated breast goes, the patient standing, at the key frames of its schedule (SCHEDULES):
+For each technique of build_mammaplasty.py and each case (bm.CASES: ptosis I to III, hypertrophies G3 and G4) this
+script works out where every part of the operated breast goes, the patient standing, at the key frames of its schedule
+(SCHEDULES):
 
-  marcacao         the ptotic breast (ptosis grade II with moderate hypertrophy) with its marking, its measurements and
-                   the areolotome on the enlarged areola of the case
+  marcacao         the breast of the case with its marking, its measurements and the areolotome on its areola
   incisao          the same, the skin cut along the marking, the pedicle and the areola beyond the areolotome
-                   de-epithelialised
+                   de-epithelialised (free graft: the graft taken off)
   resseccao        the resection (and the skin over it) taken out
-  transposicao     the pedicle carries the nipple-areola complex (and the vessels and nerves it keeps) to its new place
-  closure stages   pillars, key stitch of the T, vertical suture, fold, areola - the order of each technique; in
-                   Pitanguy's the skin closes over the areola, which is marked and let out at the end. The last stage
-                   is the expected result. What is sutured to what is drawn: matched edges in one colour, stitches
+  transposicao     the pedicle carries the nipple-areola complex (and the vessels and nerves it keeps) to its new place,
+                   turning on its base: in-between frames (transposicao:1, :2) put the way on an arc, not a chord
+  closure stages   pillars, key stitch of the T, vertical suture, fold, areola - the order of each technique (the first
+                   with a frame halfway into it); in Pitanguy's the skin closes over the areola, which is marked and let
+                   out at the end. The last stage is the expected result. What is sutured to what is drawn: matched
+                   edges in one colour, stitches
 
 How (mammaplasty_result.py):
   * the skin of the breast is a mesh made in the rest chart, the lines of the marking among its edges;
   * the closure: where every point of the skin that stays goes when the pattern is sutured (areola edge round the
     areola, vertical limbs together under it, horizontal limbs onto the fold), solved in the rest chart;
   * the result: a breast state of build_breast.py (a small descent and a growth) whose mound has the volume left
-    after the resection and whose nipple sits 2 cm above the fold, applied to the closed skin and to the tissue
-    under it, which follows its skin; the pedicle is buried under the flaps except under the areola.
+    after the resection, whose nipple sits 1.5 cm above the fold and whose lower pole is round (its height
+    ROUNDNESS times its projection, as at rest: a shorter one only flattens into a shelf at the fold), applied to the
+    closed skin and to the tissue under it, which follows its skin; the pedicle is buried under the flaps except
+    under the areola;
+  * the areola rides on its pedicle with a collar (COLLAR, more for a long way), the pedicle and the pillars turn on
+    their bases, and in every frame the pedicle, its dermis, the pillars and the vessels are kept behind the areola
+    (keep_behind for the vertices, clear_front for the long triangles that still cross in front of it).
 
-Outputs (per case; ptosis II without suffix, the others with -g3, -g4):
+Outputs (per case; ptosis II without suffix, the others with -p1, -p3, -g3, -g4):
   src/data/mammaplastySteps<-case>.json                structures, meshes, frames, measurements before and after
   public/models/hybrid/mammaplasty-<tecnica><-case>.bin per technique: positions of every mesh at its key frames
                                                         (uint16, quantised over the technique's box) and indices
@@ -56,11 +63,16 @@ MM = bb.MM
 # "vertical", "fold", "areola": the suture lines. Before the closure nothing has moved; ONE is the result.
 ZERO = {"global": 0.0, "deep": 0.0, "T": 0.0, "vertical": 0.0, "fold": 0.0, "areola": 0.0}
 ONE = {key: 1.0 for key in ZERO}
+# In-between frames ("<id>:<k>", no view of their own): the transposition turns the pedicle on its base along an arc,
+# which the viewer, interpolating key frames linearly, would otherwise cut short as a chord (the pedicle shrinking on the
+# way); a free graft comes back to its bed from in front of it.
+SUB = 2
+TRANSPOSITION = [(f"transposicao:{k}", "Transposição do complexo areolopapilar", ZERO) for k in range(1, SUB + 1)] + [("transposicao", "Transposição do complexo areolopapilar", ZERO)]
 OPENING = [
     ("marcacao", "Marcação", ZERO),
     ("incisao", "Incisão e desepitelização", ZERO),
     ("resseccao", "Ressecção", ZERO),
-    ("transposicao", "Transposição do complexo areolopapilar", ZERO),
+    *TRANSPOSITION,
 ]
 SCHEDULES = {
     "pitanguy": OPENING + [
@@ -87,7 +99,7 @@ SCHEDULES = {
         ("marcacao", "Marcação", ZERO),
         ("incisao", "Desepitelização do anel", ZERO),
         ("resseccao", "Ressecção em cunha", ZERO),
-        ("transposicao", "Montagem da glândula", ZERO),
+        *[(fid, "Montagem da glândula", f) for fid, _, f in TRANSPOSITION],
         ("round-block", "Cerclagem (round block)", {"global": 0.55, "deep": 1.0, "T": 0.0, "vertical": 0.0, "fold": 0.0, "areola": 0.55}),
         ("areola", "Sutura da aréola", ONE),
     ],
@@ -101,11 +113,25 @@ SCHEDULES = {
         ("vertical", "Sutura vertical", {"global": 0.55, "deep": 0.9, "T": 1.0, "vertical": 1.0, "fold": 0.65, "areola": 0.55}),
         ("sulco", "Sutura no sulco: pele fechada", ONE),
         ("leito", "Leito do enxerto", ONE),
+        ("enxerto:1", "Enxertia do complexo areolopapilar", ONE),
         ("enxerto", "Enxertia do complexo areolopapilar", ONE),
     ],
 }
 SCHEDULES["lejour"] = SCHEDULES["vertical"]  # same skin pattern and closure, another pedicle
 SCHEDULES["orlando"] = SCHEDULES["wise"]
+
+
+def halfway_into_closure(schedule: list) -> list:
+    """The schedule with an in-between frame halfway into the first stage of the closure (the stage that moves the
+    pillars and the skin the furthest: in one linear step they would swell and cut corners)."""
+    ids = [fid for fid, _, _ in schedule]
+    first = max(i for i, fid in enumerate(ids) if fid in ("resseccao", "transposicao")) + 1
+    fid, label, f = schedule[first]
+    half = {key: 0.5 * value for key, value in f.items()}
+    return schedule[:first] + [(f"{fid}:1", label, half)] + schedule[first:]
+
+
+SCHEDULES = {kind: halfway_into_closure(schedule) for kind, schedule in SCHEDULES.items()}
 # lines of the marking that border the skin that stays, by suture group, for each skin pattern (bm.TECHNIQUES[...]["skin"])
 LINE_GROUPS = {
     "t": {"edge": "areola", "med": "vertical", "lat": "vertical", "bd": "fold", "ce": "fold"},
@@ -121,7 +147,18 @@ INSET = 9.0  # mm: in Pitanguy's technique the nipple-areola complex (its nipple
 # under it wait this deep under the closed skin until the areola is opened
 STITCH_STEP = 8.0  # mm between two stitches of a suture line
 T_RADIUS = 10.0  # mm of the lines round B and C that the key stitch closes
-PILLAR = 50.0  # mm, the vertical pillar of the result: lower border of the areola to the fold, on the skin (4.5-6 cm)
+# The lower pole of the result is shaped, not cut to a length: its height (nipple down to the lowest point of the breast,
+# on the meridian) is ROUNDNESS times its projection (nipple to the wall at the fold), as in a breast at rest, whose lower
+# pole curves round to the fold. Shortening it further only flattens it into a shelf at the fold: the skin from the
+# nipple to the fold cannot be much shorter than the projection. The vertical pillar is then what that lower pole gives.
+ROUNDNESS = 0.72
+LOWER_POLE = (0.5, 1.4)  # range of the length of the lower pole in the map (1: as long as in the breast at rest)
+# mm of pedicle round the areola that the transposition carries with it, rigidly (the dermal collar): at least COLLAR,
+# and COLLAR_SHARE of the way the nipple goes (a long way leaves a wider ring of tissue behind, which would bunch up)
+COLLAR = 12.0
+COLLAR_SHARE = 0.22
+BEHIND = 0.6  # mm: pedicle, dermis and vessels under the areola stay at least this far behind it
+GRAFT_HOVER = 40.0  # mm in front of its bed that a free graft passes on its way back
 NIPPLE_ABOVE_FOLD = 15.0  # mm, the new nipple in the standing result: a little above point A, the projection of the fold
 # mm of trunk skin round the breast outline over which the result fades into the skin that stays (the large breasts
 # change their outline more: a wider skirt)
@@ -134,9 +171,6 @@ SCAR_LIFT = 0.45
 # down, to lie below the breast and in front of the epigastrium, where the frontal views of the steps see it whole
 OUT_OFFSET = {"radial": 30.0, "medial": 65.0, "down": 95.0}  # for the specimen of ptosis II; larger ones go further
 OUT_REFERENCE_ML = 180.0  # the specimen those offsets were made for (they grow with its cube root)
-# the lower pole of the result may be shortened down to this share of its length in the map (ptosis II: 40%; the long
-# lower poles of G3 and G4 need more to bring the vertical pillar to PILLAR)
-MIN_LOWER_POLE = {"ptose-1": 0.4, "ptose-2": 0.4, "ptose-3": 0.15, "g3": 0.12, "g4": 0.12}
 # mm: a free graft waits here (forwards, laterally and up from the breast) between its harvest and the grafting
 GRAFT_ASIDE = {"radial": 60.0, "lateral": 75.0, "up": 55.0}
 COLORS = {
@@ -212,7 +246,24 @@ class Technique:
         self.closure = mr.Closure(self.patch, ("stay",), self.targets, self.areola_r, seam="seam" if "seam" in self.named else None, seam_top=self.seam_top)
         pedicle_rest = item["pedicle"].rest
         rho = np.hypot(*rest.iso(pedicle_rest[:, :2]).T) if len(pedicle_rest) else np.zeros(1)
-        self.reach = max(float(np.percentile(rho, 98)), self.areola_r + 10)  # how far the pedicle reaches from the nipple
+        # how far the nipple goes in the operation (standing breast to result), and the collar it takes along
+        nipple_now = self.ch.to_model(bb.deform(self.breast, self.ch.nipple[None])[st.k])[0]
+        nipple_then = self.ch.to_model(mr.state_map(self.breast, self.ch.nipple[None], self.result))[0]
+        self.collar = max(COLLAR, COLLAR_SHARE * float(np.linalg.norm(nipple_then - nipple_now)))
+        self.reach = max(float(np.percentile(rho, 98)), self.areola_r + self.collar + 10)  # how far the pedicle reaches from the nipple
+        # the pivot of the transposition: the base of the pedicle (its points the swing leaves where they are); a free
+        # graft, or a pedicle that all moves, turns about the chest wall behind the nipple
+        self.pivot = self.ch.to_model(np.array([[st.um, 0.0, float(st.b.base(np.array([st.um]), np.array([0.0]))[0])]]))[0]
+        if len(pedicle_rest):
+            iso_p = rest.iso(pedicle_rest[:, :2])
+            rho_p = np.hypot(iso_p[:, 0], iso_p[:, 1])
+            base_p = st.b.base(pedicle_rest[:, 0], pedicle_rest[:, 1])
+            t_p = np.clip((pedicle_rest[:, 2] - base_p) / np.maximum(st.skin_r(pedicle_rest[:, 0], pedicle_rest[:, 1]) - base_p, 0.5), 0, 1)
+            inner = self.areola_r + self.collar
+            w_p = smooth01(1 - (rho_p - inner) / max(self.reach - inner, 8.0)) * smooth01(t_p / 0.6)
+            still = w_p < 0.15
+            if still.sum() >= 12:
+                self.pivot = self.ch.to_model(bb.deform(self.breast, pedicle_rest[still])[st.k]).mean(0)
         self.field = self.displacement_field()
 
     def nipple_to_fold(self, result: dict) -> float:
@@ -223,24 +274,38 @@ class Technique:
         u = np.full(80, st.um)
         return float(bb.polyline_length(self.ch.to_model(mr.state_map(self.breast, np.c_[u, v, st.skin_r(u, v)], result))))
 
+    def lower_pole(self, result: dict) -> tuple[float, float]:
+        """Height of the lower pole of a state (nipple down to the lowest point of the breast skin on the meridian) and
+        its projection (nipple to the wall at the fold), mm."""
+        st = self.st
+        fold_v = float(np.interp(st.um, st.us, st.V[:, -1]))
+        v = np.linspace(0.0, fold_v, 240)
+        u = np.full_like(v, st.um)
+        model = self.ch.to_model(mr.state_map(self.breast, np.c_[u, v, st.skin_r(u, v)], result))
+        nipple = self.ch.to_model(mr.state_map(self.breast, self.ch.nipple[None], result))[0]
+        fold = self.ch.to_model(np.array([[st.um, fold_v, float(st.skin_r(np.array([st.um]), np.array([fold_v]))[0])]]))[0]
+        return float(nipple[1] - model[:, 1].min()), float(nipple[2] - fold[2])
+
     def solve_result(self, volume_ml: float) -> tuple[dict, float]:
-        """The result state with the remaining volume, the nipple NIPPLE_ABOVE_FOLD above the fold and a vertical pillar
-        (nipple to fold on the skin, less the radius of the new areola) of PILLAR: the length of the lower pole is solved
-        for it (secant). A periareolar closure takes no skin between the ring and the fold: its pillar is the skin from
-        the lower border of the ring to the fold, as it is on the standing breast."""
-        pillar = PILLAR if self.skin != "ring" else float(self.st.fold_s(0.0)) - float(self.item["points"]["I"][1])
-        self.pillar = pillar
-        target = pillar + AREOLA_NEW / 2
-        g0, g1 = 1.0, 0.8
-        l0 = self.nipple_to_fold(mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g0))
-        result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g1)
-        l1 = self.nipple_to_fold(result)
-        for _ in range(6):
-            if abs(l1 - target) < 0.4 or abs(l1 - l0) < 1e-6:
-                break
-            g0, g1, l0 = g1, float(np.clip(g1 + (target - l1) * (g1 - g0) / (l1 - l0), MIN_LOWER_POLE[self.case], 1.0)), l1
-            result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, g1)
-            l1 = self.nipple_to_fold(result)
+        """The result state with the remaining volume, the nipple NIPPLE_ABOVE_FOLD above the fold and a round lower pole:
+        the length of the lower pole is solved (bisection) for a height of ROUNDNESS times the projection."""
+
+        def ratio(length: float) -> tuple[float, dict]:
+            result = mr.result_state(self.breast, volume_ml, NIPPLE_ABOVE_FOLD, length)
+            height, projection = self.lower_pole(result)
+            return height / max(projection, 1.0), result
+
+        lo, hi = LOWER_POLE
+        r_lo, result = ratio(lo)
+        if r_lo < ROUNDNESS:
+            r_hi, result = ratio(hi)
+            if r_hi > ROUNDNESS:
+                for _ in range(6):
+                    mid = (lo + hi) / 2
+                    r_mid, _ = ratio(mid)
+                    lo, hi = (mid, hi) if r_mid < ROUNDNESS else (lo, mid)
+                _, result = ratio((lo + hi) / 2)
+        self.lower_pole_mm = self.lower_pole(result)
         return result, NIPPLE_ABOVE_FOLD
 
     def inset(self, q: np.ndarray) -> np.ndarray:
@@ -412,14 +477,36 @@ class Technique:
         return self.ch.to_model(mr.state_map(self.breast, rest_chart, self.result))
 
     def swing(self, rest_chart: np.ndarray, start: np.ndarray, end: np.ndarray) -> np.ndarray:
-        """Transposition: the end of the pedicle that carries the areola reaches its place, the base stays."""
+        """Transposition: the end of the pedicle that carries the areola reaches its place with a collar (self.collar mm)
+        round it, the base stays, and the tissue between turns on the base (arcs about the pivot, not chords: what is
+        only part of the way does not fold over the areola)."""
         iso = self.rest.iso(rest_chart[:, :2])
         rho = np.hypot(iso[:, 0], iso[:, 1])
         u, v, r = rest_chart[:, 0], rest_chart[:, 1], rest_chart[:, 2]
         base = self.breast.base(u, v)
         t = np.clip((r - base) / np.maximum(self.st.skin_r(u, v) - base, 0.5), 0, 1)
-        w = smooth01(1 - (rho - self.areola_r) / (self.reach - self.areola_r)) * smooth01(t / 0.6)
-        return start + w[:, None] * (end - start)
+        inner = self.areola_r + self.collar
+        w = smooth01(1 - (rho - inner) / max(self.reach - inner, 8.0)) * smooth01(t / 0.6)
+        return self.arc(start, end, w)
+
+    def arc(self, start: np.ndarray, end: np.ndarray, w, pivot: np.ndarray | None = None) -> np.ndarray:
+        """Points from start to end by the fraction w (per point or one for all) along arcs about a pivot (default: that
+        of the pedicle), their distance to it blended linearly: tissue turning on its base keeps its bulk on the way."""
+        pivot = self.pivot if pivot is None else pivot
+        w = np.broadcast_to(np.asarray(w, float), (len(start),))
+        a, b = start - pivot, end - pivot
+        la, lb = np.linalg.norm(a, axis=1), np.linalg.norm(b, axis=1)
+        ua, ub = a / np.maximum(la, 1e-9)[:, None], b / np.maximum(lb, 1e-9)[:, None]
+        angle = np.arccos(np.clip(np.einsum("ij,ij->i", ua, ub), -1.0, 1.0))
+        sin = np.sin(angle)
+        straight = sin < 1e-4
+        k1 = np.where(straight, 1 - w, np.sin((1 - w) * angle) / np.where(straight, 1.0, sin))
+        k2 = np.where(straight, w, np.sin(w * angle) / np.where(straight, 1.0, sin))
+        direction = k1[:, None] * ua + k2[:, None] * ub
+        arc = pivot + direction * (la + w * (lb - la))[:, None]
+        # close to the pivot, or turning almost about, the direction is unstable: there the way is straight
+        steady = smooth01((np.minimum(la, lb) - 10.0) / 25.0) * smooth01((2.6 - angle) / 0.6)
+        return start + w[:, None] * (end - start) + steady[:, None] * (arc - start - w[:, None] * (end - start))
 
 
 # --------------------------------------------------------------------------------------------------
@@ -477,6 +564,26 @@ class Writer:
             if np.abs(frames[k] - previous).max() > 0.005:
                 stored[k] = previous = frames[k]
         self.meshes.append({"name": name, "structure": structure, "label": label, "color": color, "opacity": opacity, "tissue": tissue, "faces": remap[faces], "frames": stored, "full": frames})
+
+    def settle(self, disc_name: str, structures: set[str], hint) -> None:
+        """Every mesh of `structures` kept behind the disc of the areola in every frame (keep_behind, then clear_front for
+        the triangles that still cross in front of it; `hint(centre)`: the direction away from the chest there); the
+        frames where each mesh moves are then stored again."""
+        disc = next((m for m in self.meshes if m["name"] == disc_name), None)
+        if disc is None:
+            return
+        for m in self.meshes:
+            if m["structure"] not in structures:
+                continue
+            full = []
+            for k, frame in enumerate(m["full"]):
+                ring, away = disc["full"][k], hint(disc["full"][k].mean(0))
+                full.append(clear_front(keep_behind(frame, ring, disc["faces"], away), m["faces"], ring, disc["faces"], away))
+            stored, previous = {0: full[0]}, full[0]
+            for k in range(1, self.count):
+                if np.abs(full[k] - previous).max() > 0.005:
+                    stored[k] = previous = full[k]
+            m["full"], m["frames"] = full, stored
 
     def write(self, path: Path) -> tuple[list[dict], dict]:
         allpos = np.vstack([p for m in self.meshes for p in m["frames"].values()]) * MM
@@ -697,6 +804,79 @@ def staged_skin(tech: Technique, k0: np.ndarray, final: np.ndarray, schedule: li
     return frames
 
 
+def transposed(ids: list[str], i: int) -> float:
+    """How far the transposition has gone at key frame i: 0 before it, k / (SUB + 1) at its in-between frames, 1 from the
+    transposition on."""
+    if ids[i].startswith("transposicao:"):
+        return int(ids[i].split(":")[1]) / (SUB + 1)
+    return 1.0 if "transposicao" in ids and i >= ids.index("transposicao") else 0.0
+
+
+def keep_behind(points: np.ndarray, disc: np.ndarray, disc_faces: np.ndarray, hint: np.ndarray, depth: float = BEHIND, reach: float = 10.0) -> np.ndarray:
+    """Tissue under the areola kept behind it: a point in front of the disc of the areola, or less than `depth` behind it,
+    goes back along the disc's normal (oriented along `hint`, away from the chest); fully over the disc, fading to
+    nothing `reach` mm beyond its rim."""
+    import trimesh
+
+    centre = disc.mean(0)
+    radius = float(np.linalg.norm(disc - centre, axis=1).max())
+    near = np.nonzero(np.linalg.norm(points - centre, axis=1) < radius + reach + 25.0)[0]
+    if not len(near):
+        return points
+    mesh = trimesh.Trimesh(disc, disc_faces, process=False)
+    closest, _, face = trimesh.proximity.closest_point(mesh, points[near])
+    normal = mesh.face_normals[face]
+    normal = normal * np.where(normal @ hint < 0, -1.0, 1.0)[:, None]
+    offset = points[near] - closest
+    height = np.einsum("ij,ij->i", offset, normal)
+    lateral = np.linalg.norm(offset - height[:, None] * normal, axis=1)
+    push = np.maximum(height + depth, 0.0) * (1.0 - smooth01(lateral / reach))
+    out = points.copy()
+    out[near] -= normal * push[:, None]
+    return out
+
+
+def clear_front(points: np.ndarray, faces: np.ndarray, disc: np.ndarray, disc_faces: np.ndarray, hint: np.ndarray, depth: float = BEHIND, reach: float = 25.0, rounds: int = 4) -> np.ndarray:
+    """What keep_behind leaves in front of the areola. It moves vertices, and fades beside the disc: a long triangle
+    (the pillars of the large breasts have edges of several centimetres) with corners beside the disc can still cross
+    the column in front of it. Rays from the disc (its vertices and face centres, along the normal of its plane and of
+    each face) find such triangles up to `reach` mm in front, and their corners go back along the ray until the
+    triangle is `depth` behind the disc; repeated while a ray hits something."""
+    import trimesh
+
+    disc_mesh = trimesh.Trimesh(disc, disc_faces, process=False)
+    centre = disc.mean(0)
+    axis = np.linalg.svd(disc - centre)[2][2]
+    axis = axis if axis @ hint >= 0 else -axis
+    face_normal = disc_mesh.face_normals * np.where(disc_mesh.face_normals @ hint < 0, -1.0, 1.0)[:, None]
+    centres = disc_mesh.triangles_center
+    dirs = np.vstack([np.repeat(axis[None], len(disc) + len(centres), 0), face_normal])
+    starts = np.vstack([disc, centres, centres]) - dirs * depth
+    radius = float(np.linalg.norm(disc - centre, axis=1).max())
+    out = points.copy()
+    for _ in range(rounds):
+        corners = out[faces]
+        middle = corners.mean(1)
+        size = np.linalg.norm(corners - middle[:, None], axis=2).max(1)
+        near = np.nonzero(np.linalg.norm(middle - centre, axis=1) < radius + reach + size)[0]
+        if not len(near):
+            break
+        loc, ray, hit = trimesh.Trimesh(out, faces[near], process=False).ray.intersects_location(starts, dirs, multiple_hits=True)
+        if not len(loc):
+            break
+        dist = np.einsum("ij,ij->i", loc - starts[ray], dirs[ray])
+        keep = dist < reach + depth
+        if not keep.any():
+            break
+        push, way = np.zeros(len(out)), np.zeros_like(out)
+        for r, t, d in zip(ray[keep], hit[keep], dist[keep]):
+            for v in faces[near[t]]:
+                if d > push[v]:
+                    push[v], way[v] = d, dirs[r]
+        out -= way * (push + 0.05 * (push > 0))[:, None]
+    return out
+
+
 def line_track(patch, name: str) -> tuple[np.ndarray, np.ndarray]:
     """Vertices of a line of the marking in order, with their fraction of its length."""
     ids, fraction = patch.on_line(name)
@@ -853,14 +1033,16 @@ def neurovascular_tracks(tech: Technique, item: dict, pillar_pieces: dict, anato
         frames = []
         for i, f in enumerate(fr):
             if i < t3:
-                frames.append(k0)
+                # before the transposition nothing moves; on its way, the pedicle's share goes along the arc
+                s_ = transposed(ids, i)
+                frames.append(k0 if s_ == 0 else k0 + anchor[:, None] * (m_ped[:, None] * (tech.arc(k0, swing, s_) - k0)))
                 continue
             waiting = key == "pitanguy" and t3 < i and ids[i] != "abertura"
             sw, bu = (swing_in, buried_in) if waiting else (swing, buried)
             ped = sw if i == t3 else sw + f["global"] * (bu - sw)
             move = m_ped[:, None] * (ped - k0)
             if i > t3:
-                move += sum(m_pil[side][:, None] * f["deep"] * (later - k0) for side in m_pil)
+                move += sum(m_pil[side][:, None] * (tech.arc(k0, later, f["deep"], tech.pillar_pivot[side]) - k0) for side in m_pil if f["deep"] > 0)
                 move += m_stay[:, None] * f["global"] * (later - k0)
             frames.append(k0 + anchor[:, None] * move)
         radii = np.linspace(geometry["radiusMm"][0], geometry["radiusMm"][1], len(pts)) * 0.8
@@ -955,13 +1137,25 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
         out = []
         for i in range(nf):
             sw, bu = (swing_in, buried_in) if waiting(i) else (swing, buried)
-            out.append(k0 if i < t3 else sw if i == t3 else sw + fr[i]["global"] * (bu - sw))
+            if i < t3:
+                s_ = transposed(ids, i)
+                out.append(k0 if s_ == 0 else tech.arc(k0, sw, s_))
+            else:
+                out.append(sw if i == t3 else sw + fr[i]["global"] * (bu - sw))
         return out
 
     def nac_like(q, k0, final):
-        """Skin of the areola (rest chart q): at its place from the transposition on (Pitanguy: deeper until opened)."""
+        """Skin of the areola (rest chart q): carried by the pedicle along its arc, at its place from the transposition
+        on (Pitanguy: deeper until opened)."""
         inside = tech.skin_final(tech.inset(q))
-        return [k0 if i < t3 else (inside if waiting(i) else final) for i in range(nf)]
+        out = []
+        for i in range(nf):
+            if i < t3:
+                s_ = transposed(ids, i)
+                out.append(k0 if s_ == 0 else tech.arc(k0, final, s_))
+            else:
+                out.append(inside if waiting(i) else final)
+        return out
 
     def removed(k0, shift):
         return [k0 if i < t2 else k0 + shift for i in range(nf)]
@@ -974,9 +1168,20 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     graft_dir = radial_of(ch, nipple_now) * GRAFT_ASIDE["radial"] + np.array([-ch.s, 0.0, 0.0]) * GRAFT_ASIDE["lateral"] + np.array([0.0, GRAFT_ASIDE["up"], 0.0])
 
     def graft_like(k0, final):
-        """Free graft: lifted off at the incision, kept aside while the breast is amputated and closed, laid on its bed
-        in the last frame."""
-        return [k0 if i < t_harvest else (final if i == nf - 1 else k0 + graft_dir) for i in range(nf)]
+        """Free graft: lifted off at the incision, kept aside while the breast is amputated and closed, brought in front
+        of its bed and laid on it in the last frame."""
+        hover = radial_of(ch, final.mean(0)) * GRAFT_HOVER
+        out = []
+        for i in range(nf):
+            if i < t_harvest:
+                out.append(k0)
+            elif i == nf - 1:
+                out.append(final)
+            elif ids[i].startswith("enxerto:"):
+                out.append(final + hover)
+            else:
+                out.append(k0 + graft_dir)
+        return out
 
     # ---- skin -------------------------------------------------------------------------------------------------
     k0 = tech.standing(patch.rest_chart)
@@ -1018,7 +1223,7 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     disc_radii = [AREOLA_NEW / 2 * k / 6 for k in range(1, 7)]
     ring_radii = list(np.linspace(AREOLA_NEW / 2, areola_now / 2, 4))
     grid = nipple_grid(st, nipple, disc_radii + ring_radii[1:], n)
-    lift_areola = 0.3
+    lift_areola = 0.4
     disc_xs = np.vstack([nipple[None], grid[:6].reshape(-1, 2)])
     q_disc = st.skin(disc_xs, lift_areola)
     disc_k0 = st.model(q_disc)
@@ -1060,10 +1265,14 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     w.add(f"mamo_{key}_step_resection", sid("resection"), f"Ressecção {info['resection']}", COLORS["resection"], 0.9, "piece", res.faces, removed(res_k0, out_dir))
     volumes, pillar_frames = {}, {}
     pillar_pieces = pillars(kind in FLAP_TECHNIQUES, item, front, inverse, st)
+    tech.pillar_pivot = {}
     for side, piece in pillar_pieces.items():
         k0p = ch.to_model(piece.standing)
         finalp = tech.final(piece.rest, "pillar")
-        pillar_frames[side] = [k0p + f["deep"] * (finalp - k0p) for f in fr]
+        # a pillar (or flap) turns towards the middle on its base: the part of it that moves least
+        moved = np.linalg.norm(finalp - k0p, axis=1)
+        tech.pillar_pivot[side] = k0p[moved <= np.percentile(moved, 15)].mean(0)
+        pillar_frames[side] = [k0p if f["deep"] == 0 else tech.arc(k0p, finalp, f["deep"], tech.pillar_pivot[side]) for f in fr]
         w.add(f"mamo_{key}_step_pillar_{side}", sid(f"pillar-{side}"), f"{pillar_word} {side}", COLORS[f"pillar-{side}"], 0.9, "piece", piece.faces, pillar_frames[side])
         volumes[side] = round(piece.volume)
 
@@ -1163,22 +1372,25 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     if graft:
         # the graft is lifted off at the incision and laid on its bed in the last frame
         arrow(t_harvest, disc_k0[0], disc[t_harvest][0], COLORS["nac"])
-        arrow(nf - 1, disc[nf - 2][0], disc[nf - 1][0], COLORS["nac"])
+        arrow(nf - 1, disc[ids.index("leito")][0], disc[nf - 1][0], COLORS["nac"])
     else:
-        arrow(t3, disc[t3 - 1][0], disc[t3][0], COLORS["nac"])
+        arrow(t3, disc[t2][0], disc[t3][0], COLORS["nac"])
     for i in range(t3 + 1, nf):
+        if ":" in ids[i]:
+            continue
+        prev = max(j for j in range(i) if ":" not in ids[j])
         for side, frames_ in pillar_frames.items():
-            arrow(i, frames_[i - 1].mean(0), frames_[i].mean(0), COLORS[f"pillar-{side}"])
+            arrow(i, frames_[prev].mean(0), frames_[i].mean(0), COLORS[f"pillar-{side}"])
         for group, (stitches, _) in seams.items():
             if group == "deep":
                 continue
             # the two edges of the middle stitch of a suture that closes in this stage, going to meet
             a, b = stitches[len(stitches) // 2]
-            if np.linalg.norm(a[i - 1] - b[i - 1]) - np.linalg.norm(a[i] - b[i]) > 4.0:
-                arrow(i, a[i - 1], a[i], SEAM_COLORS[group])
-                arrow(i, b[i - 1], b[i], SEAM_COLORS[group])
+            if np.linalg.norm(a[prev] - b[prev]) - np.linalg.norm(a[i] - b[i]) > 4.0:
+                arrow(i, a[prev], a[i], SEAM_COLORS[group])
+                arrow(i, b[prev], b[i], SEAM_COLORS[group])
         if ids[i] == "abertura":
-            arrow(i, disc[i - 1][0], disc[i][0], COLORS["nac"])
+            arrow(i, disc[prev][0], disc[i][0], COLORS["nac"])
 
     # ---- measurements of the marking ---------------------------------------------------------------------------------
     measures, values = [], {"areolaNowMm": areola_now, "areolaNewMm": AREOLA_NEW}
@@ -1214,6 +1426,9 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
         if label == "Cicatriz vertical":
             values["verticalScarMm"] = round(float(bb.polyline_length(pts)), 1)
     values["areolaResultMm"] = round(float(np.linalg.norm(disc_final[rim[: n // 2]] - disc_final[rim[n // 2:]], axis=1).mean()), 1)
+    # the pedicle, its dermis, the areola beyond the areolotome, the vessels and nerves (and a graft's bed) lie behind the
+    # areola in every frame: the transposition and the closure may not bring any of them over it
+    w.settle(f"mamo_{key}_step_areola", {sid("pedicle"), sid("dermis"), sid("areola-ring"), sid("pillar-medial"), sid("pillar-lateral"), sid("arteries"), sid("nerves")}, lambda centre: radial_of(ch, centre))
     return tech, w, volumes, branches, extra_points, values, arrows
 
 
@@ -1283,7 +1498,7 @@ def write_case(case: str) -> None:
         out_bin = Path(str(OUT_BIN).format(key=key))
         records, box_ = writer.write(out_bin)
         m = measure(tech, before, notch)
-        print(f"   mamilo {tech.nipple_above_fold} mm acima do sulco; polo inferior x{tech.result['growth']['length']} para um pilar vertical de {PILLAR / 10:.1f} cm")
+        print(f"   mamilo {tech.nipple_above_fold} mm acima do sulco; polo inferior x{tech.result['growth']['length']}: altura {tech.lower_pole_mm[0]:.0f} mm para {tech.lower_pole_mm[1]:.0f} mm de projeção")
         print(f"   antes {m['before']}\n   depois {m['after']}\n   medidas {values}")
         print(f"   vasos e nervos do pedículo: {branches}")
         # the content hash keeps the service worker (cache first) from serving an older binary with newer data
@@ -1307,7 +1522,7 @@ def write_case(case: str) -> None:
     # where the skin of the trunk gives way to the patch of each technique (rest chart u, v of the operated side)
     hole = rest.uv(np.array(tech.patch.mesh_domain.buffer(-1.5).simplify(0.3).exterior.coords))
     out = {
-        "version": 4, "source": bm.SOURCE, "case": case, "state": case, "pillarMm": PILLAR,
+        "version": 5, "source": bm.SOURCE, "case": case, "state": case, "roundness": ROUNDNESS,
         "hole": [[round(float(u), 2), round(float(v), 2)] for u, v in hole],
         "techniques": techniques, "structures": structures, "meshes": manifest,
     }

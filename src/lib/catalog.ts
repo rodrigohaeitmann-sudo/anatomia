@@ -1,7 +1,8 @@
 /**
  * Catalogue helpers over the packs (src/data/packs.ts): lookups, covers, search index.
  */
-import { allPacks, packGroups, type Pack, type PackGroup, type PackView } from "@/data/packs";
+import { mammaplastyTechniques, type MammaplastyTechnique } from "@/data/mammaplasty";
+import { allPacks, packFolders, packGroups, type Pack, type PackFolder, type PackGroup, type PackView } from "@/data/packs";
 import type { IconName } from "@/components/ui/Icon";
 import { fold } from "@/lib/text";
 import { modelStructures } from "@/lib/modelConfig";
@@ -84,8 +85,27 @@ export const groupShort: Record<string, string> = { mama: "Mama", ...mammaplasty
 export const packEntry = (packId: string) => allPacks.find((entry) => entry.pack.id === packId) ?? null;
 export const viewCount = (group: PackGroup) => group.packs.reduce((sum, pack) => sum + pack.views.length, 0);
 
-export type { Pack, PackGroup, PackView };
-export { allPacks, packGroups };
+export type { MammaplastyTechnique, Pack, PackFolder, PackGroup, PackView };
+export { allPacks, packFolders, packGroups };
+
+// ---- folders (phones): a folder of groups is one entry of the library; its groups are subfolders -------------------
+export const folderById = (id: string | null | undefined) => packFolders.find((folder) => folder.id === id) ?? null;
+export const folderOf = (groupId: string | null | undefined) => packFolders.find((folder) => folder.groups.includes(groupId ?? "")) ?? null;
+export const groupById = (id: string | null | undefined) => packGroups.find((group) => group.id === id) ?? null;
+export const groupsOf = (folder: PackFolder) => folder.groups.map((id) => groupById(id)).filter((group): group is PackGroup => group !== null);
+/** Entries of the library on phones, in order: the groups outside folders and each folder where its first group is. */
+export type LibraryEntry = { kind: "group"; group: PackGroup } | { kind: "folder"; folder: PackFolder; groups: PackGroup[] };
+export const libraryEntries: LibraryEntry[] = packGroups.flatMap((group): LibraryEntry[] => {
+  const folder = folderOf(group.id);
+  if (!folder) return [{ kind: "group", group }];
+  return folder.groups[0] === group.id ? [{ kind: "folder", folder, groups: groupsOf(folder) }] : [];
+});
+/** The techniques of a group as subfolders (the degrees of the reduction mammaplasty); none for the other groups. */
+export const techniquesOf = (groupId: string): MammaplastyTechnique[] => mammaplastyTechniques[groupId] ?? [];
+export const folderViewCount = (folder: PackFolder) => groupsOf(folder).reduce((sum, group) => sum + viewCount(group), 0);
+export const folderTechniqueCount = (folder: PackFolder) => folder.groups.reduce((sum, id) => sum + techniquesOf(id).length, 0);
+/** Whether a group is shown by a library filter (a group id, or a folder id for all of its groups). */
+export const inFilter = (group: PackGroup, filter: string | null) => !filter || group.id === filter || folderOf(group.id)?.id === filter;
 
 // ---- search ------------------------------------------------------------------------------------------
 
