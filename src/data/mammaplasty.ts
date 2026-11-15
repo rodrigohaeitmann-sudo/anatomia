@@ -19,6 +19,8 @@ type Measurements = {
   linesMm: Record<string, number>;
   pedicleMl: number;
   pedicleG: number;
+  /** the part of the pedicle from where its arteries come through the chest wall to its de-epithelialised part */
+  pedicleStalkMl?: number;
   resectionMl: number;
   resectionG: number;
   resectionPct: number;
@@ -301,6 +303,21 @@ const referenceCard: AnatomyDetail = {
 const referencesOf = (planCase: PlanCaseId) => `mamo-reference-lines${planCaseSuffix[planCase]}`;
 /** A technique with a pedicle (all but the free nipple graft). */
 const hasPedicle = (t: CaseTechnique) => t.measurements.pedicleMl > 0;
+/** Where the arteries of each pedicle come in through the chest wall (build_mammaplasty.py, PEDICLE_SOURCES). */
+const pedicleSource: Record<TechniqueId, string> = {
+  pitanguy: "dos perfurantes da torácica interna do 2º e do 3º espaço intercostal",
+  lejour: "dos perfurantes da torácica interna do 2º e do 3º espaço intercostal",
+  vertical: "dos perfurantes da torácica interna do 2º ao 4º espaço intercostal",
+  orlando: "dos perfurantes da torácica interna do 2º ao 4º espaço intercostal",
+  wise: "dos perfurantes intercostais do 5º e do 6º espaço, na raiz presa à parede acima do sulco",
+  periareolar: "das perfurantes da torácica interna, por dentro, e do ramo mamário lateral, por fora",
+  thorek: "",
+};
+/** How the pedicle is drawn in the steps: whole, from its arteries to the areola, its base held on the chest wall. */
+const pedicleWhole = (t: CaseTechnique) =>
+  t.technique === "wise" || t.measurements.pedicleStalkMl
+    ? `O pedículo é mostrado inteiro, da entrada ${pedicleSource[t.technique]} pela parede torácica até o complexo areolopapilar, e não só sob a pele desepitelizada; a base fica presa à parede em todos os passos e só o resto do pedículo, com o complexo areolopapilar, se move`
+    : `Nesta mama a técnica corta as artérias que nutririam o pedículo (${pedicleSource[t.technique].replace(/^d(os|as) /, "")}): ele aparece sem a haste que o ligaria a elas, e a base fica presa à parede em todos os passos`;
 export const planDetails: Record<string, AnatomyDetail> = Object.fromEntries(planCaseIds.map((planCase) => [referencesOf(planCase), referenceCard]));
 Object.keys(techniques).forEach((key) => {
   const t = techniques[key];
@@ -312,8 +329,8 @@ Object.keys(techniques).forEach((key) => {
       summary: words.pedicleSummary,
       vascularization: supply(m)[0].replace(" (no modelo)", "") + ".",
       innervation: `Conservados: ${list(m.kept, "nerve")}.`,
-      landmarks: [`Volume no modelo: ${m.pedicleMl} mL, cerca de ${m.pedicleG} g`, ...designNotes(t).slice(0, 1)],
-      surgical: [...words.pedicleNotes, ...longPedicle(t), planNoteOf(t)],
+      landmarks: [`Volume no modelo: ${m.pedicleMl} mL, cerca de ${m.pedicleG} g${m.pedicleStalkMl ? `, ${m.pedicleStalkMl} mL deles entre a parede e a pele desepitelizada` : ""}`, ...designNotes(t).slice(0, 1)],
+      surgical: [pedicleWhole(t), ...words.pedicleNotes, ...longPedicle(t), planNoteOf(t)],
     };
   }
   planDetails[`mamo-resection-${key}`] = {
@@ -326,77 +343,6 @@ Object.keys(techniques).forEach((key) => {
 // ---- pack ------------------------------------------------------------------------------------------------
 const pointLabels = (key: string, names: string[]): PackLabel[] =>
   names.map((name) => ({ structure: `mamo-marking-${key}`, near: `mamo:${key}:${name}`, text: `${name}: ${planPoints[`mamo:${key}:${name}`].note}` }));
-const arteries = ["internal-thoracic-perforators", "lateral-mammary-branches", "intercostal-perforators", "thoracoacromial-mammary-branch"];
-
-function views(key: string, points: string[]): PackView[] {
-  const t = techniques[key];
-  const m = t.measurements;
-  const words = text[t.technique];
-  const zoom = zoomOf(t);
-  const references = referencesOf(t.case);
-  const marking = `mamo-marking-${key}`;
-  const pedicle = `mamo-pedicle-${key}`;
-  const resection = `mamo-resection-${key}`;
-  const short = t.short;
-  const pedicled = hasPedicle(t);
-  const all: PackView[] = [
-    {
-      id: `${key}-marcacao`,
-      title: `${short}: marcação`,
-      description: words.markingSummary,
-      structures: ["skin", "nipple-areola", "contralateral-breast", references, marking],
-      solid: ["skin"],
-      orientation: "anterior",
-      anchor: "nipple",
-      distance: 0.4 * zoom,
-      breast: t.state,
-      labels: pointLabels(key, points),
-      relations: [...measures_(key), ...words.markingSteps, proposalOf(t)],
-    },
-    {
-      id: `${key}-pediculo`,
-      title: `${short}: pedículo ${t.pedicle}`,
-      description: words.pedicleSummary,
-      structures: ["skin", "nipple-areola", marking, pedicle, ...arteries, "fourth-intercostal-lateral-branch", "horizontal-septum", "internal-thoracic-vessels", "lateral-thoracic-vessels", "chest-wall", "costal-cartilages"],
-      focus: [pedicle],
-      orientation: "anterolateral",
-      anchor: "nipple",
-      distance: 0.55 * zoom,
-      breast: t.state,
-      labels: [
-        { structure: pedicle, near: "nipple", text: `Pedículo ${t.pedicle}` },
-        { structure: marking, near: `mamo:${key}:A`, text: "A: novo mamilo" },
-      ],
-      relations: [`Volume do pedículo no modelo: ${m.pedicleMl} mL, cerca de ${m.pedicleG} g`, ...designNotes(t).slice(0, 1), ...supply(m), ...words.pedicleNotes, ...longPedicle(t), planNoteOf(t)],
-    },
-    {
-      id: `${key}-resseccao`,
-      title: `${short}: ressecção ${t.resection}`,
-      description: words.resectionSummary,
-      structures: ["skin", "nipple-areola", marking, ...(pedicled ? [pedicle] : []), resection],
-      focus: [resection],
-      orientation: "anterolateral",
-      anchor: "nipple",
-      distance: 0.55 * zoom,
-      breast: t.state,
-      labels: [
-        { structure: resection, near: "inframammaryFold", nearOffsetMm: [0, -30, 30], text: `Ressecção ${t.resection}` },
-        ...(pedicled ? [{ structure: pedicle, near: "nipple", text: `Pedículo ${t.pedicle}` }] : []),
-      ],
-      relations: [
-        `Peça ressecada no modelo: ${m.resectionMl} mL, cerca de ${m.resectionG} g: ${m.resectionPct}% do monte de ${t.dims.moundMl} mL`,
-        ...designNotes(t),
-        ...(pedicled ? [] : supply(m).slice(1)),
-        ...words.resectionNotes,
-        proposalOf(t),
-        planNoteOf(t),
-      ],
-    },
-  ];
-  // the free nipple graft has no pedicle to show
-  return pedicled ? all : all.filter((view) => view.id !== `${key}-pediculo`);
-}
-
 // ---- step by step: what leaves, where the rest goes, what is sutured to what (src/data/mammaplastySteps<-case>.json) ------
 type Stage = { title: string; text: string; seams: string[]; notes: string[]; solid?: boolean };
 type StepText = {
@@ -615,6 +561,8 @@ function stepViews(key: string): PackView[] {
   const id = (part: string) => `mamo-step-${part}-${key}`;
   const [skin, excised, dermis, pedicle, resection, medial, lateral] = ["skin", "excised", "dermis", "pedicle", "resection", "pillar-medial", "pillar-lateral"].map(id);
   const [nac, ring, tome, measures, arteries, sutures, areolaSuture, cover, coverRing, scars] = ["nac", "areola-ring", "areolotome", "measures", "arteries", "sutures", "sutures-areola", "disc", "disc-ring", "scars"].map(id);
+  // the arteries the pedicle keeps to the nipple, and those the operation cuts (shown up to the resection)
+  const arteriesCut = id("arteries-cut");
   const marking = `mamo-marking-${key}`;
   // "dermis" is the de-epithelialised skin over the pedicle or, in the free graft, the bed of the graft: a part of
   // the skin that stays, shown with it from the start and tinted only once it is de-epithelialised
@@ -649,10 +597,11 @@ function stepViews(key: string): PackView[] {
     ? `Ficam: os retalhos medial (${pillarsMl.medial} mL) e lateral (${pillarsMl.lateral} mL) e o polo superior; não há pedículo`
     : `Fica: o pedículo ${t.pedicle} (verde, ${m.pedicleMl} mL) e os ${flaps} medial (${pillarsMl.medial} mL) e lateral (${pillarsMl.lateral} mL)`;
   const nerves = "Os nervos (menu de estruturas ou botão Vasos) seguem a mesma regra";
+  const cutLater = "Depois da ressecção só as que chegam ao mamilo ficam na vista; as cortadas estão no menu de estruturas e no botão Vasos";
   const vessels = graft
     ? `Artérias da mama: o enxerto não tem pedículo, e nenhuma artéria chega a ele. Em vermelho escuro, as cortadas pela ressecção: o trecho que está na peça sai com ela. ${nerves}`
     : branches.artery.length
-      ? `Artérias da mama: em vermelho vivo as que o pedículo conserva até o mamilo (${branchList(branches.artery)}); em vermelho escuro as cortadas, cujo trecho na peça sai com ela. ${nerves}`
+      ? `Artérias da mama: em vermelho vivo as que o pedículo conserva até o mamilo (${branchList(branches.artery)}); em vermelho escuro as cortadas, cujo trecho na peça sai com ela. ${nerves}. ${cutLater}`
       : `Artérias da mama: no modelo, nenhuma chega ao mamilo sem cruzar a ressecção ou as incisões; em vermelho escuro as cortadas, cujo trecho na peça sai com ela. ${nerves}`;
   const arteryLabel = !graft && branches.artery.length ? "Artérias que o pedículo conserva" : "Artérias cortadas pela ressecção";
   const outerRing = graft ? "o anel de fora sai com a peça" : ringSkin ? "o anel de fora é desepitelizado com a pele em volta" : "o anel de fora será desepitelizado com o pedículo";
@@ -716,11 +665,11 @@ function stepViews(key: string): PackView[] {
       id: `${key}-passo-resseccao`,
       title: graft ? "4. Amputação do polo inferior" : "4. Ressecção",
       description: s.resection,
-      structures: ["skin", "contralateral-breast", ...skinParts, ...areola, ...pieces, arteries],
+      structures: ["skin", "contralateral-breast", ...skinParts, ...areola, ...pieces, arteries, arteriesCut],
       translucent: [skin, ...(graft ? [dermis] : [])],
       tint,
       focus: [resection, excised],
-      labels: [label(resection, "resection", `Ressecção ${t.resection}: ${m.resectionMl} mL`), label(excised, "excised", "Pele ressecada"), label(pedicle, "pedicle", `Pedículo ${t.pedicle} (${m.pedicleMl} mL)`), label(arteries, "arteries", arteryLabel), ...pillarLabels],
+      labels: [label(resection, "resection", `Ressecção ${t.resection}: ${m.resectionMl} mL`), label(excised, "excised", "Pele ressecada"), label(pedicle, "pedicle", `Pedículo ${t.pedicle} (${m.pedicleMl} mL)`), label(!graft && branches.artery.length ? arteries : arteriesCut, "arteries", arteryLabel), ...pillarLabels],
       surgery: surgery(frameOf("resseccao")),
       relations: [removed, stays, ...designNotes(t), vessels, ...s.notes.resection],
     },
@@ -737,7 +686,7 @@ function stepViews(key: string): PackView[] {
       focus: [pedicle, nac],
       labels: [label(nac, "nac", `Complexo areolopapilar: sobe ${cm(sizes.ascensionMm)} cm até A`), label(pedicle, "pedicle", `Pedículo ${t.pedicle}`), label(arteries, "arteries", ringSkin ? "Vasos do pedículo: sobem com a glândula" : "Vasos do pedículo: dobram-se com ele")],
       surgery: surgery(frameOf("transposicao")),
-      relations: [ascension + ` (fúrcula–A: ${cm(m.notchToAMm)} cm)`, vessels, ...s.notes.transposition],
+      relations: [ascension + ` (fúrcula–A: ${cm(m.notchToAMm)} cm)`, vessels, ...s.notes.transposition, pedicleWhole(t)],
     });
   }
   // the closure, stage by stage: what is sutured to what
@@ -889,6 +838,14 @@ Object.keys(techniques).forEach((key) => {
     }`,
     surgical: ["Pode ser ocultado no menu de estruturas; a escolha vale para todos os passos da técnica", "Trajetos típicos da literatura, não os de uma pessoa"],
   };
+  planDetails[`mamo-step-arteries-cut-${key}`] = {
+    summary: `Artérias da mama cortadas pela técnica (camada esquemática), em vermelho escuro: ${travel}. O trecho que estava na peça sai com ela; o que fica irriga os ${s.pillar === "Pilar" ? "pilares" : "retalhos"} e a pele, não o mamilo.`,
+    surgical: ["Aparecem até a ressecção; nos passos seguintes, ligue no menu de estruturas ou no botão Vasos", "Trajetos típicos da literatura, não os de uma pessoa"],
+  };
+  planDetails[`mamo-step-nerves-cut-${key}`] = {
+    summary: "Nervos da mama cortados pela técnica (camada esquemática), em amarelo escuro, acompanhando a cirurgia como as artérias.",
+    surgical: ["Ligue no menu de estruturas ou no botão Vasos; a escolha vale para todos os passos da técnica"],
+  };
   planDetails[`mamo-step-nerves-${key}`] = {
     summary: `Nervos da mama (camada esquemática) acompanhando a cirurgia, como as artérias. ${
       graft ? "O enxerto não leva nervos: a sensibilidade do mamilo se perde." : `Em amarelo vivo, os que o pedículo ${t.pedicle} conserva: ${branchList(branches.nerve)}.`
@@ -917,16 +874,6 @@ Object.keys(techniques).forEach((key) => {
   };
 });
 
-const markingPoints: Record<TechniqueId, string[]> = {
-  pitanguy: ["A", "B", "C", "D", "E"],
-  wise: ["A", "B", "C", "D", "E"],
-  orlando: ["A", "B", "C", "D", "E"],
-  thorek: ["A", "B", "C", "D", "E"],
-  vertical: ["A", "T", "M", "L", "F"],
-  lejour: ["A", "T", "M", "L", "F"],
-  periareolar: ["A", "S", "I", "M", "L"],
-};
-
 // ---- packs: one group per degree of ptosis --------------------------------------------------------------------------
 const countWords: Record<number, string> = { 1: "Uma técnica", 2: "Duas técnicas", 3: "Três técnicas", 4: "Quatro técnicas", 5: "Cinco técnicas" };
 /** A technique label inside a sentence. */
@@ -948,21 +895,6 @@ export const mammaplastyStepPacksOf = (planCase: PlanCaseId): Pack[] =>
     };
   });
 
-/** Marking, pedicle and resection of the techniques of a case. */
-export const mammaplastyPackOf = (planCase: PlanCaseId): Pack => {
-  const keys = keysOf(planCase);
-  const weights = sentenceList(keys.map((key) => `${techniques[key].short} ${techniques[key].measurements.resectionG} g`));
-  const designed = techniques[keys[0]].dims.resultMl != null;
-  return {
-    id: planCase === "ptose-2" ? "mamoplastia-redutora" : `mamoplastia-redutora-${planCase}`,
-    title: `Mamoplastia redutora${caseWords[planCase].title}: marcação, pedículo e ressecção`,
-    summary: `${countWords[keys.length] ?? `${keys.length} técnicas`} na ${caseWords[planCase].breast}, de ${moundOf(planCase)} mL: ${techniqueList(planCase)}. ${
-      designed ? "Pedículos afinados e retalhos de 15 mm ou mais para chegar a uma mama menor. " : ""
-    }Peças no modelo: ${weights}. Para cada técnica: a marcação na pele, o pedículo com os vasos que conserva e a peça ressecada, com volume e peso estimados.`,
-    views: keys.flatMap((key) => views(key, markingPoints[techniques[key].technique])),
-  };
-};
-
 /** The marking shown for each degree in the overview. */
 const overviewMarking: Record<PlanCaseId, string> = { "ptose-1": "periareolar-p1", "ptose-2": "vertical", "ptose-3": "wise-p3", g3: "wise-g3", g4: "thorek-g4" };
 /** What each technique does to a breast, in one line (measured on the model). */
@@ -977,7 +909,7 @@ export const mammaplastyOverviewPack: Pack = {
   id: "mamoplastia-tecnica-por-grau",
   title: "Mamoplastia redutora: técnica por grau de ptose",
   summary:
-    "Que técnica para que mama: da ptose grau I à gigantomastia, as técnicas modeladas em cada grau, com a subida do complexo areolopapilar, o peso da peça, o que fica da mama e as artérias que chegam ao mamilo. Cada grau tem os seus packs, com a marcação, o pedículo, a ressecção e o passo a passo de cada técnica.",
+    "Que técnica para que mama: da ptose grau I à gigantomastia, as técnicas modeladas em cada grau, com a subida do complexo areolopapilar, o peso da peça, o que fica da mama e as artérias que chegam ao mamilo. Cada grau tem o passo a passo de cada técnica, da marcação ao resultado.",
   views: planCaseIds.map((planCase) => {
     const keys = keysOf(planCase);
     const main = techniques[overviewMarking[planCase]] ?? techniques[keys[0]];
@@ -995,19 +927,19 @@ export const mammaplastyOverviewPack: Pack = {
       relations: [
         `Monte de ${moundOf(planCase)} mL; subida do complexo areolopapilar até o ponto A: ${cm(main.measurements.nippleRiseMm)} cm sobre a pele`,
         ...keys.map(techniqueLine),
-        `Marcação mostrada: ${inSentence(main.label)}. As outras estão nos packs deste grau`,
+        `Marcação mostrada: ${inSentence(main.label)}. As outras estão no passo a passo de cada técnica`,
         planNoteOf(main),
       ],
     };
   }),
 };
 
-/** One group of the library per degree: the plan of its techniques, then each technique step by step. */
+/** One group of the library per degree: each of its techniques step by step, from the marking to the result. */
 export const mammaplastyGroups: PackGroup[] = planCaseIds.map((planCase) => ({
   id: `mamoplastia-${planCase}`,
   title: `Mamoplastia redutora: ${caseWords[planCase].area}`,
   description: `${caseWords[planCase].group} ${countWords[keysOf(planCase).length] ?? "Técnicas"}: ${techniqueList(planCase)}.`,
-  packs: [mammaplastyPackOf(planCase), ...mammaplastyStepPacksOf(planCase)],
+  packs: mammaplastyStepPacksOf(planCase),
 }));
 
 /** The reduction mammaplasty as a folder of the library on phones: one subfolder per degree of ptosis. */
@@ -1015,16 +947,15 @@ export const mammaplastyFolder: PackFolder = {
   id: "mamoplastia",
   title: "Mamoplastia redutora",
   short: "Mamoplastia",
-  description: "As técnicas por grau de ptose, da ptose grau I à gigantomastia. Em cada grau, cada técnica com a sua marcação, o pedículo, a ressecção e o passo a passo até o resultado.",
+  description: "As técnicas por grau de ptose, da ptose grau I à gigantomastia. Em cada grau, o passo a passo de cada técnica, da marcação ao resultado.",
   groups: mammaplastyGroups.map((group) => group.id),
 };
 
-/** A technique of a degree, as a subfolder: its views in the plan of the degree and its own step-by-step pack. */
-export type MammaplastyTechnique = { key: string; title: string; short: string; summary: string; planPack: string; planViews: string[]; stepPack: string };
-/** The techniques of every degree (by group id), in the order of the plan. */
+/** A technique of a degree, as a subfolder: its step-by-step pack. */
+export type MammaplastyTechnique = { key: string; title: string; short: string; summary: string; stepPack: string };
+/** The techniques of every degree (by group id). */
 export const mammaplastyTechniques: Record<string, MammaplastyTechnique[]> = Object.fromEntries(
   planCaseIds.map((planCase) => {
-    const plan = mammaplastyPackOf(planCase);
     return [
       `mamoplastia-${planCase}`,
       keysOf(planCase).map((key) => {
@@ -1036,8 +967,6 @@ export const mammaplastyTechniques: Record<string, MammaplastyTechnique[]> = Obj
           title: t.label,
           short: t.short,
           summary: `${pedicle} · ressecção ${t.resection} · peça de ${m.resectionG.toLocaleString("pt-BR")} g; fica uma mama de ${(m.leftMl ?? t.dims.moundMl - m.resectionMl).toLocaleString("pt-BR")} mL`,
-          planPack: plan.id,
-          planViews: plan.views.filter((view) => view.id.startsWith(`${key}-`)).map((view) => view.id),
           stepPack: `mamoplastia-${key}-passo-a-passo`,
         };
       }),

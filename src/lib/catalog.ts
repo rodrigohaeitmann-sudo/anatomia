@@ -13,17 +13,12 @@ import { modelStructures } from "@/lib/modelConfig";
  */
 const covers: Record<string, string> = {
   "ptose-mamaria": "/covers/ptose-2.jpg",
-  "mamoplastia-redutora": "/covers/mamoplastia-marcacao.jpg",
   "mamoplastia-pitanguy-passo-a-passo": "/covers/passos-pitanguy.jpg",
   "mamoplastia-wise-passo-a-passo": "/covers/passos-wise.jpg",
   "mamoplastia-vertical-passo-a-passo": "/covers/passos-vertical.jpg",
   "vascular-mama": "/covers/irrigacao-0.jpg",
-  // reduction mammaplasty by degree of ptosis: the plan of each degree and each technique step by step
+  // reduction mammaplasty by degree of ptosis: the overview and each technique step by step
   "mamoplastia-tecnica-por-grau": "/covers/tecnica-por-grau.jpg",
-  "mamoplastia-redutora-ptose-1": "/covers/plano-ptose-1.jpg",
-  "mamoplastia-redutora-ptose-3": "/covers/plano-ptose-3.jpg",
-  "mamoplastia-redutora-g3": "/covers/plano-g3.jpg",
-  "mamoplastia-redutora-g4": "/covers/plano-g4.jpg",
   ...Object.fromEntries(
     [
       "lejour",
@@ -55,13 +50,8 @@ const viewCovers: Record<string, string> = {
   "vascular-mama/septo": "/covers/irrigacao-1.jpg",
   "vascular-mama/inervacao-cap": "/covers/irrigacao-2.jpg",
   "vascular-mama/septo-ptose": "/covers/irrigacao-3.jpg",
-  "mamoplastia-redutora/pitanguy-marcacao": "/covers/mamoplastia-marcacao.jpg",
-  "mamoplastia-redutora/pitanguy-pediculo": "/covers/mamoplastia-pediculo.jpg",
-  "mamoplastia-tecnica-por-grau/tecnicas-ptose-1": "/covers/plano-ptose-1.jpg",
-  "mamoplastia-tecnica-por-grau/tecnicas-ptose-2": "/covers/mamoplastia-marcacao.jpg",
-  "mamoplastia-tecnica-por-grau/tecnicas-ptose-3": "/covers/plano-ptose-3.jpg",
-  "mamoplastia-tecnica-por-grau/tecnicas-g3": "/covers/plano-g3.jpg",
-  "mamoplastia-tecnica-por-grau/tecnicas-g4": "/covers/plano-g4.jpg",
+  // the overview: the marking of each degree (captured in the app)
+  ...Object.fromEntries(["ptose-1", "ptose-2", "ptose-3", "g3", "g4"].map((planCase) => [`mamoplastia-tecnica-por-grau/tecnicas-${planCase}`, `/covers/tecnicas-${planCase}.jpg`])),
 };
 
 export const coverOf = (packId: string): string | null => covers[packId] ?? null;

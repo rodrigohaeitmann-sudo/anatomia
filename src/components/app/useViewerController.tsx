@@ -424,7 +424,7 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   const toggleNeuro = () => {
     // in the steps of a surgery, the vessels and nerves are those that follow the operation
     if (view.surgery) {
-      const ids = [`mamo-step-arteries-${view.surgery.technique}`, `mamo-step-nerves-${view.surgery.technique}`];
+      const ids = ["arteries", "nerves", "arteries-cut", "nerves-cut"].map((part) => `mamo-step-${part}-${view.surgery?.technique}`).filter((id) => modelStructures.some((item) => item.id === id));
       const next = !ids.every((id) => visibility[id]);
       const changes = Object.fromEntries(ids.map((id) => [id, next]));
       rememberStep(changes);
