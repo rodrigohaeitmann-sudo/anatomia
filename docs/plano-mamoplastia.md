@@ -162,7 +162,7 @@ Critério usado (Regnault, 1976): grau I, mamilo na altura do sulco (±1 cm); gr
 
 ## Fases 2 e 3: três técnicas no app
 
-Pack **Mamoplastia redutora** (grupo Mama), nove vistas: para Pitanguy, Wise com pedículo inferior e vertical com pedículo superomedial, a **marcação** na pele, o **pedículo** com os vasos que conserva e a **ressecção**. Tudo sobre a mama com ptose grau II e hipertrofia moderada (641 mL), em pé. `scripts/hybrid/build_mammaplasty.py` gera `src/data/mammaplasty.json` (55 kB: linhas, pontos, medidas, textos) e `public/models/hybrid/mammaplasty.bin` (177 kB: as seis peças); `src/data/mammaplasty.ts` monta o pack e as fichas a partir desses dados.
+Pack **Mamoplastia redutora** (grupo Mama), nove vistas: para Pitanguy, Wise com pedículo inferior e vertical com pedículo superomedial, a **marcação** na pele, o **pedículo** com os vasos que conserva e a **ressecção**. (Na segunda revisão das técnicas por grau, este pack e os de plano dos outros graus saíram do app: o passo a passo mostra a mesma marcação, o pedículo, agora inteiro, e a ressecção; o plano continua sendo calculado, porque é dele que vêm as peças do passo a passo. Ver `docs/plano-mamoplastia-tecnicas.md`.) Tudo sobre a mama com ptose grau II e hipertrofia moderada (641 mL), em pé. `scripts/hybrid/build_mammaplasty.py` gera `src/data/mammaplasty.json` (55 kB: linhas, pontos, medidas, textos) e `public/models/hybrid/mammaplasty.bin` (177 kB: as seis peças); `src/data/mammaplasty.ts` monta o pack e as fichas a partir desses dados.
 
 ![Marcação, pedículo e ressecção das três técnicas, no app](img/mamoplastia-tecnicas.jpg)
 
