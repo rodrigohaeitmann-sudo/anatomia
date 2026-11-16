@@ -15,14 +15,15 @@ each case lists the techniques that suit its degree of ptosis.
    Point A, the new position of the nipple, is the projection of the inframammary fold on the breast
    meridian, and never less than MIN_RISE above the nipple (ptosis grade I, where the nipple is already at
    the height of the fold). Patterns: inverted T without keyhole (Pitanguy, free nipple graft), keyhole
-   (Wise), vertical with dome, periareolar ring.
+   (Wise), vertical with dome, periareolar ring. The opening for the areola (keyhole, dome) is DOME_ARC long.
 2. Pieces. A pedicle or a resection is the tissue behind a region of the breast seen from the front,
    from the skin straight back towards the chest (the way the textbooks draw them): to the chest wall,
    to the skin of the underside where the breast hangs below the fold, or to a flap thickness. Under the
    medial and lateral skin flaps of the inverted T the wedges are taken below the flap thickness, and the
    inferior pedicle keeps its root on the wall, under the plane of the horizontal septum. The pieces are
    closed meshes built in the standing breast and pulled back to rest by inverting the breast map
-   (Newton); volume times density is the weight.
+   (Newton); volume times density is the weight. A pedicle is drawn whole: beyond its de-epithelialised part,
+   its stalk runs to where its source arteries (PEDICLE_SOURCES) come through the chest wall.
 3. What each pedicle keeps. The schematic vessels and nerves of build_breast_anatomy.py are followed
    from their origin to the nipple: a branch that crosses a resection is cut by that technique.
 
@@ -80,11 +81,31 @@ FLAP_THICKNESS = 15.0  # medial and lateral skin flaps of the inverted T; also h
 ROOT_HEIGHT = 55.0  # the inferior pedicle stays on the wall this far above the fold (up to the fifth rib, origin of the septum)
 ROOT_TOP_WIDTH = 46.0  # width of that root at its upper end (INFERIOR_BASE at the fold)
 ROOT_KEEP = 25.0  # mm: a thinned inferior pedicle keeps this much under the plane of the septum where the breast hangs
+# The opening for the new areola, the keyhole of Wise's pattern and the dome of the vertical one, is DOME_ARC long: 14 cm,
+# the lower end of the 14-16 cm usual for an areola of 4-5 cm (the areolotome's 42 mm is 13.2 cm round). Its top is the
+# upper border of the new areola, AREOLA_D / 2 above point A.
+DOME_ARC = 140.0
+KEYHOLE_R = DOME_ARC / (2 * np.pi * (360.0 - T_ANGLE) / 360.0)  # 33.4 mm: the keyhole is this circle less the T_ANGLE between the limbs
 DOME_RISE = 21.0  # top of the dome above the new nipple (upper edge of the new areola)
-DOME_BASE = 21.0  # the dome ends this far below the new nipple (lower edge of the new areola)
-DOME_HALF = 34.0  # half-width of the dome at its base
+DOME_BASE = 28.0  # the dome ends this far below the new nipple ...
+DOME_HALF = 40.0  # ... with this half-width at its base: both scaled on each breast for a dome DOME_ARC long (vertical)
 VERTICAL_HALF = 48.0  # widest half-width of the vertical pattern
 VERTICAL_STOP = 30.0  # the vertical pattern ends this far above the fold (skin length)
+# Where the blood of each pedicle comes in: the arteries of the schematic layer that it is built on (those the technique
+# does not cut, Planner.build). The pedicle is drawn from where they come through the chest wall to the areola (its
+# stalk, round their courses: SUPPLY_CORRIDOR each side,
+# full thickness on the wall, under STALK_COVER of fat, widening towards the pedicle), not only under its
+# de-epithelialised skin
+PEDICLE_SOURCES = {
+    "superior": ["lit_ita_perforator_2", "lit_ita_perforator_3"],
+    "superomedial": ["lit_ita_perforator_2", "lit_ita_perforator_3", "lit_ita_perforator_4"],
+    # the root of the inferior pedicle on the wall (ROOT_HEIGHT above the fold) already takes in the 5th and 6th perforators
+    "inferior": ["lit_intercostal_perforator_5", "lit_intercostal_perforator_6"],
+    # the central pedicle is fed from all sides: medial, lateral and from behind
+    "central": ["lit_ita_perforator_2", "lit_ita_perforator_3", "lit_ita_perforator_4", "lit_lateral_mammary_1", "lit_intercostal_perforator_4", "lit_intercostal_perforator_5"],
+}
+STALK_COVER = 5.0
+STALK_JOINT = 28.0  # mm: the stalk widens up to this (or half the de-epithelialised part) each side where it joins it
 
 MIN_RISE = 20.0  # mm of skin: point A (the new nipple) is never less than this above the nipple (ptosis grade I)
 RING_BELOW = 10.0  # periareolar ring: mm of skin taken below the areolotome's circle
@@ -308,10 +329,13 @@ def horizontal_limb(st: Standing, start, end) -> np.ndarray:
 
 
 def inverted_t(st: Standing, keyhole: bool, fold_margin: float = FOLD_MARGIN):
-    """Inverted T patterns. With keyhole: Wise (areola opening round A). Without: Pitanguy (A, B, C, D, E)."""
-    rk = AREOLA_D / 2
+    """Inverted T patterns. With keyhole (Wise): an opening of DOME_ARC for the areola, a circle of KEYHOLE_R whose top is
+    the upper border of the new areola (AREOLA_D / 2 above A), the limbs leaving it radially. Without (Pitanguy, free
+    graft): the limbs start at A (points A, B, C, D, E) and the areola is placed on the cone at the end."""
     a = np.array([0.0, 0.0])
-    medial, lateral = st.march(a, -T_ANGLE / 2, rk + LIMB), st.march(a, T_ANGLE / 2, rk + LIMB)
+    rk = KEYHOLE_R if keyhole else AREOLA_D / 2
+    centre = np.array([0.0, KEYHOLE_R - AREOLA_D / 2]) if keyhole else a
+    medial, lateral = st.march(centre, -T_ANGLE / 2, rk + LIMB), st.march(centre, T_ANGLE / 2, rk + LIMB)
     b, c = medial[-1], lateral[-1]
     d, e = fold_ends(st, fold_margin)
     bd, ce = horizontal_limb(st, b, d), horizontal_limb(st, c, e)
@@ -321,7 +345,7 @@ def inverted_t(st: Standing, keyhole: bool, fold_margin: float = FOLD_MARGIN):
     lines = {"ramo medial": medial[root:], "ramo lateral": lateral[root:], "horizontal medial": bd, "horizontal lateral": ce, "sulco": fold}
     points = {"A": a, "B": b, "C": c, "D": d, "E": e}
     if keyhole:
-        arc = np.array([st.march(a, angle, rk)[-1] for angle in np.linspace(-T_ANGLE / 2, -(360 - T_ANGLE / 2), 64)])
+        arc = np.array([st.march(centre, angle, rk)[-1] for angle in np.linspace(-T_ANGLE / 2, -(360 - T_ANGLE / 2), 64)])
         lines = {"fechadura": arc, **lines}
         top = arc
     else:
@@ -332,15 +356,29 @@ def inverted_t(st: Standing, keyhole: bool, fold_margin: float = FOLD_MARGIN):
 
 
 def vertical(st: Standing):
-    """Vertical pattern with a dome over the new areola; the limbs meet above the fold."""
+    """Vertical pattern with a dome over the new areola; the limbs meet above the fold. The dome keeps its top DOME_RISE
+    above A and is scaled (width and depth) until it is DOME_ARC long on the standing skin: the chart is not true to
+    length away from A, and a dome of fixed size in it would be longer on a larger breast."""
     a = np.array([0.0, 0.0])
     s_end = float(st.fold_s(0.0)) - VERTICAL_STOP
-    s_base = DOME_BASE
     t = np.linspace(0, np.pi, 40)
-    dome = np.c_[-DOME_HALF * np.cos(t), s_base - (DOME_RISE + s_base) * np.sin(t)]  # medial base, over the top, lateral base
+
+    def dome_of(k: float) -> np.ndarray:  # medial base, over the top, lateral base
+        return np.c_[-DOME_HALF * k * np.cos(t), DOME_BASE * k - (DOME_RISE + DOME_BASE * k) * np.sin(t)]
+
+    lo, hi = 0.4, 1.6
+    for _ in range(10):
+        mid = (lo + hi) / 2
+        if bb.polyline_length(st.model(st.skin(dome_of(mid)))) < DOME_ARC:
+            lo = mid
+        else:
+            hi = mid
+    k = (lo + hi) / 2
+    dome = dome_of(k)
+    half, s_base = DOME_HALF * k, DOME_BASE * k
 
     def limb(sign: float) -> np.ndarray:
-        p0 = np.array([sign * DOME_HALF, s_base])
+        p0 = np.array([sign * half, s_base])
         p1 = np.array([sign * VERTICAL_HALF * 1.2, s_base + 0.30 * (s_end - s_base)])
         p2 = np.array([sign * VERTICAL_HALF * 0.9, s_base + 0.85 * (s_end - s_base)])
         p3 = np.array([0.0, s_end])
@@ -428,23 +466,30 @@ def prism(region: Polygon, top, bottom, spacing: float = 3.5, wall_layers: int =
 
 class Piece:
     """Tissue behind one or more frontal regions; each part has its own depth range. The rest positions (the map
-    inverted, the expensive part) are worked out when first asked for, so that a design can be searched on volumes."""
+    inverted, the expensive part) are worked out when first asked for, so that a design can be searched on volumes.
+    A pedicle also has a stalk (Planner.stalk: from where its arteries come through the chest wall to its de-epithelialised
+    part), meshed after the core: `core_volume` and `core_vertices` are those of the core alone. `anchor`: the regions
+    of the pedicle held on the chest wall in the steps (its stalk, the root of an inferior pedicle)."""
 
-    def __init__(self, front: Front, inverse: Inverse, parts: list[tuple[Polygon, object, object]], spacing: float = 3.5) -> None:
+    def __init__(self, front: Front, inverse: Inverse, parts: list[tuple[Polygon, object, object]], spacing: float = 3.5, stalk=(), anchor=None) -> None:
         self.front = front
         self.inverse = inverse
-        self.parts = []
+        self.parts, self.stalk_parts = [], []
         verts, faces, offset = [], [], 0
-        for region, top, bottom in parts:
-            region = region.intersection(front.domain).buffer(0)
-            for polygon in region.geoms if region.geom_type == "MultiPolygon" else [region]:
-                if polygon.is_empty or polygon.area < 80:
-                    continue
-                self.parts.append((polygon, top, bottom))
-                v, f = prism(polygon, top, bottom, spacing=spacing, fade=front.fade)
-                verts.append(v)
-                faces.append(f + offset)
-                offset += len(v)
+        core_faces = 0
+        for group, items in ((self.parts, parts), (self.stalk_parts, stalk)):
+            for region, top, bottom in items:
+                region = region.intersection(front.domain).buffer(0)
+                for polygon in region.geoms if region.geom_type == "MultiPolygon" else [region]:
+                    if polygon.is_empty or polygon.area < 80:
+                        continue
+                    group.append((polygon, top, bottom))
+                    v, f = prism(polygon, top, bottom, spacing=spacing, fade=front.fade)
+                    verts.append(v)
+                    faces.append(f + offset)
+                    offset += len(v)
+            if group is self.parts:
+                self.core_vertices, core_faces = offset, sum(len(f) for f in faces)
         self.standing = np.vstack(verts)
         self.faces = np.vstack(faces)
         ch = front.st.b.ch
@@ -452,6 +497,10 @@ class Piece:
         _, uses = np.unique(np.sort(model.edges, axis=1), axis=0, return_counts=True)
         self.closed = bool((uses % 2 == 0).all())
         self.volume = abs(float(model.volume)) / 1000
+        core = trimesh.Trimesh(ch.to_model(self.standing[: self.core_vertices]), self.faces[:core_faces], process=False)
+        self.core_volume = abs(float(core.volume)) / 1000
+        self.stalk = unary_union([polygon for polygon, _, _ in self.stalk_parts]).buffer(0) if self.stalk_parts else Polygon()
+        self.anchor = unary_union([self.stalk, *([anchor] if anchor is not None else [])]).buffer(0)
         self._rest = None
         self.residual = float("nan")
 
@@ -464,7 +513,7 @@ class Piece:
 
     def contains(self, standing_points: np.ndarray) -> np.ndarray:
         inside = np.zeros(len(standing_points), bool)
-        for region, top, bottom in self.parts:
+        for region, top, bottom in self.parts + self.stalk_parts:
             inside |= self.front.contains(region, top, bottom, standing_points)
         return inside
 
@@ -474,10 +523,13 @@ class EmptyPiece:
 
     def __init__(self) -> None:
         self.parts: list = []
+        self.stalk_parts: list = []
         self.standing = np.zeros((0, 3))
         self.rest = np.zeros((0, 3))
         self.faces = np.zeros((0, 3), int)
         self.volume, self.closed, self.residual = 0.0, True, 0.0
+        self.core_volume, self.core_vertices = 0.0, 0
+        self.stalk = self.anchor = Polygon()
 
     def contains(self, standing_points: np.ndarray) -> np.ndarray:
         return np.zeros(len(standing_points), bool)
@@ -519,8 +571,53 @@ class Planner:
         self.spacing = self.design.get("pieceSpacingMm", 3.5 if self.design["resultMl"] is None else 5.5)
 
     # ---- shared ---------------------------------------------------------------------------------------------
-    def piece(self, parts) -> Piece:
-        return Piece(self.front, self.inverse, parts, spacing=self.spacing)
+    def piece(self, parts, stalk=(), anchor=None) -> Piece:
+        return Piece(self.front, self.inverse, parts, spacing=self.spacing, stalk=stalk, anchor=anchor)
+
+    def stalk(self, key: str, footprint: Polygon, *taken, names=None) -> list:
+        """The stalk of a pedicle: the tissue round its source arteries (PEDICLE_SOURCES) from where they come through the
+        chest wall to its de-epithelialised part (`footprint`), SUPPLY_CORRIDOR each side, full thickness down to the
+        wall and under STALK_COVER of fat; never where the pattern or a resection (`taken`) is. Where the flaps are
+        thinned it stays inside what that leaves round the pedicle's vessels (Planner.supply)."""
+        names = PEDICLE_SOURCES.get(TECHNIQUES[key]["pedicle"], []) if names is None else names
+        if not names or not ANATOMY_JSON.exists():
+            return []
+        if not hasattr(Planner, "_anatomy"):
+            Planner._anatomy = json.loads(ANATOMY_JSON.read_text())["geometry"]
+        front = self.front
+        # it widens from the corridor at the wall to half the width of the de-epithelialised part where it joins it
+        bounds = footprint.bounds
+        joint = max(SUPPLY_CORRIDOR, min(STALK_JOINT, 0.5 * (bounds[2] - bounds[0])))
+        if TECHNIQUES[key]["pedicle"] == "central":
+            joint = SUPPLY_CORRIDOR  # fed from all sides: its arms stay narrow, or they would take the whole breast
+        corridors = []
+        for name in names:
+            course = standing_course(self.st, Planner._anatomy[name])
+            # from where it comes out of the chest wall (the courses start at the source artery, behind the wall) ...
+            out = np.nonzero(course[:, 2] >= front.sample(front.wall, course[:, :2]) - 1.0)[0]
+            if not len(out):
+                continue
+            start = int(out[0])
+            # ... to where it reaches the de-epithelialised part
+            reached = np.nonzero(shapely.contains_xy(footprint, course[start:, 0], course[start:, 1]))[0]
+            end = start + (int(reached[0]) + 1 if len(reached) else len(course) - start)
+            if end - start < 2:
+                continue
+            path = resample_course(course[start:end, :2], 3.0)
+            along = np.r_[0, np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
+            f = (along / max(along[-1], 1.0)) ** 2
+            radii = SUPPLY_CORRIDOR + (joint - SUPPLY_CORRIDOR) * f * f * (3 - 2 * f)
+            corridors.append(unary_union([Point(xy).buffer(radius, 16) for xy, radius in zip(path, radii)]))
+        if not corridors:
+            return []
+        region = unary_union(corridors).buffer(6.0).buffer(-6.0)
+        if self.design["flapMm"].get(key) is not None:
+            region = region.intersection(self.supply(key))
+        region = region.difference(footprint.buffer(0.5)).difference(unary_union([shape for shape in taken if shape is not None and not shape.is_empty]).buffer(0.5))
+        region = region.intersection(front.domain).buffer(-1.0).buffer(1.0)
+        if region.is_empty:
+            return []
+        return [(region, lambda uv: front.top(uv) - STALK_COVER, front.bottom_full)]
 
     def wedges(self, points: dict, centre: Polygon) -> Polygon:
         """Lower pole under the medial and lateral skin flaps of the inverted T, between the fold ends."""
@@ -607,7 +704,7 @@ class Planner:
         extra = self.thinned("pitanguy", pattern, superior, wedges)
         return {
             "points": points, "lines": lines, "pattern": pattern, "footprint": superior, "baseOnOutline": True,
-            "pedicle": self.piece([(superior, front.top, front.flap(SUPERIOR_THICKNESS))]),
+            "pedicle": self.piece([(superior, front.top, front.flap(SUPERIOR_THICKNESS))]), "stalk": (superior, [pattern, wedges]),
             "resection": self.piece([
                 (pattern.difference(superior), front.top, front.bottom_spare),
                 (superior.intersection(keel), front.flap(SUPERIOR_THICKNESS), front.bottom_spare),
@@ -659,7 +756,8 @@ class Planner:
         behind = [(hanging_part, floor, front.bottom_spare), (root.intersection(front.hanging), root_floor, front.bottom_spare)] if thinned else []
         return {
             "points": points, "lines": lines, "pattern": pattern, "footprint": hanging_part, "baseOnOutline": False,
-            "pedicle": self.piece([(hanging_part, front.top, floor), (root, septum_plane, root_floor)]),
+            # the root on the wall is held there in the steps, with the stalk
+            "pedicle": self.piece([(hanging_part, front.top, floor), (root, septum_plane, root_floor)], anchor=root), "stalk": (unary_union([hanging_part, root]), [pattern, wedges]),
             "resection": self.piece([
                 (pattern.difference(hanging_part).difference(root), front.top, front.bottom_spare),
                 (root.intersection(pattern), front.top, septum_plane),
@@ -690,7 +788,7 @@ class Planner:
         behind = [(superomedial, floor, front.bottom_spare)] if thinned else []
         return {
             "points": points, "lines": lines, "pattern": pattern, "footprint": superomedial, "baseOnOutline": True,
-            "pedicle": self.piece([(superomedial, front.top, floor)]),
+            "pedicle": self.piece([(superomedial, front.top, floor)]), "stalk": (superomedial, [pattern, lateral_side]),
             "resection": self.piece([
                 (below_dome.difference(superomedial), front.top, front.bottom_spare),
                 (lateral_side, front.flap(FLAP_THICKNESS + 5.0), front.bottom_spare),  # under the lateral pillar
@@ -718,7 +816,7 @@ class Planner:
             "points": points, "lines": lines, "pattern": pattern, "footprint": superior, "baseOnOutline": True,
             # the skin of the dome is only de-epithelialised: the whole dome is the base of the pedicle
             "base": pattern.difference(below_dome).buffer(0),
-            "pedicle": self.piece([(superior, front.top, front.flap(SUPERIOR_THICKNESS))]),
+            "pedicle": self.piece([(superior, front.top, front.flap(SUPERIOR_THICKNESS))]), "stalk": (superior, [pattern]),
             "resection": self.piece([
                 (below_dome.difference(superior), front.top, front.bottom_spare),
                 (superior.intersection(keel), front.flap(SUPERIOR_THICKNESS), front.bottom_spare),
@@ -744,7 +842,7 @@ class Planner:
         behind = [(superomedial, floor, front.bottom_spare)] if thinned else []
         return {
             "points": points, "lines": lines, "pattern": pattern, "footprint": superomedial, "baseOnOutline": True,
-            "pedicle": self.piece([(superomedial, front.top, floor)]),
+            "pedicle": self.piece([(superomedial, front.top, floor)]), "stalk": (superomedial, [pattern, wedges]),
             "resection": self.piece([
                 (pattern.difference(superomedial), front.top, front.bottom_spare),
                 (wedges, front.flap(FLAP_THICKNESS), front.bottom_spare),
@@ -773,7 +871,7 @@ class Planner:
             "points": points, "lines": lines, "pattern": region, "footprint": region, "baseOnOutline": True,
             # the dermis is cut along the lower half of the ring (the way in); above the nipple it is left whole
             "base": region.intersection(box(-1e4, nv, 1e4, 1e4)).buffer(0),
-            "pedicle": self.piece([(region.difference(wedge), front.top, front.bottom_full), (under_ring, front.top, front.flap(CENTRAL_THICKNESS))]),
+            "pedicle": self.piece([(region.difference(wedge), front.top, front.bottom_full), (under_ring, front.top, front.flap(CENTRAL_THICKNESS))]), "stalk": (region, [wedge]),
             "resection": self.piece([
                 (under_ring, front.flap(CENTRAL_THICKNESS), front.bottom_spare),
                 (below_ring, front.flap(FLAP_THICKNESS), front.bottom_spare),
@@ -801,9 +899,25 @@ class Planner:
             ]),
         }
 
-    def build(self, key: str) -> dict:
+    def build(self, key: str, stalk: bool = True) -> dict:
+        """The technique `key`. With `stalk`, its pedicle gets its stalk, along the source arteries that reach the nipple
+        (those the technique cuts feed no pedicle); the design of the large cases does without (only the core counts)."""
         item = getattr(self, key)()
         item["nipple"], item["areolaNow"], item["a"] = self.nipple, self.areola_now, self.a_uv
+        footprint, taken = item.pop("stalk", (None, []))
+        if stalk and footprint is not None and ANATOMY_JSON.exists():
+            if not hasattr(Planner, "_anatomy"):
+                Planner._anatomy = json.loads(ANATOMY_JSON.read_text())["geometry"]
+            sources = []
+            for name in PEDICLE_SOURCES.get(TECHNIQUES[key]["pedicle"], []):
+                inside_mm, crossings = course_cut(standing_course(self.st, Planner._anatomy[name]), item, self.front)
+                if inside_mm < 4.0 and crossings == 0:
+                    sources.append(name)
+            parts = self.stalk(key, footprint, *taken, names=sources)
+            if parts:
+                pedicle = item["pedicle"]
+                item["pedicle"] = self.piece(pedicle.parts, stalk=parts, anchor=None if pedicle.anchor.is_empty else pedicle.anchor)
+            item["stalkSources"] = sources
         return item
 
 
@@ -841,15 +955,16 @@ def design_for(case: str, st: Standing, front: Front, inverse: Inverse, mound_ml
                     design[field].pop(key, None)
                 else:
                     design[field][key] = value
-            return Planner(st, front, inverse, design).build(key)
+            return Planner(st, front, inverse, design).build(key, stalk=False)
 
         if key in PEDICLE_SHARE:
             goal = PEDICLE_SHARE[key] * target
-            if build(pedicleDepthMm=None)["pedicle"].volume > goal:
-                if build(pedicleDepthMm=MIN_PEDICLE_DEPTH)["pedicle"].volume >= goal:
+            # the share is that of the core of the pedicle (its stalk, on the wall, is the same in every design)
+            if build(pedicleDepthMm=None)["pedicle"].core_volume > goal:
+                if build(pedicleDepthMm=MIN_PEDICLE_DEPTH)["pedicle"].core_volume >= goal:
                     design["pedicleDepthMm"][key] = MIN_PEDICLE_DEPTH
                 else:
-                    design["pedicleDepthMm"][key] = bisect(lambda depth: build(pedicleDepthMm=depth)["pedicle"].volume, MIN_PEDICLE_DEPTH, 160.0, goal, rising=True)
+                    design["pedicleDepthMm"][key] = bisect(lambda depth: build(pedicleDepthMm=depth)["pedicle"].core_volume, MIN_PEDICLE_DEPTH, 160.0, goal, rising=True)
 
         def left_ml(flap):
             return mound_ml - build(flapMm=flap)["resection"].volume
@@ -878,36 +993,44 @@ def neurovascular(st: Standing, front: Front, plan: dict) -> dict:
     if not ANATOMY_JSON.exists():
         return {}
     anatomy = json.loads(ANATOMY_JSON.read_text())
-    ch = st.b.ch
     result = {}
     for name, geometry in anatomy["geometry"].items():
         if geometry["kind"] != "tube":
             continue
         standing = standing_course(st, geometry)
-        step = np.r_[np.linalg.norm(np.diff(ch.to_model(standing), axis=0), axis=1), 0.0]
         result[name] = {}
         for key, item in plan.items():
-            inside_mm = float(step[item["resection"].contains(standing)].sum())
-            in_pattern = shapely.contains_xy(item["pattern"], standing[:, 0], standing[:, 1])
-            crossings = 1 if item.get("graft") else 0
-            base = item.get("base", item["footprint"]).buffer(1.5)
-            for i in np.nonzero(in_pattern[1:] != in_pattern[:-1])[0]:
-                # the point where the course crosses the outline (the samples are some mm apart)
-                lo, hi = 0.0, 1.0
-                for _ in range(10):
-                    half = (lo + hi) / 2
-                    point = standing[i] + half * (standing[i + 1] - standing[i])
-                    if bool(shapely.contains_xy(item["pattern"], point[0], point[1])) == bool(in_pattern[i]):
-                        lo = half
-                    else:
-                        hi = half
-                cross = standing[i] + (lo + hi) / 2 * (standing[i + 1] - standing[i])
-                skin = front.top(cross[None, :2])[0]
-                superficial = skin - FLAP_THICKNESS <= cross[2] <= skin + 1.0
-                at_base = item["baseOnOutline"] and base.contains(Point(cross[:2]))
-                crossings += int(superficial and not at_base)
+            inside_mm, crossings = course_cut(standing, item, front)
             result[name][key] = {"insideMm": round(inside_mm, 1), "incisions": crossings}
     return result
+
+
+def course_cut(standing: np.ndarray, item: dict, front: Front) -> tuple[float, int]:
+    """How a course (standing chart) meets a technique: mm of it inside the resection, and the incisions it crosses
+    while superficial outside the base of the pedicle (neurovascular). It is cut with 4 mm or more inside, or one
+    incision crossed."""
+    ch = front.st.b.ch
+    step = np.r_[np.linalg.norm(np.diff(ch.to_model(standing), axis=0), axis=1), 0.0]
+    inside_mm = float(step[item["resection"].contains(standing)].sum())
+    in_pattern = shapely.contains_xy(item["pattern"], standing[:, 0], standing[:, 1])
+    crossings = 1 if item.get("graft") else 0
+    base = item.get("base", item["footprint"]).buffer(1.5)
+    for i in np.nonzero(in_pattern[1:] != in_pattern[:-1])[0]:
+        # the point where the course crosses the outline (the samples are some mm apart)
+        lo, hi = 0.0, 1.0
+        for _ in range(10):
+            half = (lo + hi) / 2
+            point = standing[i] + half * (standing[i + 1] - standing[i])
+            if bool(shapely.contains_xy(item["pattern"], point[0], point[1])) == bool(in_pattern[i]):
+                lo = half
+            else:
+                hi = half
+        cross = standing[i] + (lo + hi) / 2 * (standing[i + 1] - standing[i])
+        skin = front.top(cross[None, :2])[0]
+        superficial = skin - FLAP_THICKNESS <= cross[2] <= skin + 1.0
+        at_base = item["baseOnOutline"] and base.contains(Point(cross[:2]))
+        crossings += int(superficial and not at_base)
+    return inside_mm, crossings
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1071,7 +1194,7 @@ def write_case(case: str) -> None:
             "notchToAMm": round(bb.polyline_length(ch.to_model(st.to_state(notch_line))), 0),
             "nippleRiseMm": round(length(np.c_[np.zeros(60), np.linspace(0, item["nipple"][1], 60)]), 0),
             "linesMm": {name: round(length(xs), 0) for name, xs in item["lines"].items()},
-            "pedicleMl": round(pedicle.volume), "pedicleG": round(pedicle.volume * DENSITY),
+            "pedicleMl": round(pedicle.volume), "pedicleG": round(pedicle.volume * DENSITY), "pedicleStalkMl": round(pedicle.volume - pedicle.core_volume),
             "resectionMl": round(resection.volume), "resectionG": round(resection.volume * DENSITY),
             "resectionPct": round(resection.volume / mound_ml * 100),
             "leftMl": round(mound_ml - resection.volume),
@@ -1095,7 +1218,7 @@ def write_case(case: str) -> None:
         measures[technique] = m
         print(f"[{case}] {info['label']}: fúrcula–A {m['notchToAMm']:.0f} mm · subida do CAP {m['nippleRiseMm']:.0f} mm · linhas {m['linesMm']}")
         if pedicle.volume > 0:
-            print(f"   pedículo {info['pedicle']}: {pedicle.volume:.0f} mL ≈ {m['pedicleG']} g ({'fechada' if pedicle.closed else 'ABERTA'}, {len(pedicle.rest)} vértices, inverso {pedicle.residual:.3f} mm)")
+            print(f"   pedículo {info['pedicle']}: {pedicle.volume:.0f} mL ≈ {m['pedicleG']} g, haste {m['pedicleStalkMl']} mL ({'fechada' if pedicle.closed else 'ABERTA'}, {len(pedicle.rest)} vértices, inverso {pedicle.residual:.3f} mm)")
         print(f"   ressecção {info['resection']}: {resection.volume:.0f} mL ≈ {m['resectionG']} g = {m['resectionPct']}% do monte, Berrocal {m['berrocal']}; fica {m['leftMl']} mL ({'fechada' if resection.closed else 'ABERTA'}, {len(resection.rest)} vértices, inverso {resection.residual:.3f} mm)")
         print(f"   secciona: {', '.join(m['cut']) or '—'}")
 

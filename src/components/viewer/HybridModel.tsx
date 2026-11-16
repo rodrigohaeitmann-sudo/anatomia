@@ -205,10 +205,28 @@ const proximityTissues = new Set<Tissue>(["muscle", "fat", "fascia", "bone", "ca
 export const superficialForCut = new Set(["skin", "breast-fat", "breast-ligaments", "contralateral-breast", "pectoral-fascia", "deltoid-fascia", "thoracolumbar-fascia"]);
 const stepWindowStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
 
-function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; solid: boolean; vertexColors: boolean; base?: string; baseOpacity?: number }) {
+/**
+ * See-through skin of the operation steps: nearly clear where it faces the viewer and denser towards the outline (a
+ * Fresnel falloff), so that the tissue inside keeps its colours while the shape of the breast stays readable.
+ */
+const GHOST_OPACITY = 0.5;
+const GHOST_FACING = 0.16; // share of GHOST_OPACITY where the skin faces the viewer
+function ghostly(material: THREE.Material) {
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <opaque_fragment>",
+      `float ghostRim = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
+      diffuseColor.a *= mix(${GHOST_FACING.toFixed(2)}, 1.0, pow(ghostRim, 2.0));
+      #include <opaque_fragment>`,
+    );
+  };
+  material.customProgramCacheKey = () => "ghost-skin";
+}
+
+function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; ghost?: boolean; solid: boolean; vertexColors: boolean; base?: string; baseOpacity?: number }) {
   const color = new THREE.Color(opts.vertexColors ? "#ffffff" : opts.override ?? opts.base ?? tissueColors[tissue]);
   let opacity = opts.solid ? 1 : opts.baseOpacity ?? tissueOpacity[tissue] ?? 1;
-  if (opts.translucent) opacity = Math.min(opacity, 0.3);
+  if (opts.translucent) opacity = Math.min(opacity, opts.ghost ? GHOST_OPACITY : 0.3);
   const faded = opts.viewMode === "surgical" && !opts.active && !opts.selected && !opts.override && !opts.emphasis;
   if (faded) {
     opacity = Math.min(opacity, tissue === "skin" ? 0.12 : 0.22);
@@ -229,6 +247,12 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
     roughness: vascular ? 0.32 : tissue === "bone" ? 0.72 : tissue === "skin" ? 0.5 : 0.58,
     metalness: 0,
   };
+  if (opts.ghost && opts.translucent) {
+    // no sheen: its pale rim would veil the tissue inside
+    const ghost = new THREE.MeshStandardMaterial({ ...common, depthWrite: false });
+    ghostly(ghost);
+    return ghost;
+  }
   if (opts.lowPower) return new THREE.MeshStandardMaterial(common);
   return new THREE.MeshPhysicalMaterial({
     ...common,
@@ -238,6 +262,14 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
     sheenColor: new THREE.Color(tissue === "skin" ? "#ffd9c7" : "#ffffff"),
     sheenRoughness: 0.6,
   });
+}
+
+/** A copy of a material for a fade, with the shader changes of the original (Material.clone leaves them out). */
+function fadeClone<M extends THREE.Material>(material: M): M {
+  const clone = material.clone() as M;
+  clone.onBeforeCompile = material.onBeforeCompile;
+  clone.customProgramCacheKey = material.customProgramCacheKey;
+  return clone;
 }
 
 export function HybridModel(props: Props) {
@@ -752,7 +784,7 @@ export function HybridModel(props: Props) {
       const show = visible(record.structure);
       if (!show) {
         if (fading && wasVisible && before?.color) {
-          const clone = before.clone();
+          const clone = fadeClone(before);
           clone.transparent = true;
           fades.push({ mesh: object, clone, from: opacityOf(before), to: 0, fromColor: before.color.clone(), toColor: before.color.clone(), final: null, order: record.tissue === "skin" ? 3 : 2 });
           object.material = clone;
@@ -777,12 +809,14 @@ export function HybridModel(props: Props) {
         planes: list,
         lowPower,
         translucent: Boolean(translucent?.has(record.structure)),
+        // the skin of the operated breast in the steps: see-through as a ghost
+        ghost: record.tissue === "skin" && record.structure.startsWith("mamo-step-"),
         solid: Boolean(solid?.has(record.structure)),
         vertexColors: painted,
         base: record.color,
         baseOpacity: record.opacity,
       };
-      const key = `${record.tissue}|${record.color ?? ""}|${record.opacity ?? ""}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${opts.solid}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
+      const key = `${record.tissue}|${record.color ?? ""}|${record.opacity ?? ""}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${opts.ghost}|${opts.solid}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
       let material = cache.get(key);
       if (!material) {
         material = makeMaterial(record.tissue, opts);
@@ -794,7 +828,7 @@ export function HybridModel(props: Props) {
         const from = wasVisible ? opacityOf(before) : 0;
         const fromColor = (wasVisible ? before.color : target.color).clone();
         if (Math.abs(from - opacityOf(target)) > 0.02 || !fromColor.equals(target.color)) {
-          const clone = target.clone();
+          const clone = fadeClone(target);
           clone.transparent = true;
           clone.opacity = from;
           clone.color.copy(fromColor);

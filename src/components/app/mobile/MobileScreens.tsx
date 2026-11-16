@@ -446,19 +446,16 @@ function Pushed({ header, children }: { header: ReactNode; children: ReactNode }
   );
 }
 
-/** Views of the technique in a pack (all of them, or `only` those ids), with what was seen. */
-function useViewsOf(packId: string, only?: string[]) {
+/** The views of a pack, with what was seen. */
+function useViewsOf(packId: string) {
   const entry = packEntry(packId);
   const progress = usePackProgress(packId);
-  const views = (entry?.pack.views ?? []).map((view, index) => ({ view, index })).filter(({ view }) => !only || only.includes(view.id));
+  const views = (entry?.pack.views ?? []).map((view, index) => ({ view, index }));
   return { views, progress, total: views.length, seen: views.filter(({ view }) => progress.seen.includes(view.id)).length };
 }
 
 function TechniqueRow({ item, group, first, onOpen }: { item: MammaplastyTechnique; group: PackGroup; first: boolean; onOpen: () => void }) {
-  const plan = useViewsOf(item.planPack, item.planViews);
-  const steps = useViewsOf(item.stepPack);
-  const seen = plan.seen + steps.seen;
-  const total = plan.total + steps.total;
+  const { seen, total } = useViewsOf(item.stepPack);
   return (
     <button type="button" onClick={onOpen} className={cx("flex w-full items-center gap-3.5 px-3.5 py-3 text-left active:bg-surface-alt", !first && "border-t border-line-soft")}>
       <Cover packId={item.stepPack} groupId={group.id} className="h-[60px] w-[60px]" />
@@ -476,13 +473,12 @@ function TechniqueRow({ item, group, first, onOpen }: { item: MammaplastyTechniq
   );
 }
 
-/** A degree of ptosis of the reduction mammaplasty: its techniques, each a subfolder, and the plan that compares them. */
+/** A degree of ptosis of the reduction mammaplasty: its techniques, each a subfolder. */
 export function MDegree({ nav, group }: { nav: AppNav; group: string }) {
   const entry = groupById(group);
   const folder = folderOf(group);
   if (!entry || !folder) return null;
   const items = techniquesOf(group);
-  const plan = items[0] ? packEntry(items[0].planPack) : null;
   return (
     <Pushed header={<BackHeader eyebrow={folder.title} title={subTitle(entry)} onBack={() => nav.back({ name: "library", group: folder.id })} />}>
       <p className="text-pretty text-[15px] leading-normal text-ink-2">{entry.description}</p>
@@ -494,32 +490,19 @@ export function MDegree({ nav, group }: { nav: AppNav; group: string }) {
           ))}
         </Card>
       </section>
-      {plan && (
-        <section>
-          <Lbl className="mb-2.5">Comparar as técnicas</Lbl>
-          <Card padded={false} className="overflow-hidden">
-            <PackRow pack={plan.pack} group={entry} first onOpen={() => nav.openPack(plan.pack.id)} />
-          </Card>
-        </section>
-      )}
     </Pushed>
   );
 }
 
-/** One technique of a degree: its marking, pedicle and resection (in the plan of the degree) and its step by step. */
+/** One technique of a degree: its step by step, from the marking to the result. */
 export function MTechnique({ nav, group, technique }: { nav: AppNav; group: string; technique: string }) {
   const entry = groupById(group);
   const item = techniquesOf(group).find((candidate) => candidate.key === technique);
-  const plan = useViewsOf(item?.planPack ?? "", item?.planViews ?? []);
   const steps = useViewsOf(item?.stepPack ?? "");
   if (!entry || !item) return null;
   const resume = steps.progress.lastIndex >= 0 ? steps.progress.lastIndex : 0;
-  const strip = (title: string) => {
-    const text = title.startsWith(`${item.short}: `) ? title.slice(item.short.length + 2) : title;
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  };
-  // the views of the plan are numbered in the technique; the steps carry their number in the title ("3. Incisão")
-  const rows = (packId: string, list: typeof plan, label: (title: string, position: number) => [string, string]) =>
+  // the steps carry their number in the title ("3. Incisão")
+  const rows = (packId: string, list: typeof steps, label: (title: string, position: number) => [string, string]) =>
     list.views.map(({ view, index }, position) => {
       const seen = list.progress.seen.includes(view.id);
       const here = index === list.progress.lastIndex;
@@ -544,10 +527,6 @@ export function MTechnique({ nav, group, technique }: { nav: AppNav; group: stri
         <div className="text-[19px] font-semibold tracking-[-0.3px]">{item.title}</div>
         <p className="mt-1 text-pretty text-[14.5px] leading-normal text-ink-2">{item.summary}</p>
       </div>
-      <section>
-        <Lbl className="mb-2.5">Planejamento · {plan.total} vistas</Lbl>
-        <Group>{rows(item.planPack, plan, (title, position) => [String(position + 1), strip(title)])}</Group>
-      </section>
       <section>
         <Lbl className="mb-2.5">Passo a passo · {steps.total} vistas</Lbl>
         <Group>

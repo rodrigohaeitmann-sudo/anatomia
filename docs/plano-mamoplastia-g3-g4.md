@@ -35,7 +35,7 @@ Parâmetros (`scripts/hybrid/build_breast.py`, mm de descida do fluxo; inclinaç
 
 *Perfil no meridiano da mama (lado operado; mm na carta, sulco em azul). O sulco não se move, o polo superior esvazia e a bolsa cresce e pende.*
 
-No app: chips **G3** e **G4** no seletor **Forma da mama**, que mostra também o peso que a redução retiraria e o grau de Berrocal; perfis de G3 e G4, "Frente: G4" e "Corte sagital: G4" no pack **Ptose mamária**; e, na biblioteca, os grupos **Mamoplastia redutora: G3** e **Mamoplastia redutora: G4** (eram um grupo só, "Mamoplastia em G3 e G4"), cada um com o pack do plano e o passo a passo de cada técnica.
+No app: chips **G3** e **G4** no seletor **Forma da mama**, que mostra também o peso que a redução retiraria e o grau de Berrocal; perfis de G3 e G4, "Frente: G4" e "Corte sagital: G4" no pack **Ptose mamária**; e, na biblioteca, os grupos **Mamoplastia redutora: G3** e **Mamoplastia redutora: G4** (eram um grupo só, "Mamoplastia em G3 e G4"), cada um com o passo a passo de cada técnica (os packs do plano saíram na segunda revisão das técnicas por grau, `docs/plano-mamoplastia-tecnicas.md`).
 
 ## Correções no modelo
 
@@ -59,6 +59,8 @@ O alvo de volume final do plano (500 e 525 mL) não é alcançável assim: com r
 
 ### Peças, peso e grau
 
+Números da implementação de G3 e G4. Os atuais, depois das revisões das técnicas por grau (cúpula de 14 cm e pedículo com haste, entre outras), estão em `docs/plano-mamoplastia-tecnicas.md`, nas seções "Peças e o que cada técnica conserva" e "Passo a passo e resultado".
+
 | Caso | Técnica | Pedículo | Ressecção | Peso (0,95 g/mL) | % do monte | Grau da peça | Fica | Desenho |
 |---|---|---|---|---|---|---|---|---|
 | Ptose II (641 mL) | Pitanguy | 70 mL | 180 mL | 171 g | 28% | I | 460 mL | o aceito na revisão |
@@ -77,6 +79,8 @@ Técnicas acrescentadas depois (`docs/plano-mamoplastia-tecnicas.md`): **Wise co
 
 ## Marcação
 
+Medidas da implementação de G3 e G4; a cúpula da vertical passou a medir 14 cm em todas as mamas na segunda revisão das técnicas por grau (`docs/plano-mamoplastia-tecnicas.md`).
+
 | Medida (pele em pé) | Ptose II | G3 | G4 |
 |---|---|---|---|
 | Fúrcula–ponto A | 27,2 cm | 28,1 cm | 28,9 cm |
@@ -91,6 +95,8 @@ Técnicas acrescentadas depois (`docs/plano-mamoplastia-tecnicas.md`): **Wise co
 O ponto A segue a projeção do sulco no meridiano. Os ramos da vertical de 19 a 26 cm mostram por que essa técnica é pouco usada em reduções desse porte: no fechamento, os pilares e a pele são aproximados de muito longe.
 
 ## Pedículos e o que conservam
+
+Na implementação de G3 e G4. Na segunda revisão das técnicas por grau, com a cúpula de 14 cm, a vertical de G4 deixa de conservar a perfurante do 2º espaço (nenhuma artéria chega ao mamilo) e o Wise superomedial de G4 passa a conservar também a do 3º; a tabela atual está em `docs/plano-mamoplastia-tecnicas.md`.
 
 | Caso | Técnica | Artérias que chegam ao mamilo | Nervos |
 |---|---|---|---|

@@ -28,7 +28,10 @@ How (mammaplasty_result.py):
     under the areola;
   * the areola rides on its pedicle with a collar (COLLAR, more for a long way), the pedicle and the pillars turn on
     their bases, and in every frame the pedicle, its dermis, the pillars and the vessels are kept behind the areola
-    (keep_behind for the vertices, clear_front for the long triangles that still cross in front of it).
+    (keep_behind for the vertices, clear_front for the long triangles that still cross in front of it);
+  * the base of the pedicle is held on the chest wall (Technique.anchor_of: its stalk, the root of an inferior
+    pedicle, its deep layer away from the areola): the closure does not slide it and the transposition does not swing
+    it, it only follows the breast as the result reshapes it (the map never moves the wall).
 
 Outputs (per case; ptosis II without suffix, the others with -p1, -p3, -g3, -g4):
   src/data/mammaplastySteps<-case>.json                structures, meshes, frames, measurements before and after
@@ -158,6 +161,8 @@ LOWER_POLE = (0.5, 1.4)  # range of the length of the lower pole in the map (1: 
 COLLAR = 12.0
 COLLAR_SHARE = 0.22
 BEHIND = 0.6  # mm: pedicle, dermis and vessels under the areola stay at least this far behind it
+ANCHOR_FADE = 25.0  # mm over which the hold of the chest wall on a pedicle fades (anchor_of)
+PEDICLE_OPACITY = 0.62  # the pedicle is drawn see-through (its vessels inside), the other pieces opaque
 GRAFT_HOVER = 40.0  # mm in front of its bed that a free graft passes on its way back
 NIPPLE_ABOVE_FOLD = 15.0  # mm, the new nipple in the standing result: a little above point A, the projection of the fold
 # mm of trunk skin round the breast outline over which the result fades into the skin that stays (the large breasts
@@ -244,7 +249,9 @@ class Technique:
         self.skirt = SKIRTS[case]
         self.patch = mr.SkinPatch(rest, [("nac", Point(0, 0).buffer(self.areola_r + 0.6, 64)), ("dermis", self.dermis), ("excised", self.pattern), ("stay", None)], self.named, skirt=self.skirt)
         self.closure = mr.Closure(self.patch, ("stay",), self.targets, self.areola_r, seam="seam" if "seam" in self.named else None, seam_top=self.seam_top)
-        pedicle_rest = item["pedicle"].rest
+        # the core of the pedicle (its stalk, held on the wall, does not swing)
+        pedicle_rest = item["pedicle"].rest[: item["pedicle"].core_vertices]
+        self.anchor_region = item["pedicle"].anchor
         rho = np.hypot(*rest.iso(pedicle_rest[:, :2]).T) if len(pedicle_rest) else np.zeros(1)
         # how far the nipple goes in the operation (standing breast to result), and the collar it takes along
         nipple_now = self.ch.to_model(bb.deform(self.breast, self.ch.nipple[None])[st.k])[0]
@@ -315,8 +322,30 @@ class Technique:
             return q
         rho = np.hypot(*self.rest.iso(q[:, :2]).T)
         out = q.copy()
-        out[:, 2] -= INSET * (1 - smooth01((rho - self.areola_r) / 22.0))
+        # what is held on the wall (anchor_of) stays where it is
+        out[:, 2] -= INSET * (1 - smooth01((rho - self.areola_r) / 22.0)) * (1 - self.anchor_of(q))
         return out
+
+    def anchor_of(self, q: np.ndarray) -> np.ndarray:
+        """How firmly each point of the pedicle (rest chart q) is held where it is, from 0 (it goes with its skin and the
+        areola) to 1 (on the chest wall: the closure does not slide it and the transposition does not swing it). Held:
+        the stalk and the root of an inferior pedicle, where it is attached to the wall, fading over ANCHOR_FADE mm into
+        the pedicle, which is free beyond (dissected, it turns on its base); a central pedicle, which is not lifted off
+        the wall, also keeps all its deep layer. Never held: the skin and the dermis on the pedicle, which close with the
+        skin round them, and the collar of tissue round the areola, which goes with it."""
+        u, v, r = q[:, 0], q[:, 1], q[:, 2]
+        base = self.breast.base(u, v)
+        t = np.clip((r - base) / np.maximum(self.st.skin_r(u, v) - base, 0.5), 0, 1)
+        rho = np.hypot(*self.rest.iso(q[:, :2]).T)
+        collar = 1 - smooth01((rho - self.areola_r - self.collar) / 10.0)
+        held = np.zeros(len(q))
+        if not self.anchor_region.is_empty:
+            uv = bb.deform(self.breast, q)[self.st.k][:, :2]
+            beyond = shapely.distance(self.anchor_region, shapely.points(uv))
+            held = np.where(beyond <= 0.0, 1.0, (1 - smooth01(beyond / ANCHOR_FADE)) * (1 - collar))
+        if self.kind == "periareolar":
+            held = np.maximum(held, 1 - smooth01(t / 0.45))
+        return held * (1 - smooth01((t - 0.88) / 0.1))
 
     def areola_radius(self, diameter: float) -> float:
         """Radius (isotropic rest chart) of the circle round the nipple that the result shows `diameter` mm across."""
@@ -455,39 +484,44 @@ class Technique:
         return self.ch.to_model(bb.deform(self.breast, rest_chart)[self.st.k])
 
     def final(self, rest_chart: np.ndarray, role: str, buried: bool = True) -> np.ndarray:
-        """Model positions (mm) in the result of rest chart points: skin that stays, pillar, pedicle."""
+        """Model positions (mm) in the result of rest chart points: skin that stays, pillar, pedicle. A pedicle goes with
+        the closure of its skin only as far as it is free (anchor_of): what is held keeps its place on the chest wall and
+        only follows the breast as it changes shape (the map of the result, which never moves the wall)."""
         st, breast, rest = self.st, self.breast, self.rest
         u, v, r = rest_chart[:, 0], rest_chart[:, 1], rest_chart[:, 2]
         base = breast.base(u, v)
         depth_rest = np.maximum(st.skin_r(u, v) - base, 0.5)
         t = np.clip((r - base) / depth_rest, 0, 1.2)
         iso = rest.iso(np.c_[u, v])
-        moved = iso + self.field(iso)
+        free = 1 - self.anchor_of(rest_chart) if role == "pedicle" else np.ones(len(iso))
+        moved = iso + free[:, None] * self.field(iso)
         uv2 = rest.uv(moved)
         base2 = breast.base(uv2[:, 0], uv2[:, 1])
         depth2 = np.maximum(st.skin_r(uv2[:, 0], uv2[:, 1]) - base2, 0.5)
         if role == "pedicle" and buried:
             rho = np.hypot(moved[:, 0], moved[:, 1])
-            cover = BURY * smooth01((rho - self.areola_r) / 8.0)
+            cover = BURY * smooth01((rho - self.areola_r) / 8.0) * free
             depth2 = np.maximum(depth2 - cover, 0.5)
         chart = np.c_[uv2, base2 + t * depth2]
-        return self.ch.to_model(mr.state_map(breast, chart, self.result))
+        out = self.ch.to_model(mr.state_map(breast, chart, self.result))
+        if role == "pedicle":
+            # what is held on the wall does not slide over the fascia either (the map of the breast lets its deep tissue
+            # slide, as a ptotic breast does): it keeps its place, and the tissue over it follows the breast less the
+            # deeper it lies
+            hold = (1 - free) * (1 - smooth01(np.minimum(t, 1.0) / 0.6))
+            here = self.standing(rest_chart)
+            out = here + (1 - hold)[:, None] * (out - here)
+        return out
 
     def skin_final(self, rest_chart: np.ndarray) -> np.ndarray:
         return self.ch.to_model(mr.state_map(self.breast, rest_chart, self.result))
 
     def swing(self, rest_chart: np.ndarray, start: np.ndarray, end: np.ndarray) -> np.ndarray:
-        """Transposition: the end of the pedicle that carries the areola reaches its place with a collar (self.collar mm)
-        round it, the base stays, and the tissue between turns on the base (arcs about the pivot, not chords: what is
-        only part of the way does not fold over the areola)."""
-        iso = self.rest.iso(rest_chart[:, :2])
-        rho = np.hypot(iso[:, 0], iso[:, 1])
-        u, v, r = rest_chart[:, 0], rest_chart[:, 1], rest_chart[:, 2]
-        base = self.breast.base(u, v)
-        t = np.clip((r - base) / np.maximum(self.st.skin_r(u, v) - base, 0.5), 0, 1)
-        inner = self.areola_r + self.collar
-        w = smooth01(1 - (rho - inner) / max(self.reach - inner, 8.0)) * smooth01(t / 0.6)
-        return self.arc(start, end, w)
+        """Transposition: the pedicle reaches its place, the areola with a collar (self.collar mm) round it, turning on its
+        base (arcs about the pivot, not chords); the base, what anchor_of holds on the chest wall, does not move, and
+        the tissue next to it goes only as far as it is free."""
+        # all of the pedicle that is free gets to its place: what is only part of the way folds into sheets
+        return self.arc(start, end, 1 - self.anchor_of(rest_chart))
 
     def arc(self, start: np.ndarray, end: np.ndarray, w, pivot: np.ndarray | None = None) -> np.ndarray:
         """Points from start to end by the fraction w (per point or one for all) along arcs about a pivot (default: that
@@ -1082,8 +1116,10 @@ KINDS = {
     "areola-ring": "Aréola excedente ({label})",
     "areolotome": "Areolótomo: nova aréola ({label})",
     "measures": "Medidas da marcação ({label})",
-    "arteries": "Artérias da mama ({label})",
-    "nerves": "Nervos da mama ({label})",
+    "arteries": "Artérias que chegam ao mamilo ({label})",
+    "arteries-cut": "Artérias cortadas ({label})",
+    "nerves": "Nervos que chegam ao mamilo ({label})",
+    "nerves-cut": "Nervos cortados ({label})",
     "sutures": "Suturas ({label})",
     "sutures-areola": "Sutura da aréola ({label})",
     "disc": "Pele sobre a aréola ({label})",
@@ -1261,8 +1297,15 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     if ped.volume > 0:
         ped_k0 = ch.to_model(ped.standing)
         pedicle_frames = pedicle_like(ped.rest, ped_k0)
-        w.add(f"mamo_{key}_step_pedicle", sid("pedicle"), f"Pedículo {info['pedicle']}", COLORS["pedicle"], 0.9, "piece", ped.faces, pedicle_frames)
-    w.add(f"mamo_{key}_step_resection", sid("resection"), f"Ressecção {info['resection']}", COLORS["resection"], 0.9, "piece", res.faces, removed(res_k0, out_dir))
+        held = tech.anchor_of(ped.rest) >= 0.95
+        if held.any():
+            q = ped.rest
+            on_wall = held & ((q[:, 2] - breast.base(q[:, 0], q[:, 1])) < 3.0)
+            moves = np.linalg.norm(np.stack(pedicle_frames) - ped_k0, axis=2).max(0)
+            print(f"   pedículo: {held.sum()} de {len(held)} vértices presos (haste {ped.volume - ped.core_volume:.0f} mL): mediana {np.median(moves[held]):.1f} mm, só com a mudança de forma da mama; os {on_wall.sum()} sobre a parede, até {moves[on_wall].max() if on_wall.any() else 0:.1f} mm")
+        # see-through, so that the vessels it keeps show inside it; the other pieces are opaque
+        w.add(f"mamo_{key}_step_pedicle", sid("pedicle"), f"Pedículo {info['pedicle']}", COLORS["pedicle"], PEDICLE_OPACITY, "piece", ped.faces, pedicle_frames)
+    w.add(f"mamo_{key}_step_resection", sid("resection"), f"Ressecção {info['resection']}", COLORS["resection"], 1.0, "piece", res.faces, removed(res_k0, out_dir))
     volumes, pillar_frames = {}, {}
     pillar_pieces = pillars(kind in FLAP_TECHNIQUES, item, front, inverse, st)
     tech.pillar_pivot = {}
@@ -1273,7 +1316,7 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
         moved = np.linalg.norm(finalp - k0p, axis=1)
         tech.pillar_pivot[side] = k0p[moved <= np.percentile(moved, 15)].mean(0)
         pillar_frames[side] = [k0p if f["deep"] == 0 else tech.arc(k0p, finalp, f["deep"], tech.pillar_pivot[side]) for f in fr]
-        w.add(f"mamo_{key}_step_pillar_{side}", sid(f"pillar-{side}"), f"{pillar_word} {side}", COLORS[f"pillar-{side}"], 0.9, "piece", piece.faces, pillar_frames[side])
+        w.add(f"mamo_{key}_step_pillar_{side}", sid(f"pillar-{side}"), f"{pillar_word} {side}", COLORS[f"pillar-{side}"], 1.0, "piece", piece.faces, pillar_frames[side])
         volumes[side] = round(piece.volume)
 
     # ---- vessels and nerves of the breast, as the tissue they run in goes ---------------------------------------------
@@ -1283,8 +1326,10 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
         if record["kept"] and record["branch"] not in branches[tissue]:
             branches[tissue].append(record["branch"])
         # the branches the pedicle keeps are bright; the others, cut on the way to the nipple, darker
+        # (two structures each: the views after the resection show only what reaches the nipple)
         color = COLORS[tissue] if record["kept"] else COLORS[f"{tissue}-cut"]
-        w.add(f"mamo_{key}_step_{record['name']}", sid("arteries" if tissue == "artery" else "nerves"), record["branch"], color, 1.0, tissue, record["faces"], record["frames"])
+        part = ("arteries" if tissue == "artery" else "nerves") + ("" if record["kept"] else "-cut")
+        w.add(f"mamo_{key}_step_{record['name']}", sid(part), record["branch"], color, 1.0, tissue, record["faces"], record["frames"])
 
     # ---- Pitanguy: the skin closes over the areola, which is marked and opened at the end ------------------------
     extra_points = {}
@@ -1428,7 +1473,7 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     values["areolaResultMm"] = round(float(np.linalg.norm(disc_final[rim[: n // 2]] - disc_final[rim[n // 2:]], axis=1).mean()), 1)
     # the pedicle, its dermis, the areola beyond the areolotome, the vessels and nerves (and a graft's bed) lie behind the
     # areola in every frame: the transposition and the closure may not bring any of them over it
-    w.settle(f"mamo_{key}_step_areola", {sid("pedicle"), sid("dermis"), sid("areola-ring"), sid("pillar-medial"), sid("pillar-lateral"), sid("arteries"), sid("nerves")}, lambda centre: radial_of(ch, centre))
+    w.settle(f"mamo_{key}_step_areola", {sid("pedicle"), sid("dermis"), sid("areola-ring"), sid("pillar-medial"), sid("pillar-lateral"), sid("arteries"), sid("nerves"), sid("arteries-cut"), sid("nerves-cut")}, lambda centre: radial_of(ch, centre))
     return tech, w, volumes, branches, extra_points, values, arrows
 
 
@@ -1459,11 +1504,11 @@ def anchors(tech: Technique, writer: Writer) -> dict:
     out["areolotome"] = [round(float(x) * MM, 5) for x in tome[len(tome) // 4]]
     for side in ("medial", "lateral"):
         out[f"pillar-{side}"] = nearest(f"mamo_{key}_step_pillar_{side}")
-    for kind, tissue in (("arteries", "artery"), ("nerves", "nerve")):
-        meshes = [m for m in writer.meshes if m["structure"] == f"mamo-step-{kind}-{key}"]
-        kept = [m for m in meshes if m["color"] == COLORS[tissue]] or meshes
-        if kept:
-            p = kept[0]["full"][0]
+    for kind in ("arteries", "nerves"):
+        # the label of the vessels sits on one that reaches the nipple, or on a cut one if none does
+        meshes = [m for m in writer.meshes if m["structure"] == f"mamo-step-{kind}-{key}"] or [m for m in writer.meshes if m["structure"] == f"mamo-step-{kind}-cut-{key}"]
+        if meshes:
+            p = meshes[0]["full"][0]
             out[kind] = [round(float(x) * MM, 5) for x in p[int(len(p) * 0.8)]]
     # where the camera of the sequence looks: between the nipple before and after, 30 mm deep to the skin
     out["centre"] = [round(float(x) * MM, 5) for x in (disc[0][0] + disc[-1][0]) / 2 - np.array([0.0, 0.0, 30.0])]
