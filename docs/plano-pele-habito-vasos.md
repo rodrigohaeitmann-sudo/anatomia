@@ -34,6 +34,7 @@ Medido com as conferências da fase A (`npm run check:skin`, `npm run check:pose
 | Comprimento dos ramos esquemáticos por estado | — | ±2% | mediana 1,6%, p90 7,5%; os ramos cutâneos anteriores do 3º e do 5º ficaram 19–22% mais curtos em ptose III a G4: a faixa medial mais larga move menos o tecido junto ao esterno, onde a pele é aderida |
 | Vasos e nervos com o hábito | — | ≥ 1 mm da pele; nada dentro de músculo | nenhum vértice fora da pele; só estruturas do tronco se movem (fáscias do dorso até 14 mm, fáscia peitoral até 8 mm, veia torácica lateral até 5 mm) |
 | Preparo da pele (refinamento, medido em Node) | — | ≤ +30% | 1,4–1,6 s no desktop (+67 mil vértices), 0,6–0,7 s no celular (+20 mil) |
+| Quadros por segundo | — | queda ≤ 10% | não medido: o ambiente de teste só renderiza por software (SwiftShader); fica para conferir num aparelho |
 | Tamanho | GLB do celular 2,93 MB | ≤ 3,4 MB | 3,37 MB; desktop 8,93 MB (era 8,91); `habitus.bin` 0,2 MB |
 
 Duas metas não foram atingidas por inteiro:

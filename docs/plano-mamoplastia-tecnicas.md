@@ -11,10 +11,10 @@ Ter no app, para cada grau de ptose, as técnicas de mamoplastia redutora que es
 | Mama | Monte | Subida do complexo areolopapilar | Técnicas |
 |---|---|---|---|
 | Ptose grau I, hipertrofia leve | 527 mL | 2,0 cm | periareolar de Benelli (round block); Lejour |
-| Ptose grau II, hipertrofia moderada | 641 mL | 3,6 cm | Pitanguy; Wise com pedículo inferior; vertical com pedículo superomedial; Lejour |
-| Ptose grau III, hipertrofia acentuada | 866 mL | 9,8 cm | Pitanguy; Wise com pedículo inferior; vertical com pedículo superomedial; Wise com pedículo superomedial |
-| G3 (ptose III, hipertrofia grau III) | 1.684 mL | 11,2 cm | as quatro da ptose III |
-| G4 (ptose III, gigantomastia) | 2.105 mL | 13,0 cm | as quatro da ptose III e Thorek (enxerto livre) |
+| Ptose grau II, hipertrofia moderada | 641 mL | 3,8 cm | Pitanguy; Wise com pedículo inferior; vertical com pedículo superomedial; Lejour |
+| Ptose grau III, hipertrofia acentuada | 866 mL | 9,9 cm | Pitanguy; Wise com pedículo inferior; vertical com pedículo superomedial; Wise com pedículo superomedial |
+| G3 (ptose III, hipertrofia grau III) | 1.684 mL | 11,4 cm | as quatro da ptose III |
+| G4 (ptose III, gigantomastia) | 2.105 mL | 13,2 cm | as quatro da ptose III e Thorek (enxerto livre) |
 
 ![No app: periareolar e Lejour na ptose I, Wise com pedículo superomedial na ptose III e em G3, e o enxerto livre de Thorek em G4](img/mamoplastia-tecnicas-por-grau.jpg)
 
@@ -48,41 +48,41 @@ Por que cada técnica está onde está:
 3. **Pedículo central e cunha.** A coluna de glândula sob o anel é o pedículo: espessura total fora da cunha e uma camada dermoglandular de 20 mm sobre ela. A cunha começa 25 mm acima do mamilo, com 40 mm de largura, e se abre até 100 mm embaixo; sob a pele do polo inferior fica um retalho de 15 mm. A derme do anel só é incisada abaixo do mamilo (é por onde se chega à glândula), então os ramos superficiais que chegam por cima e pelos lados são conservados.
 4. **Lejour.** Padrão da vertical. O pedículo é a lâmina dermoglandular de 25 mm entre a cúpula e o complexo areolopapilar, e toda a cúpula, só desepitelizada, é a sua base. Sai o polo inferior entre os ramos, em espessura total, e uma quilha sob o pedículo.
 5. **Wise com pedículo superomedial.** Padrão do Wise. A base do pedículo é a metade medial da fechadura e **todo** o ramo vertical medial: 9,4 cm de base sobre a pele (12 cm desde a segunda revisão, com a fechadura de 14 cm). Com a base de 8 cm da técnica vertical, as perfurantes da torácica interna do 2º e 3º espaços cruzavam o ramo vertical medial logo abaixo do fim da base, em G3 e G4, e contavam como seccionadas; na mama longa elas chegam baixo, e a base tem de incluí-las. Com a base inteira, o Wise superomedial passou a conservar TI 2 e 3 em G3 e TI 2 em G4 (antes, nenhuma), e TI 4 na ptose III.
-6. **Thorek.** Padrão do Pitanguy, sem pedículo. O complexo areolopapilar sai como enxerto de pele total antes da ressecção e o que fica dentro do padrão é amputado. Os retalhos em volta do padrão ficam com a espessura que leva a mama ao volume-alvo (46,5 mm em G4, para 850 mL). O leito do enxerto é um disco de 4,2 cm no vértice do cone, marcado e desepitelizado com a mama já fechada.
+6. **Thorek.** Padrão do Pitanguy, sem pedículo. O complexo areolopapilar sai como enxerto de pele total antes da ressecção e o que fica dentro do padrão é amputado. Os retalhos em volta do padrão ficam com a espessura que leva a mama ao volume-alvo (60 mm em G4, para 850 mL). O leito do enxerto é um disco de 4,2 cm no vértice do cone, marcado e desepitelizado com a mama já fechada.
 7. **Teste do que é seccionado.** Um ramo cruza a incisão no ponto exato em que o seu trajeto corta o contorno do padrão (antes era o ponto médio entre as duas amostras do trajeto de cada lado do contorno, que podia cair fora da base do pedículo quando o ramo a cruzava perto da borda). Nenhum resultado das técnicas antigas mudou; a regra passou a ser exata.
 
 ## Peças e o que cada técnica conserva
 
-Volumes medidos na mama em pé; peso a 0,95 g/mL; o pedículo inclui a haste até a entrada das suas artérias (segunda revisão). Em G3 e G4 os pedículos são afinados e os retalhos ficam com 15 mm ou mais para a mama chegar a 700 e 850 mL (`docs/plano-mamoplastia-g3-g4.md`); nas ptoses I a III as dimensões são as aceitas na revisão, sem alvo de volume. TI: perfurante da torácica interna (2º a 4º espaço); IC: perfurante intercostal (4º a 6º); TA: ramo da toracoacromial; ML: ramo mamário lateral; CA e CL: ramos cutâneos anteriores e laterais; "4º prof" e "4º sup": ramos profundo e superficial do 4º intercostal.
+Valores refeitos depois da suavização do mapa da mama e do hábito obeso (`docs/plano-pele-habito-vasos.md`): as peças mudaram até alguns por cento e algumas listas de ramos conservados mudaram. Volumes medidos na mama em pé; peso a 0,95 g/mL; o pedículo inclui a haste até a entrada das suas artérias (segunda revisão). Em G3 e G4 os pedículos são afinados e os retalhos ficam com 15 mm ou mais para a mama chegar a 700 e 850 mL (`docs/plano-mamoplastia-g3-g4.md`); nas ptoses I a III as dimensões são as aceitas na revisão, sem alvo de volume. TI: perfurante da torácica interna (2º a 4º espaço); IC: perfurante intercostal (4º a 6º); TA: ramo da toracoacromial; ML: ramo mamário lateral; CA e CL: ramos cutâneos anteriores e laterais; "4º prof" e "4º sup": ramos profundo e superficial do 4º intercostal.
 
 | Mama | Técnica | Subida do CAP | Pedículo | Peça | % do monte | Fica | Artérias que chegam ao mamilo | Nervos conservados |
 |---|---|---|---|---|---|---|---|---|
-| Ptose I (527 mL) | Periareolar de Benelli (round block) | 2,0 cm | 232 mL | 77 mL ≈ 73 g | 15% | 450 mL | TI 2, TI 3, TI 4, ML sup | CA 3, CA 4, CA 5, 4º sup, CL 3, CL 5 |
-| Ptose I (527 mL) | Lejour (vertical com pedículo superior) | 2,0 cm | 131 mL | 74 mL ≈ 70 g | 14% | 453 mL | TI 2, TI 3, TI 4, ML sup, ML inf | CA 3, CA 4, CA 5, 4º sup, CL 3 |
-| Ptose II (641 mL) | Pitanguy | 3,6 cm | 152 mL | 180 mL ≈ 171 g | 28% | 460 mL | TI 2, TI 3 | CA 3, CL 3 |
-| Ptose II (641 mL) | Wise com pedículo inferior | 3,6 cm | 250 mL | 88 mL ≈ 84 g | 14% | 552 mL | IC 4, IC 5, IC 6, TA | CA 3, 4º prof, CL 3 |
-| Ptose II (641 mL) | Vertical com pedículo superomedial | 3,6 cm | 275 mL | 99 mL ≈ 94 g | 15% | 542 mL | IC 4, IC 5, IC 6, TI 2, TI 3, TI 4, TA | CA 3, CA 4, 4º prof, CL 3 |
-| Ptose II (641 mL) | Lejour (vertical com pedículo superior) | 3,6 cm | 140 mL | 134 mL ≈ 127 g | 21% | 507 mL | TI 2, TI 3, TI 4, ML sup | CA 3, CA 4, 4º sup, CL 3 |
-| Ptose III (866 mL) | Pitanguy | 9,8 cm | 130 mL | 315 mL ≈ 299 g | 36% | 551 mL | nenhuma | CA 3, CA 5, CL 3 |
-| Ptose III (866 mL) | Wise com pedículo inferior | 9,8 cm | 285 mL | 199 mL ≈ 189 g | 23% | 668 mL | IC 4, IC 5, IC 6, TA | CA 3, CA 5, CL 3 |
-| Ptose III (866 mL) | Vertical com pedículo superomedial | 9,8 cm | 340 mL | 206 mL ≈ 196 g | 24% | 660 mL | IC 4, IC 5, IC 6, TI 2, TI 3, TI 4 | CA 3, 4º prof, CL 3 |
-| Ptose III (866 mL) | Wise com pedículo superomedial | 9,8 cm | 349 mL | 193 mL ≈ 183 g | 22% | 674 mL | IC 4, IC 5, IC 6, TI 2, TI 3, TI 4 | CA 3, CA 4, CA 5, CL 3 |
-| G3 (1684 mL) | Pitanguy | 11,2 cm | 138 mL | 982 mL ≈ 933 g, III | 58% | 702 mL | nenhuma | CA 3, CL 3 |
-| G3 (1684 mL) | Wise com pedículo inferior | 11,2 cm | 370 mL (afinado a 20,0 mm) | 726 mL ≈ 690 g, II | 43% | 958 mL | IC 4, IC 5, IC 6, TA | CA 3, CL 3 |
-| G3 (1684 mL) | Vertical com pedículo superomedial | 11,2 cm | 333 mL (afinado a 33,5 mm) | 905 mL ≈ 860 g, III | 54% | 779 mL | TI 2, TI 3 | CA 3, CL 3 |
-| G3 (1684 mL) | Wise com pedículo superomedial | 11,2 cm | 334 mL (afinado a 35,7 mm) | 897 mL ≈ 852 g, III | 53% | 787 mL | TI 2, TI 3 | CA 3, CA 4, CL 3 |
-| G4 (2105 mL) | Pitanguy | 13,0 cm | 162 mL | 1.233 mL ≈ 1.172 g, IV | 59% | 871 mL | nenhuma | CA 3 |
-| G4 (2105 mL) | Wise com pedículo inferior | 13,0 cm | 435 mL (afinado a 20,0 mm) | 916 mL ≈ 870 g, III | 44% | 1.189 mL | IC 4, IC 5, IC 6, TA | CA 3, 4º prof |
-| G4 (2105 mL) | Vertical com pedículo superomedial | 13,0 cm | 271 mL (afinado a 35,2 mm) | 1.151 mL ≈ 1.093 g, IV | 55% | 954 mL | nenhuma | CA 3 |
-| G4 (2105 mL) | Wise com pedículo superomedial | 13,0 cm | 366 mL (afinado a 37,4 mm) | 1.137 mL ≈ 1.080 g, IV | 54% | 968 mL | TI 2, TI 3 | CA 3 |
-| G4 (2105 mL) | Thorek (enxerto livre do complexo areolopapilar) | 13,0 cm | sem pedículo | 1.255 mL ≈ 1.192 g, IV | 60% | 850 mL | nenhuma | nenhum |
+| Ptose I (527 mL) | Periareolar de Benelli (round block) | 2,0 cm | 242 mL | 80 mL ≈ 76 g | 15% | 447 mL | TI 2, TI 3, TI 4, ML sup | CA 3, CA 4, CA 5, 4º sup, CL 3, CL 5 |
+| Ptose I (527 mL) | Lejour (vertical com pedículo superior) | 2,0 cm | 137 mL | 74 mL ≈ 70 g | 14% | 453 mL | TI 2, TI 3, TI 4, ML sup, ML inf | CA 3, CA 4, CA 5, 4º sup, CL 3 |
+| Ptose II (641 mL) | Pitanguy | 3,8 cm | 150 mL | 182 mL ≈ 173 g | 28% | 459 mL | TI 2, TI 3 | CA 3, CA 5, CL 3 |
+| Ptose II (641 mL) | Wise com pedículo inferior | 3,8 cm | 264 mL | 93 mL ≈ 88 g | 14% | 548 mL | IC 4, IC 5, IC 6, TA | CA 3, CA 5, 4º prof, CL 3 |
+| Ptose II (641 mL) | Vertical com pedículo superomedial | 3,8 cm | 256 mL | 85 mL ≈ 81 g | 13% | 556 mL | IC 4, IC 5, IC 6, TI 2, TI 3, TI 4, TA | CA 3, CA 4, CA 5, 4º prof, CL 3 |
+| Ptose II (641 mL) | Lejour (vertical com pedículo superior) | 3,8 cm | 149 mL | 107 mL ≈ 102 g | 17% | 534 mL | TI 2, TI 3, TI 4, ML sup | CA 3, CA 4, CA 5, 4º sup, CL 3 |
+| Ptose III (866 mL) | Pitanguy | 9,9 cm | 131 mL | 316 mL ≈ 300 g | 36% | 550 mL | nenhuma | CA 3, CL 3 |
+| Ptose III (866 mL) | Wise com pedículo inferior | 9,9 cm | 300 mL | 204 mL ≈ 193 g | 23% | 663 mL | IC 4, IC 5, IC 6, TA | CA 3, CL 3 |
+| Ptose III (866 mL) | Vertical com pedículo superomedial | 9,9 cm | 349 mL | 200 mL ≈ 190 g | 23% | 666 mL | IC 4, IC 5, IC 6, TI 2, TI 3, TI 4 | CA 3, CA 4, CA 5, 4º prof, CL 3 |
+| Ptose III (866 mL) | Wise com pedículo superomedial | 9,9 cm | 337 mL | 203 mL ≈ 193 g | 23% | 663 mL | IC 4, IC 5, IC 6, TI 2, TI 3, TI 4 | CA 3, CA 4, CL 3 |
+| G3 (1.684 mL) | Pitanguy | 11,4 cm | 138 mL | 984 mL ≈ 935 g, III | 58% | 700 mL | nenhuma | CA 3, CL 3 |
+| G3 (1.684 mL) | Wise com pedículo inferior | 11,4 cm | 403 mL (afinado a 20,0 mm) | 720 mL ≈ 684 g, II | 43% | 964 mL | IC 4, IC 5, IC 6, TA | CA 3, 4º prof, CL 3 |
+| G3 (1.684 mL) | Vertical com pedículo superomedial | 11,4 cm | 323 mL (afinado a 33,3 mm) | 932 mL ≈ 885 g, III | 55% | 753 mL | TI 2, TI 3 | CA 3, CA 5, CL 3 |
+| G3 (1.684 mL) | Wise com pedículo superomedial | 11,4 cm | 342 mL (afinado a 36,3 mm) | 927 mL ≈ 881 g, III | 55% | 757 mL | TI 2, TI 3, TI 4 | CA 3, CA 4, CL 3 |
+| G4 (2.105 mL) | Pitanguy | 13,2 cm | 162 mL | 1.255 mL ≈ 1.193 g, IV | 60% | 850 mL | nenhuma | CA 3, CL 3 |
+| G4 (2.105 mL) | Wise com pedículo inferior | 13,2 cm | 471 mL (afinado a 20,0 mm) | 921 mL ≈ 875 g, III | 44% | 1.184 mL | IC 4, IC 5, IC 6, TA | CA 3, 4º prof, CL 3 |
+| G4 (2.105 mL) | Vertical com pedículo superomedial | 13,2 cm | 376 mL (afinado a 34,1 mm) | 1.176 mL ≈ 1.117 g, IV | 56% | 929 mL | TI 2 | CA 3, CA 5, CL 3 |
+| G4 (2.105 mL) | Wise com pedículo superomedial | 13,2 cm | 374 mL (afinado a 38,2 mm) | 1.178 mL ≈ 1.119 g, IV | 56% | 927 mL | TI 2, TI 3 | CA 3, CL 3 |
+| G4 (2.105 mL) | Thorek (enxerto livre do complexo areolopapilar) | 13,2 cm | sem pedículo | 1.255 mL ≈ 1.192 g, IV | 60% | 850 mL | nenhuma | nenhum |
 
 O que os números mostram:
 
 - **Ptose I.** As duas técnicas tiram cerca de 15% do monte (cerca de 75 g) e conservam as perfurantes da torácica interna e o ramo mamário lateral superior, que chegam por cima e pelos lados. Nenhuma das duas conserva as perfurantes intercostais, que sobem pelo septo: na periareolar elas atravessam a cunha.
-- **Ptose II.** O Lejour tira mais que a vertical superomedial (o polo inferior sai em espessura total e não há pedículo espesso a preservar), mas conserva menos: só as perfurantes do 2º e 3º espaços.
-- **Ptose III.** O pedículo superior de Pitanguy não conserva nenhuma artéria da camada esquemática. O Wise superomedial, como a vertical superomedial, conserva tanto as perfurantes da torácica interna quanto as intercostais, e tira um pouco mais (216 g contra 199 g).
-- **G3 e G4.** O Wise superomedial fica igual à vertical superomedial no que conserva (TI 2 e 3 em G3; só TI 2 em G4) e tira quase o mesmo peso. O Thorek é o que mais tira (1.192 g) e leva a mama aos 850 mL do alvo, ao custo de todos os vasos e nervos do complexo areolopapilar.
+- **Ptose II.** O Lejour tira mais que a vertical superomedial (102 g contra 81 g: o polo inferior sai em espessura total e não há pedículo espesso a preservar), mas conserva menos: as perfurantes da torácica interna e o ramo mamário lateral superior, sem as intercostais nem o ramo da toracoacromial.
+- **Ptose III.** O pedículo superior de Pitanguy não conserva nenhuma artéria da camada esquemática. O Wise superomedial, como a vertical superomedial, conserva tanto as perfurantes da torácica interna quanto as intercostais, e tira quase o mesmo (193 g contra 190 g).
+- **G3 e G4.** O Wise superomedial conserva, como a vertical superomedial, as perfurantes altas da torácica interna, uma a mais em cada grau (TI 2 a 4 em G3 e TI 2 e 3 em G4, contra TI 2 e 3 e só TI 2), e tira quase o mesmo peso (881 e 1.119 g, contra 885 e 1.117 g). Em G4, o Thorek e o Pitanguy são os que mais tiram (≈ 1.190 g) e levam a mama aos 850 mL do alvo; o Thorek, ao custo de todos os vasos e nervos do complexo areolopapilar.
 
 ## Passo a passo e resultado
 
