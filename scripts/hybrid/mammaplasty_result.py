@@ -41,17 +41,20 @@ def state_map(breast: bb.Breast, q: np.ndarray, state: dict) -> np.ndarray:
     u, v, r = q[:, 0], q[:, 1], q[:, 2]
     d = r - breast.base(u, v)
     amp = breast.taper(u)
-    sel = (d > 0) & (amp > 1e-4)
+    gate = breast.gate(u, v)
+    sel = (d > 0) & (amp > 1e-4) & (gate > 1e-4)
+    fade = bb.smootherstep(breast.thickness(u[sel], v[sel]) / bb.GROWTH["fadeMm"])
     hinge = breast.curve("hinge", u[sel])
     top = breast.curve("top", u[sel]) - hinge
     a, dd = bb.flow_advance(v[sel] - hinge, d[sel], amp[sel], top, 0.0, state["descent"])
     a, dd = bb.tilt_advance(a, dd, amp[sel], state.get("tilt", 0.0))
     um = round(float(breast.ch.nipple[0]), 2)
-    u2, a2, d2 = bb.grow(breast, u[sel], a, dd, um, state["growth"])
+    u2, a2, d2 = bb.grow(breast, u[sel], a, dd, um, state["growth"], fade)
     moved = q.copy()
     moved[sel, 0] = u2
     moved[sel, 1] = hinge + a2
     moved[sel, 2] = breast.base(u2, moved[sel, 1]) + d2
+    moved[sel] = q[sel] + gate[sel][:, None] * (moved[sel] - q[sel])
     return moved
 
 

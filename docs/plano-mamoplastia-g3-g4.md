@@ -6,6 +6,8 @@ Levar tudo o que o app faz com a mama de ptose grau II (forma da mama, marcaçã
 
 **Situação: implementado**, a partir do plano aprovado, com as recomendações do plano onde as decisões ficaram em aberto (lista em "Decisões tomadas"). Os números abaixo são os do app para as três técnicas da ptose II. Depois, com as técnicas por grau de ptose (`docs/plano-mamoplastia-tecnicas.md`), G3 e G4 ganharam o **Wise com pedículo superomedial** e G4 o **enxerto livre do complexo areolopapilar (Thorek)**, que tinha ficado pendente (fase E deste plano).
 
+> **Atualização.** Depois da suavização do mapa da mama e do hábito obeso de ptose III, G3 e G4 (`docs/plano-pele-habito-vasos.md`), a tabela dos estados, os fatores de crescimento e os comprimentos dos ramos abaixo foram refeitos. As tabelas de peças desta página guardam os números da fase em que G3 e G4 foram construídos. Os valores atuais por técnica estão em `docs/plano-mamoplastia-tecnicas.md`.
+
 > **Leitura do pedido.** "Modelos de reconstrução" foi lido como a **remodelação da mama na mamoplastia redutora** (marcação → pedículo → ressecção → transposição → fechamento → resultado), replicada para as duas mamas novas. "G3 e G4" foi lido como os **graus III e IV de hipertrofia da classificação de Berrocal Revueltas**, com ptose grau III de Regnault.
 
 ![No app: G4 de frente, septo e vasos em G4, pedículo inferior em G4, marcação do Wise em G4 com as medidas, ressecção do Pitanguy em G4 e resultado da vertical em G4](img/mamoplastia-g3-g4-app.jpg)
@@ -18,18 +20,18 @@ A classificação de Berrocal Revueltas gradua a hipertrofia pelo **peso resseca
 
 | Estado | Mamilo × sulco | Contorno inferior × sulco | Fúrcula–mamilo | Mamilo–sulco (pele) | Projeção | Mamilo–linha média | Volume | Regnault | Redução esperada |
 |---|---|---|---|---|---|---|---|---|---|
-| Sem ptose (o modelo) | 51 mm acima | 0 | 22,6 cm | 7,2 cm | 55 mm | 11,2 cm | 426 mL | — | — |
-| Ptose II | 26 mm abaixo | 62 mm abaixo | 32,1 cm | 13,6 cm | 84 mm | 13,8 cm | 641 mL | grau II | a 500 mL: ≈ 130 g (I) |
-| Ptose III | 89 mm abaixo | 101 mm abaixo | 37,3 cm | 14,9 cm | 66 mm | 14,1 cm | 866 mL | grau III | a 500 mL: ≈ 350 g (I) |
-| **G3** | **93 mm abaixo** | **104 mm abaixo** | **41,8 cm** | **18,0 cm** | **107 mm** | **16,6 cm** | **1.684 mL (+295%)** | **grau III** | **a 700 mL: ≈ 930 g (III)** |
-| **G4** | **111 mm abaixo** | **121 mm abaixo** | **44,2 cm** | **18,7 cm** | **102 mm** | **16,4 cm** | **2.105 mL (+394%)** | **grau III** | **a 850 mL: ≈ 1.190 g (IV)** |
+| Sem ptose (o modelo) | 51 mm acima | 0 | 22,6 cm | 7,2 cm | 55 mm | 11,2 cm | 427 mL | — | — |
+| Ptose II | 26 mm abaixo | 62 mm abaixo | 32,5 cm | 13,8 cm | 89 mm | 14,1 cm | 641 mL | grau II | a 500 mL: ≈ 130 g (I) |
+| Ptose III | 90 mm abaixo | 101 mm abaixo | 37,6 cm | 15,2 cm | 72 mm | 14,5 cm | 866 mL | grau III | a 500 mL: ≈ 350 g (I) |
+| **G3** | **94 mm abaixo** | **104 mm abaixo** | **42,5 cm** | **19,2 cm** | **120 mm** | **17,4 cm** | **1.684 mL (+295%)** | **grau III** | **a 700 mL: ≈ 940 g (III)** |
+| **G4** | **113 mm abaixo** | **121 mm abaixo** | **44,8 cm** | **19,8 cm** | **114 mm** | **17,1 cm** | **2.105 mL (+393%)** | **grau III** | **a 850 mL: ≈ 1.190 g (IV)** |
 
 Parâmetros (`scripts/hybrid/build_breast.py`, mm de descida do fluxo; inclinação; fatores de espessura, largura, comprimento abaixo do sulco e afinamento da bolsa):
 
 | | Descida | Inclinação | Espessura | Largura | Comprimento | Bolsa | Volume final alvo |
 |---|---|---|---|---|---|---|---|
-| G3 | 80 | 1,3 | 2,40 | 1,85 | 1,30 | 0,50 | 700 mL |
-| G4 | 84 | 1,4 | 2,90 | 2,00 | 1,40 | 0,60 | 850 mL |
+| G3 | 80 | 1,3 | 2,67 | 1,85 | 1,30 | 0,50 | 700 mL |
+| G4 | 84 | 1,4 | 3,23 | 2,00 | 1,40 | 0,60 | 850 mL |
 
 ![Perfis no meridiano da mama: repouso, ptose II, ptose III, G3 e G4](img/mamoplastia-g3-g4-perfis.jpg)
 
@@ -124,22 +126,22 @@ Na implementação de G3 e G4. Na segunda revisão das técnicas por grau, com a
 
 | Ramo | Ø de desenho | Repouso | Ptose II | Ptose III | G3 | G4 |
 |---|---|---|---|---|---|---|
-| Perfurante da torácica interna, 2º espaço | 2,5 → 1,2 mm | 151 | 241 | 284 | 322 | 343 |
-| Perfurante da torácica interna, 3º | 2,2 → 1,2 | 130 | 218 | 262 | 296 | 316 |
-| Perfurante da torácica interna, 4º | 2,0 → 1,2 | 120 | 207 | 251 | 287 | 307 |
-| Ramo mamário lateral superior | 2,4 → 1,2 | 126 | 211 | 251 | 291 | 305 |
-| Ramo mamário lateral inferior | 2,0 → 1,2 | 116 | 200 | 236 | 273 | 284 |
-| Perfurante intercostal, 4º | 2,0 → 1,2 | 86 | 176 | 211 | 242 | 256 |
-| Perfurante intercostal, 5º | 2,2 → 1,2 | 68 | 150 | 183 | 211 | 224 |
-| Perfurante intercostal, 6º | 2,0 → 1,2 | 84 | 153 | 186 | 215 | 228 |
-| Ramo mamário da toracoacromial | 2,2 → 1,2 | 121 | 208 | 244 | 273 | 287 |
-| 4º intercostal, ramo profundo | 1,8 → 1,1 | 181 | 263 | 297 | 324 | 336 |
-| 4º intercostal, ramo superficial | 1,6 → 1,0 | 153 | 238 | 283 | 323 | 338 |
-| Ramo cutâneo lateral do 3º | 1,6 → 1,0 | 137 | 215 | 242 | 267 | 283 |
-| Ramo cutâneo lateral do 5º | 1,6 → 1,0 | 142 | 225 | 255 | 274 | 282 |
-| Ramo cutâneo anterior do 3º | 1,6 → 1,0 | 82 | 162 | 183 | 195 | 205 |
-| Ramo cutâneo anterior do 4º | 1,6 → 1,0 | 104 | 193 | 237 | 273 | 293 |
-| Ramo cutâneo anterior do 5º | 1,6 → 1,0 | 78 | 155 | 177 | 186 | 197 |
+| Perfurante da torácica interna, 2º espaço | 2,5 → 1,2 mm | 151 | 242 | 286 | 327 | 348 |
+| Perfurante da torácica interna, 3º | 2,2 → 1,2 | 130 | 219 | 264 | 299 | 318 |
+| Perfurante da torácica interna, 4º | 2,0 → 1,2 | 120 | 206 | 251 | 284 | 300 |
+| Ramo mamário lateral superior | 2,4 → 1,2 | 126 | 202 | 246 | 287 | 301 |
+| Ramo mamário lateral inferior | 2,0 → 1,2 | 116 | 191 | 233 | 270 | 280 |
+| Perfurante intercostal, 4º | 2,0 → 1,2 | 86 | 179 | 215 | 251 | 264 |
+| Perfurante intercostal, 5º | 2,2 → 1,2 | 68 | 154 | 188 | 220 | 233 |
+| Perfurante intercostal, 6º | 2,0 → 1,2 | 84 | 157 | 190 | 224 | 238 |
+| Ramo mamário da toracoacromial | 2,2 → 1,2 | 121 | 211 | 248 | 282 | 296 |
+| 4º intercostal, ramo profundo | 1,8 → 1,1 | 181 | 266 | 301 | 333 | 345 |
+| 4º intercostal, ramo superficial | 1,6 → 1,0 | 152 | 233 | 281 | 319 | 334 |
+| Ramo cutâneo lateral do 3º | 1,6 → 1,0 | 137 | 208 | 238 | 260 | 274 |
+| Ramo cutâneo lateral do 5º | 1,6 → 1,0 | 142 | 217 | 251 | 268 | 275 |
+| Ramo cutâneo anterior do 3º | 1,6 → 1,0 | 82 | 140 | 148 | 155 | 161 |
+| Ramo cutâneo anterior do 4º | 1,6 → 1,0 | 104 | 190 | 236 | 268 | 284 |
+| Ramo cutâneo anterior do 5º | 1,6 → 1,0 | 77 | 130 | 141 | 147 | 153 |
 
 **Calibre:** mantido em todos os estados, com o afilamento traçado e exibido 1,35× maior para que o ramo possa ser visto e tocado. Não há estudo que mostre vasos mais calibrosos na hipertrofia; a perfurante dominante mede 1,8 ± 0,8 mm em séries de reconstrução. A queda da sensibilidade do complexo areolopapilar com o tamanho e a ptose (Tairych et al., 1998) está na vista "Septo e vasos em G3/G4" do pack Irrigação e inervação.
 

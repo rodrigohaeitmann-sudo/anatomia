@@ -55,6 +55,7 @@ from shapely.ops import unary_union
 
 sys.path.insert(0, str(Path(__file__).parent))
 import build_breast as bb  # noqa: E402
+import build_habitus as bh  # noqa: E402
 import build_mammaplasty as bm  # noqa: E402
 import mammaplasty_result as mr  # noqa: E402
 
@@ -583,6 +584,24 @@ class Writer:
     def __init__(self, frame_count: int) -> None:
         self.meshes: list[dict] = []
         self.count = frame_count
+        # body habitus of the case (docs/plano-pele-habito-vasos.md): skin patch at the first frame and the offset of
+        # each of its vertices (computed at rest); every mesh takes the offset of the patch vertex nearest to it
+        self.habitus: tuple | None = None
+
+    def habitus_offsets(self, points: np.ndarray) -> np.ndarray:
+        if self.habitus is None:
+            return np.zeros_like(points)
+        tree, offsets = self.habitus
+        return offsets[tree.query(points)[1]]
+
+    def apply_habitus(self) -> None:
+        """Adds the offset of the habitus to every frame of every mesh (the trunk round the patch moves with it)."""
+        if self.habitus is None:
+            return
+        for m in self.meshes:
+            offset = self.habitus_offsets(m["full"][0])
+            m["full"] = [f + offset for f in m["full"]]
+            m["frames"] = {k: f + offset for k, f in m["frames"].items()}
 
     def add(self, name: str, structure: str, label: str, color: str, opacity: float, tissue: str, faces: np.ndarray, frames: list) -> None:
         assert len(frames) == self.count, name
@@ -620,6 +639,7 @@ class Writer:
             m["full"], m["frames"] = full, stored
 
     def write(self, path: Path) -> tuple[list[dict], dict]:
+        self.apply_habitus()
         allpos = np.vstack([p for m in self.meshes for p in m["frames"].values()]) * MM
         lo, hi = allpos.min(0) - 1e-4, allpos.max(0) + 1e-4
         blobs, offset, records = [], 0, []
@@ -1221,6 +1241,10 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
 
     # ---- skin -------------------------------------------------------------------------------------------------
     k0 = tech.standing(patch.rest_chart)
+    from scipy.spatial import cKDTree
+
+    if bh.OUT_JSON.exists():
+        w.habitus = (cKDTree(k0), bh.displacements(ch.to_model(patch.rest_chart), skin=True)[st.k])
     uv_final = patch.rest_uv.copy()
     uv_final[closure.vertices] = closure.target_uv
     stay_final = tech.skin_final(np.c_[uv_final, st.skin_r(uv_final[:, 0], uv_final[:, 1]) + patch.lift])
@@ -1474,6 +1498,10 @@ def build(kind: str, case: str, item: dict, st, front, inverse, rest, mound_ml: 
     # the pedicle, its dermis, the areola beyond the areolotome, the vessels and nerves (and a graft's bed) lie behind the
     # areola in every frame: the transposition and the closure may not bring any of them over it
     w.settle(f"mamo_{key}_step_areola", {sid("pedicle"), sid("dermis"), sid("areola-ring"), sid("pillar-medial"), sid("pillar-lateral"), sid("arteries"), sid("nerves"), sid("arteries-cut"), sid("nerves-cut")}, lambda centre: radial_of(ch, centre))
+    # points of labels and measures go with the habitus too
+    for name, point in extra_points.items():
+        at = np.array(point) / MM
+        extra_points[name] = [round(float(x) * MM, 5) for x in at + w.habitus_offsets(at[None])[0]]
     return tech, w, volumes, branches, extra_points, values, arrows
 
 

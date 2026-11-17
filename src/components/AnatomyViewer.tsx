@@ -17,6 +17,7 @@ import { boneMatrices, posedLandmark } from "@/lib/armPoses";
 import type { BreastSide } from "@/lib/breastMap";
 import { planPieceStructures, plansOf } from "@/lib/breastAnatomy";
 import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
+import { skinUniforms } from "@/lib/skinShader";
 import { stepArrows, stepFramesOf } from "@/lib/mammaplastySteps";
 import { hiddenInSteps } from "@/lib/surgeryVisibility";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
@@ -125,19 +126,31 @@ function framing(orientation: ViewOrientation, anchor: Landmark, distanceScale =
   return { rotation, target, position: target.clone().add(v3(preset.offset).multiplyScalar(distanceScale)) };
 }
 
-function StudioEnvironment() {
+/**
+ * Tone mapping and light (docs/plano-pele-habito-vasos.md, phase G). "neutral" (Khronos PBR Neutral) keeps the colours
+ * of the tissues and the contrast of the volumes; "?tm=aces" in the address brings back the earlier filmic look, for
+ * side-by-side comparison.
+ */
+type Look = { toneMapping: THREE.ToneMapping; exposure: number; environment: number; hemisphere: number; key: number; fill: number; skinSaturation: number };
+const LOOKS: Record<"neutral" | "aces", Look> = {
+  neutral: { toneMapping: THREE.NeutralToneMapping, exposure: 1.0, environment: 0.45, hemisphere: 0.3, key: 2.3, fill: 0.7, skinSaturation: 0.8 },
+  aces: { toneMapping: THREE.ACESFilmicToneMapping, exposure: 1.05, environment: 0.55, hemisphere: 0.4, key: 2.1, fill: 0.9, skinSaturation: 1 },
+};
+const lookOf = (): Look => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tm") === "aces" ? LOOKS.aces : LOOKS.neutral);
+
+function StudioEnvironment({ intensity }: { intensity: number }) {
   const { gl, scene } = useThree();
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl);
     const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = environment;
-    scene.environmentIntensity = 0.55;
+    scene.environmentIntensity = intensity;
     return () => {
       scene.environment = null;
       environment.dispose();
       pmrem.dispose();
     };
-  }, [gl, scene]);
+  }, [gl, scene, intensity]);
   return null;
 }
 
@@ -415,6 +428,8 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   // a step-by-step sequence shows the whole breast and the specimen beside it: phones (narrow canvas) step back
   const distance = (view.distance ?? (space ? 0.8 : 1)) * (mobile && view.surgery ? 1.45 : 1);
   const frame = useMemo(() => framing(orientation, anchor, focusAnchor ? 0.55 : distance), [orientation, anchor, focusAnchor, distance]);
+  const look = useMemo(lookOf, []);
+  skinUniforms.uSkinSaturation.value = look.skinSaturation;
   const rotationMatrix = useMemo(() => new THREE.Matrix4().makeRotationFromEuler(frame.rotation), [frame.rotation]);
   // the steps of one surgical technique seen from the same side share the camera: the tissue moves, the point of view
   // the user chose stays
@@ -818,17 +833,21 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
         camera={{ position: frame.position.toArray(), fov: 40, near: 0.05, far: 200 }}
         shadows={!lowPower}
         dpr={lowPower ? [1, 1.5] : [1, 2]}
-        gl={{ antialias: true, localClippingEnabled: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05, powerPreference: "high-performance" }}
+        gl={{ antialias: true, localClippingEnabled: true, toneMapping: look.toneMapping, toneMappingExposure: look.exposure, powerPreference: "high-performance" }}
         onPointerMissed={(event) => {
           if (event.type !== "click") return;
           onSelect(null);
           onPin?.(null);
         }}
       >
-        <StudioEnvironment />
-        <hemisphereLight args={["#fffaf4", "#cdbba6", 0.4]} />
-        <directionalLight position={[4, 6, 5]} intensity={2.1} castShadow={!lowPower} shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} />
-        <directionalLight position={[-5, 3, -4]} intensity={0.9} color="#9cc7ff" />
+        <StudioEnvironment intensity={look.environment} />
+        <hemisphereLight args={["#fffaf4", "#cdbba6", look.hemisphere]} />
+        {/* the shadow camera fits the model (the default one spans 500 units, and its bias then equalled ~29 mm,
+            losing the contact shadows of the fold and of the pouch on the abdomen) */}
+        <directionalLight position={[4, 6, 5]} intensity={look.key} castShadow={!lowPower} shadow-mapSize={[2048, 2048]} shadow-bias={-0.0002} shadow-normalBias={0.01}>
+          <orthographicCamera attach="shadow-camera" args={[-3.2, 3.2, 3.2, -3.2, 1, 20]} />
+        </directionalLight>
+        <directionalLight position={[-5, 3, -4]} intensity={look.fill} color="#9cc7ff" />
         <directionalLight position={[0, -3, 4]} intensity={0.35} color="#ffd9c7" />
         <group rotation={frame.rotation}>
           <Suspense fallback={<LoadingModel />}>

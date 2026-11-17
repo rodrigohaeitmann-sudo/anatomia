@@ -16,7 +16,11 @@
     "check:breast": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hybrid/check_breast_map.mjs",
     "anatomy:breast": "node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast_anatomy.py",
     "mammaplasty:hybrid": "node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast_anatomy.py && python3 scripts/hybrid/build_mammaplasty.py && python3 scripts/hybrid/build_mammaplasty_steps.py",
-    "pack:hybrid": "gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid.glb -cc -kn -km -ke -vp 16 -vn 10 && gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid-mobile.glb -cc -kn -km -ke -vp 14 -vn 8 -si 0.35"
+    "pack:hybrid": "gltfpack -i assets/build/hybrid-torso.raw.glb -o public/models/hybrid/torso-female-hybrid.glb -cc -kn -km -ke -vp 16 -vn 10 && gltfpack -i assets/build/hybrid-torso-mobile.raw.glb -o public/models/hybrid/torso-female-hybrid-mobile.glb -cc -kn -km -ke -vp 14 -vn 10",
+    "habitus:hybrid": "node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_habitus.py && npm run check:habitus",
+    "check:habitus": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hybrid/check_habitus_map.mjs && python3 scripts/hybrid/check_habitus.py",
+    "check:skin": "python3 scripts/hybrid/check_skin.py && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hybrid/check_skin_app.mjs",
+    "check:poses": "python3 scripts/hybrid/check_pose_followers.py"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

@@ -10,6 +10,8 @@
  * Chart (per side): u = rref * angle about a vertical trunk axis (lateral +), v = height above the
  * nipple, r = radius; depth d = r - B(u, v) in front of the base surface B (the trunk without the
  * mound). Everything here is in millimetres except the public entry points, which take model units.
+ * Grids and curves are sampled with Catmull-Rom and every transition whose derivative enters a velocity is C2
+ * (docs/plano-pele-habito-vasos.md): a slope jump of the map shows as a crease in the skin.
  *
  * No imports on purpose: the check script loads this file directly with Node.
  */
@@ -27,11 +29,18 @@ export type BreastSideData = {
   byteOffset: number;
   qmin: number;
   qstep: number;
+  /** rest thickness of the mound (skin over the base), same window and step, starts here in the bin */
+  thicknessOffset: number;
   foldRange: number[];
   fold: number[];
   hinge: number[];
   top: number[];
   nippleChart: number[];
+  /** medial and lateral fades of this breast (mm): the model's, scaled by its fold width */
+  taperMedialMm?: number;
+  taperMm?: number;
+  /** depth factors of this breast in place of the state's (the contralateral one: same volume in every state) */
+  depth?: Record<string, number>;
   meshes: string[];
 };
 
@@ -54,11 +63,16 @@ export type BreastModelParams = {
   unitsPerMm: number;
   rref: number;
   cell: number;
+  /** lateral fade of the map (mm); the medial one is taperMedialMm */
   taperMm: number;
+  taperMedialMm: number;
+  /** the map is off out of the shipped window (fading over windowFadeMm) and more than belowHingeMm below the hinge */
+  gate: { belowHingeMm: number; fadeMm: number; windowFadeMm: number };
   flow: { shear: number; shearFold: number; shearBlend: number[]; rise: number; decel: number[]; lmin: number; stepMm: number };
   tilt: { reach: number; fade: number[]; stepMm: number };
-  /** hypertrophy flow: superficial layer, blend above the fold, hang scale (mm) and RK4 steps over unit time */
-  growth: { shear: number; blend: number; hangMm: number; steps: number };
+  /** hypertrophy flow: superficial layer, blend above the fold, hang scale (mm), RK4 steps over unit time, and the rest
+   * mound thickness under which the depth growth fades (the border of the mound keeps its slope) */
+  growth: { shear: number; blend: number; hangMm: number; steps: number; fadeMm: number };
   states: BreastStateData[];
 };
 
@@ -70,15 +84,36 @@ const dsmoothstep = (t: number) => {
   const x = t < 0 ? 0 : t > 1 ? 1 : t;
   return 6 * x * (1 - x);
 };
+/** C2 transitions: where their derivative enters a velocity it must stay continuous, or the flow creases the tissue */
+const smootherstep = (t: number) => {
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  return x * x * x * (x * (6 * x - 15) + 10);
+};
+const dsmootherstep = (t: number) => {
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  return 30 * x * x * (1 - x) * (1 - x);
+};
+/** Catmull-Rom weights (C1 interpolation, no slope jump on the grid lines), in the order of build_breast.py. */
+const catmullRom = (t: number, out: number[]) => {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  out[0] = (-t3 + 2 * t2 - t) / 2;
+  out[1] = (3 * t3 - 5 * t2 + 2) / 2;
+  out[2] = (-3 * t3 + 4 * t2 + t) / 2;
+  out[3] = (t3 - t2) / 2;
+};
 
 /** One breast: chart, base surface and the state maps. */
 export class BreastSide {
   readonly data: BreastSideData;
   private readonly p: BreastModelParams;
   private readonly base: Float64Array;
+  private readonly thickness: Float64Array;
   // scratch pair returned by the inner maps (avoids allocating per vertex)
   private oa = 0;
   private od = 0;
+  private readonly wu = [0, 0, 0, 0];
+  private readonly wv = [0, 0, 0, 0];
 
   /** `bin`: the whole breast-chart.bin; this side's base surface starts at data.byteOffset (uint16, little endian). */
   constructor(data: BreastSideData, params: BreastModelParams, bin: ArrayBuffer) {
@@ -88,11 +123,13 @@ export class BreastSide {
     const view = new DataView(bin, data.byteOffset, count * 2);
     this.base = new Float64Array(count);
     for (let i = 0; i < count; i++) this.base[i] = view.getUint16(i * 2, true) * data.qstep + data.qmin;
+    const thickness = new DataView(bin, data.thicknessOffset, count * 2);
+    this.thickness = new Float64Array(count);
+    for (let i = 0; i < count; i++) this.thickness[i] = thickness.getUint16(i * 2, true) * data.qstep;
   }
 
-  // ---- chart ----------------------------------------------------------------------------------------
-  /** Base surface radius at (u, v): bilinear, clamped to the shipped window. */
-  baseAt(u: number, v: number) {
+  /** Bicubic Catmull-Rom sample of a window grid at (u, v) mm, clamped (edges repeated), as cubic_2d in Python. */
+  private grid(values: Float64Array, u: number, v: number) {
     const { u0, v0, nu, nv } = this.data;
     const cell = this.p.cell;
     let fu = (u - u0) / cell;
@@ -101,25 +138,64 @@ export class BreastSide {
     fv = fv < 0 ? 0 : fv > nv - 1 ? nv - 1 : fv;
     const i = Math.min(Math.floor(fu), nu - 2);
     const j = Math.min(Math.floor(fv), nv - 2);
-    const tu = fu - i;
-    const tv = fv - j;
-    const b = this.base;
-    const k = i * nv + j;
-    return (b[k] * (1 - tv) + b[k + 1] * tv) * (1 - tu) + (b[k + nv] * (1 - tv) + b[k + nv + 1] * tv) * tu;
+    catmullRom(fu - i, this.wu);
+    catmullRom(fv - j, this.wv);
+    let out = 0;
+    for (let a = 0; a < 4; a++) {
+      let ii = i + a - 1;
+      ii = ii < 0 ? 0 : ii > nu - 1 ? nu - 1 : ii;
+      let row = 0;
+      for (let b = 0; b < 4; b++) {
+        let jj = j + b - 1;
+        jj = jj < 0 ? 0 : jj > nv - 1 ? nv - 1 : jj;
+        row += this.wv[b] * values[ii * nv + jj];
+      }
+      out += this.wu[a] * row;
+    }
+    return out;
+  }
+
+  // ---- chart ----------------------------------------------------------------------------------------
+  /** Base surface radius at (u, v): bicubic (Catmull-Rom), clamped to the shipped window. */
+  baseAt(u: number, v: number) {
+    return this.grid(this.base, u, v);
+  }
+
+  /** Rest thickness of the mound (skin over the base) at (u, v). */
+  thicknessAt(u: number, v: number) {
+    return this.grid(this.thickness, u, v);
   }
 
   private curve(values: number[], u: number) {
     let f = (u - this.data.u0) / this.p.cell;
-    const last = values.length - 1;
-    f = f < 0 ? 0 : f > last ? last : f;
-    const i = Math.min(Math.floor(f), last - 1);
-    return values[i] + (values[i + 1] - values[i]) * (f - i);
+    const n = values.length;
+    f = f < 0 ? 0 : f > n - 1 ? n - 1 : f;
+    const i = Math.min(Math.floor(f), n - 2);
+    catmullRom(f - i, this.wu);
+    let out = 0;
+    for (let k = 0; k < 4; k++) {
+      let ii = i + k - 1;
+      ii = ii < 0 ? 0 : ii > n - 1 ? n - 1 : ii;
+      out += this.wu[k] * values[ii];
+    }
+    return out;
   }
 
-  /** 1 over the central meridians, 0 at the medial and lateral ends of the fold. */
+  /** 1 over the central meridians, 0 at the medial and lateral ends of the fold (C2). */
   taper(u: number) {
     const [lo, hi] = this.data.foldRange;
-    return smoothstep((u - lo) / this.p.taperMm) * smoothstep((hi - u) / this.p.taperMm);
+    return smootherstep((u - lo) / (this.data.taperMedialMm ?? this.p.taperMedialMm)) * smootherstep((hi - u) / (this.data.taperMm ?? this.p.taperMm));
+  }
+
+  /** 1 where the map acts; 0 out of the shipped window and far below the hinge (the abdomen never moves). */
+  gate(u: number, v: number, hinge: number) {
+    const { u0, v0, nu, nv } = this.data;
+    const { cell } = this.p;
+    const { belowHingeMm, fadeMm, windowFadeMm } = this.p.gate;
+    const fu = (u - u0) / cell;
+    const fv = (v - v0) / cell;
+    const edge = Math.min(Math.min(fu, nu - 1 - fu), Math.min(fv, nv - 1 - fv)) * cell;
+    return smootherstep(edge / windowFadeMm) * smootherstep((v - hinge + belowHingeMm) / fadeMm);
   }
 
   // ---- flows (incompressible in the chart, attached to the wall) ----------------------------------------
@@ -130,17 +206,17 @@ export class BreastSide {
   private descend(a: number, d: number, s: number, top: number) {
     const { shear, shearFold, shearBlend, rise, decel, lmin } = this.p.flow;
     const x = (a - shearBlend[0]) / (shearBlend[1] - shearBlend[0]);
-    const delta = shearFold + (shear - shearFold) * smoothstep(x);
-    const ddelta = ((shear - shearFold) * dsmoothstep(x)) / (shearBlend[1] - shearBlend[0]);
+    const delta = shearFold + (shear - shearFold) * smootherstep(x);
+    const ddelta = ((shear - shearFold) * dsmootherstep(x)) / (shearBlend[1] - shearBlend[0]);
     const t = d <= 0 ? 0 : d / delta;
     const tc = t < 1 ? t : 1;
     const profile = tc * tc * (3 - 2 * tc);
     const integral = t < 1 ? tc * tc * tc - 0.5 * tc * tc * tc * tc : 0.5 + (t - 1);
-    const up = smoothstep((top - a) / rise);
-    const dup = -dsmoothstep((top - a) / rise) / rise;
+    const up = smootherstep((top - a) / rise);
+    const dup = -dsmootherstep((top - a) / rise) / rise;
     const y = (a - decel[0]) / (decel[1] - decel[0]);
-    const down = lmin + (1 - lmin) * smoothstep(y);
-    const ddown = ((1 - lmin) * dsmoothstep(y)) / (decel[1] - decel[0]);
+    const down = lmin + (1 - lmin) * smootherstep(y);
+    const ddown = ((1 - lmin) * dsmootherstep(y)) / (decel[1] - decel[0]);
     const drive = up * down;
     const ddrive = dup * down + up * ddown;
     this.va = -s * drive * profile;
@@ -151,8 +227,8 @@ export class BreastSide {
   private tilt(a: number, d: number, k: number) {
     const { reach, fade } = this.p.tilt;
     const x = (a - fade[0]) / (fade[1] - fade[0]);
-    const m = 1 - smoothstep(x);
-    const dm = -dsmoothstep(x) / (fade[1] - fade[0]);
+    const m = 1 - smootherstep(x);
+    const dm = -dsmootherstep(x) / (fade[1] - fade[0]);
     const t = (d > 0 ? d : 0) / reach;
     this.va = (-k * m * reach * t * t) / (1 + t * t);
     this.vd = k * dm * reach * reach * (t - Math.atan(t));
@@ -185,8 +261,11 @@ export class BreastSide {
   private ga = 0;
   private gd = 0;
 
-  /** Velocity of the hypertrophy flow (rates: logarithms of the width, length and depth factors); left in gu/ga/gd. */
-  private growthVelocity(u: number, a: number, d: number, um: number, lw: number, ll: number, ld: number, hang: number) {
+  /**
+   * Velocity of the hypertrophy flow (rates: logarithms of the width, length and depth factors; `fade`: the depth growth
+   * of the point, less where the mound is thin at rest); left in gu/ga/gd.
+   */
+  private growthVelocity(u: number, a: number, d: number, um: number, lw: number, ll: number, ld: number, hang: number, fade: number) {
     const { shear, blend, hangMm } = this.p.growth;
     const taper = this.taper(u);
     const superficial = smoothstep(d / shear) * taper;
@@ -194,11 +273,11 @@ export class BreastSide {
     const thin = 1 - hang * taper * smoothstep(-a / hangMm);
     this.gu = lw * superficial * (u - um);
     this.ga = ll * superficial * below * a;
-    this.gd = d * (ld * taper + Math.log(thin > 1e-3 ? thin : 1e-3));
+    this.gd = d * (ld * taper * fade + Math.log(thin > 1e-3 ? thin : 1e-3));
   }
 
   /** The growth as a flow (RK4 over unit time): it cannot fold the tissue and the wall keeps its place. Result in gu/ga/gd. */
-  private grow(u: number, a: number, d: number, um: number, g: BreastGrowth) {
+  private grow(u: number, a: number, d: number, um: number, g: BreastGrowth, fade: number) {
     const lw = Math.log(g.width);
     const ll = Math.log(g.length);
     const ld = Math.log(g.depth);
@@ -206,13 +285,13 @@ export class BreastSide {
     const steps = this.p.growth.steps;
     const h = 1 / steps;
     for (let n = 0; n < steps; n++) {
-      this.growthVelocity(u, a, d, um, lw, ll, ld, hang);
+      this.growthVelocity(u, a, d, um, lw, ll, ld, hang, fade);
       const k1u = this.gu, k1a = this.ga, k1d = this.gd;
-      this.growthVelocity(u + 0.5 * h * k1u, a + 0.5 * h * k1a, d + 0.5 * h * k1d, um, lw, ll, ld, hang);
+      this.growthVelocity(u + 0.5 * h * k1u, a + 0.5 * h * k1a, d + 0.5 * h * k1d, um, lw, ll, ld, hang, fade);
       const k2u = this.gu, k2a = this.ga, k2d = this.gd;
-      this.growthVelocity(u + 0.5 * h * k2u, a + 0.5 * h * k2a, d + 0.5 * h * k2d, um, lw, ll, ld, hang);
+      this.growthVelocity(u + 0.5 * h * k2u, a + 0.5 * h * k2a, d + 0.5 * h * k2d, um, lw, ll, ld, hang, fade);
       const k3u = this.gu, k3a = this.ga, k3d = this.gd;
-      this.growthVelocity(u + h * k3u, a + h * k3a, d + h * k3d, um, lw, ll, ld, hang);
+      this.growthVelocity(u + h * k3u, a + h * k3a, d + h * k3d, um, lw, ll, ld, hang, fade);
       u += (h * (k1u + 2 * k2u + 2 * k3u + this.gu)) / 6;
       a += (h * (k1a + 2 * k2a + 2 * k3a + this.ga)) / 6;
       d = Math.max(d + (h * (k1d + 2 * k2d + 2 * k3d + this.gd)) / 6, 0);
@@ -247,6 +326,8 @@ export class BreastSide {
     const hingeCurve = this.data.hinge;
     const topCurve = this.data.top;
     const um = this.data.nippleChart[0];
+    const sideDepth = this.data.depth ?? {};
+    const growths = states.map((state) => (sideDepth[state.id] ? { ...state.growth, depth: sideDepth[state.id] } : state.growth));
     let out: Float32Array[] | null = null;
     for (let i = 0; i < count; i++) {
       const x = positions[i * 3] / unitsPerMm;
@@ -258,9 +339,13 @@ export class BreastSide {
       const amp = this.taper(u);
       if (amp <= 1e-4) continue;
       const v = y - y0;
-      const depth = Math.hypot(dx, dz) - this.baseAt(u, v);
+      const r = Math.hypot(dx, dz);
+      const depth = r - this.baseAt(u, v);
       if (depth <= 0) continue;
       const hinge = this.curve(hingeCurve, u);
+      const gate = this.gate(u, v, hinge);
+      if (gate <= 1e-4) continue;
+      const fade = smootherstep(this.thicknessAt(u, v) / this.p.growth.fadeMm);
       const top = this.curve(topCurve, u) - hinge;
       // the descent of every state continues the previous one; tilt and growth are applied on top of it
       let a = v - hinge;
@@ -292,12 +377,13 @@ export class BreastSide {
           }
         }
         // hypertrophy: thicker, wider about the meridian, longer below the fold; the pendulous pouch hangs thinner
-        this.grow(u, a2, d2, um, state.growth);
-        const u2 = this.gu;
+        this.grow(u, a2, d2, um, growths[k], fade);
         a2 = this.ga;
         d2 = this.gd;
-        const v2 = hinge + a2;
-        const r2 = this.baseAt(u2, v2) + d2;
+        // the gate fades the whole displacement, in chart coordinates
+        const u2 = u + gate * (this.gu - u);
+        const v2 = v + gate * (hinge + a2 - v);
+        const r2 = r + gate * (this.baseAt(this.gu, hinge + a2) + d2 - r);
         const theta = u2 / rref;
         const target = out[k];
         target[i * 3] = (xc - s * r2 * Math.sin(theta)) * unitsPerMm - positions[i * 3];

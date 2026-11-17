@@ -41,7 +41,7 @@ same function also carries labels, markings and surgical pieces to any breast st
 
 Outputs:
   src/data/breastModel.json                 chart parameters, curves, states, measurements
-  public/models/hybrid/breast-chart.bin     base surface B of both sides (uint16)
+  public/models/hybrid/breast-chart.bin     base surface B and rest mound thickness of both sides (uint16)
   scripts/hybrid/breast-test-vectors.json   rest points and their deformed positions (check_breast_map.mjs)
 
 Usage: node scripts/hybrid/decode_model.mjs && python3 scripts/hybrid/build_breast.py
@@ -72,19 +72,34 @@ CELL = 2.0  # chart grid, mm
 RREF = 170.0  # reference radius: u = RREF * theta is roughly an arc length on the chest
 U_RANGE = (-40.0, 340.0)
 V_RANGE = (-230.0, 240.0)
-B_STEP = 0.005  # mm, quantisation of the base surface
+B_STEP = 0.005  # mm, quantisation of the base surface and of the mound thickness
 
 # Ptosis model parameters (mm, degrees). See the module docstring.
 FLOW = {"shear": 7.0, "shearFold": 20.0, "shearBlend": [5.0, 65.0], "rise": 60.0, "decel": [-55.0, 15.0], "lmin": 0.7, "stepMm": 4.0}
 TILT = {"reach": 60.0, "fade": [0.0, 60.0], "stepMm": 4.0}  # extra descent of the tissue far from the wall, below the fold
-GROWTH = {"shear": 15.0, "blend": 20.0, "hangMm": 120.0, "steps": 6}  # width/length follow the superficial tissue; length grows below the fold
+# width/length follow the superficial tissue; length grows below the fold; the depth growth fades where the mound is thinner
+# than fadeMm at rest (its border), so the skin leaves the base with the slope it has at rest (no crease at the border)
+GROWTH = {"shear": 15.0, "blend": 20.0, "hangMm": 120.0, "steps": 6, "fadeMm": 8.0}
 FOLD_LIMIT = 0.1  # smallest Jacobian determinant accepted anywhere in the mound (0 would be tissue folding over itself)
-TAPER_MM = 28.0
+# lateral and medial fade of the map (C2): narrower bands creased the skin next to the sternum and the axilla; the medial
+# one is wider, or the medial wall of the large pendulous breasts turns edge-on and folds (G4)
+# Both are for a breast whose fold spans TAPER_REFERENCE_MM (the operated one); each breast scales them by its own fold
+# width (the contralateral one is 142 mm wide), so the fades take the same share of both and they keep the same shape.
+TAPER_MM = 50.0
+TAPER_MEDIAL_MM = 55.0
+TAPER_REFERENCE_MM = 160.0
+# the map is switched off out of the shipped window and far below the pouch: the abdomen never moves
+GATE = {"belowHingeMm": 120.0, "fadeMm": 40.0, "windowFadeMm": 10.0}
+# skin layer over the base (docs/plano-pele-habito-vasos.md, D1): where the skin lies within thinMm of the base its height
+# over it is smoothed (Gaussian, sigmaMm), so the map does not amplify the bumps of the skin into creases; only from
+# aboveFoldMm above the fold (fading in over fadeMm), since the pouch hangs over the base below that
+SKIN_LAYER = {"thinMm": 8.0, "sigmaMm": 4.0, "aboveFoldMm": 10.0, "fadeMm": 20.0}
 HINGE_FLAT = 0.5  # the pouch hangs from a flatter curve than the fold (broad U instead of a V)
 
 # Breast states: flow descent (mm of travel of the tissue), tilt of the pouch (extra descent far from the wall, as a
 # fraction of TILT.reach) and growth of the mound (depth, width about the meridian, length below the fold, and how
-# much thinner the pouch hangs HANG mm below the fold).
+# much thinner the pouch hangs HANG mm below the fold). The depth factors were re-tuned (bisection) when the map was
+# smoothed (docs/plano-pele-habito-vasos.md, phase C), so every state keeps its volume (527, 641, 866, 1684, 2105 mL).
 STATES = [
     {
         "id": "ptose-1",
@@ -92,7 +107,7 @@ STATES = [
         "short": "Ptose I",
         "descent": 50.0,
         "tilt": 0.0,
-        "growth": {"depth": 1.1, "width": 1.08, "length": 1.05, "hang": 0.0},
+        "growth": {"depth": 1.129, "width": 1.08, "length": 1.05, "hang": 0.0},
         "description": "Mamilo na altura do sulco inframamário, ainda acima do contorno inferior da mama. O polo superior começa a esvaziar, o polo inferior ultrapassa o sulco e o volume já é maior.",
     },
     {
@@ -101,7 +116,7 @@ STATES = [
         "short": "Ptose II",
         "descent": 77.0,
         "tilt": 0.0,
-        "growth": {"depth": 1.18, "width": 1.16, "length": 1.12, "hang": 0.0},
+        "growth": {"depth": 1.236, "width": 1.16, "length": 1.12, "hang": 0.0},
         "description": "Mamilo abaixo do sulco, mas acima do contorno inferior. Polo superior plano, glândula deslizada sobre a fáscia, polo inferior alongado e mama mais pesada: o caso típico da mamoplastia redutora.",
     },
     {
@@ -110,8 +125,8 @@ STATES = [
         "short": "Ptose III",
         "descent": 77.0,
         "tilt": 1.3,
-        "growth": {"depth": 1.45, "width": 1.4, "length": 1.3, "hang": 0.5},
-        "description": "Mamilo no contorno mais baixo da mama, apontando para baixo. A mama, volumosa, pende sobre a parede abdominal e a aréola se alonga.",
+        "growth": {"depth": 1.567, "width": 1.4, "length": 1.3, "hang": 0.5},
+        "description": "Mamilo no contorno mais baixo da mama, apontando para baixo. A mama, volumosa, pende sobre a parede abdominal e a aréola se alonga. O tronco começa a ganhar peso, como é comum nesse grau.",
     },
     # Hypertrophy graded by the weight a reduction removes (Berrocal Revueltas: III 800-1000 g, IV >= 1000 g per breast),
     # on a grade III ptosis (docs/plano-mamoplastia-g3-g4.md). `resultMl`: the breast the reduction aims at.
@@ -121,9 +136,9 @@ STATES = [
         "short": "G3",
         "descent": 80.0,
         "tilt": 1.3,
-        "growth": {"depth": 2.4, "width": 1.85, "length": 1.3, "hang": 0.5},
+        "growth": {"depth": 2.666, "width": 1.85, "length": 1.3, "hang": 0.5},
         "resultMl": 700,
-        "description": "Hipertrofia grau III de Berrocal Revueltas: a redução retira de 800 a 1.000 g por mama. Mama larga e pendente, mamilo no contorno mais baixo, fúrcula–mamilo acima de 40 cm.",
+        "description": "Hipertrofia grau III de Berrocal Revueltas: a redução retira de 800 a 1.000 g por mama. Mama larga e pendente, mamilo no contorno mais baixo, fúrcula–mamilo acima de 40 cm. Tronco com obesidade, comum nessas pacientes: abdome, flancos e rolos lateral e dorsal mais espessos.",
     },
     {
         "id": "g4",
@@ -131,11 +146,15 @@ STATES = [
         "short": "G4",
         "descent": 84.0,
         "tilt": 1.4,
-        "growth": {"depth": 2.9, "width": 2.0, "length": 1.4, "hang": 0.6},
+        "growth": {"depth": 3.233, "width": 2.0, "length": 1.4, "hang": 0.6},
         "resultMl": 850,
-        "description": "Gigantomastia: hipertrofia grau IV de Berrocal Revueltas, a redução retira mais de 1.000 g por mama. Fúrcula–mamilo de 44 cm, faixa em que muitos autores consideram o enxerto livre do complexo areolopapilar.",
+        "description": "Gigantomastia: hipertrofia grau IV de Berrocal Revueltas, a redução retira mais de 1.000 g por mama. Fúrcula–mamilo de 44 cm, faixa em que muitos autores consideram o enxerto livre do complexo areolopapilar. Tronco com obesidade mais acentuada; a bolsa se apoia no abdome.",
     },
 ]
+# Depth factors of the contralateral breast, in place of the state's: tuned (bisection) so that both breasts have the same
+# volume in every state (docs/plano-pele-habito-vasos.md, phase C); its fades are scaled to its width (TAPER_REFERENCE_MM),
+# so the factors stay within 1-3% of the operated side's and the projections within 5 mm.
+SIDE_DEPTH: dict[str, dict[str, float]] = {"contra": {"ptose-1": 1.123, "ptose-2": 1.244, "ptose-3": 1.595, "g3": 2.74, "g4": 3.337}}
 RESULT_ML = 500  # the breast a reduction aims at when a state does not say (for the expected Berrocal grade)
 DENSITY = 0.95  # g/mL, fatty breast tissue
 
@@ -279,10 +298,21 @@ class Breast:
                 fold[i] = ch.vs[j]
         found = np.nonzero(~np.isnan(fold))[0]
         self.fold_range = (float(ch.us[found.min()]), float(ch.us[found.max()]))
+        scale = (self.fold_range[1] - self.fold_range[0]) / TAPER_REFERENCE_MM
+        self.taper_mm = (round(TAPER_MEDIAL_MM * scale, 3), round(TAPER_MM * scale, 3))  # medial, lateral
         self.fold = gaussian_filter1d(np.interp(np.arange(ch.nu), found, fold[found]), 4.0, mode="nearest")
         has_top = np.nonzero(~np.isnan(top))[0]
         self.top = gaussian_filter1d(np.interp(np.arange(ch.nu), has_top, top[has_top]), 4.0, mode="nearest")
         self.hinge = self.fold.min() + (self.fold - self.fold.min()) * (1 - HINGE_FLAT)
+        # the skin layer of the upper breast: where the skin lies within a few mm of the base, its height over it is
+        # smoothed, so the map does not turn the bumps of the skin into creases (it moves a point by its depth). Not at
+        # the fold and below it: the pouch hangs over the base there and would take its creases.
+        # (the skin radius is the highest sample in each 2 mm cell: lightly smoothed first, or the binning steps return)
+        skin = gaussian_filter(self.RS, 1.0)
+        height = skin - base
+        thin = 1 - smootherstep(np.abs(height) / SKIN_LAYER["thinMm"])
+        above = smootherstep((ch.vs[None, :] - self.fold[:, None] - SKIN_LAYER["aboveFoldMm"]) / SKIN_LAYER["fadeMm"])
+        base = base + above * thin * (skin - gaussian_filter(height, SKIN_LAYER["sigmaMm"] / CELL) - base)
         # window shipped to the app: every column that can move, every height the pouch can reach
         self.i0 = int(np.floor((self.fold_range[0] - U_RANGE[0]) / CELL)) - 10  # room for the widened mound
         self.i1 = int(np.ceil((self.fold_range[1] - U_RANGE[0]) / CELL)) + 11
@@ -291,26 +321,35 @@ class Breast:
         self.qmin = float(np.floor(window.min()))
         self.quantised = np.round((window - self.qmin) / B_STEP).astype(np.uint16)
         self.B = self.quantised.astype(np.float64) * B_STEP + self.qmin
+        # thickness of the mound at rest (skin over the base), shipped too: the depth growth fades where it is thin
+        thickness = np.maximum(gaussian_filter(self.RS, 1.0) - base, 0)[self.i0:self.i1, self.j0:self.j1]
+        self.thickness_quantised = np.round(np.minimum(thickness, 65535 * B_STEP) / B_STEP).astype(np.uint16)
+        self.T = self.thickness_quantised.astype(np.float64) * B_STEP
         self.u0 = float(ch.us[self.i0])
         self.v0 = float(ch.vs[self.j0])
         self.curves = {key: np.round(getattr(self, key)[self.i0:self.i1], 3) for key in ("fold", "hinge", "top")}
 
-    # ---- sampling exactly as the app does (bilinear, clamped) ------------------------------------
+    # ---- sampling exactly as the app does (Catmull-Rom, clamped: C1, no slope jump on the grid lines) -----
     def base(self, u: np.ndarray, v: np.ndarray) -> np.ndarray:
-        nu, nv = self.B.shape
-        fu = np.clip((u - self.u0) / CELL, 0, nu - 1)
-        fv = np.clip((v - self.v0) / CELL, 0, nv - 1)
-        return map_coordinates(self.B, [fu, fv], order=1, mode="nearest")
+        return cubic_2d(self.B, (u - self.u0) / CELL, (v - self.v0) / CELL)
 
     def curve(self, key: str, u: np.ndarray) -> np.ndarray:
-        values = self.curves[key]
-        f = np.clip((u - self.u0) / CELL, 0, len(values) - 1)
-        i = np.minimum(np.floor(f).astype(int), len(values) - 2)
-        return values[i] + (values[i + 1] - values[i]) * (f - i)
+        return cubic_1d(self.curves[key], (u - self.u0) / CELL)
+
+    def thickness(self, u: np.ndarray, v: np.ndarray) -> np.ndarray:
+        return cubic_2d(self.T, (u - self.u0) / CELL, (v - self.v0) / CELL)
 
     def taper(self, u: np.ndarray) -> np.ndarray:
         lo, hi = self.fold_range
-        return smoothstep((u - lo) / TAPER_MM) * smoothstep((hi - u) / TAPER_MM)
+        return smootherstep((u - lo) / self.taper_mm[0]) * smootherstep((hi - u) / self.taper_mm[1])
+
+    def gate(self, u: np.ndarray, v: np.ndarray) -> np.ndarray:
+        """1 where the map acts; 0 out of the shipped window and more than GATE.belowHingeMm below the hinge."""
+        nu, nv = self.B.shape
+        fu, fv = (u - self.u0) / CELL, (v - self.v0) / CELL
+        edge = np.minimum(np.minimum(fu, nu - 1 - fu), np.minimum(fv, nv - 1 - fv)) * CELL
+        a = v - self.curve("hinge", u)
+        return smootherstep(edge / GATE["windowFadeMm"]) * smootherstep((a + GATE["belowHingeMm"]) / GATE["fadeMm"])
 
     def depth(self, q: np.ndarray) -> np.ndarray:
         return q[:, 2] - self.base(q[:, 0], q[:, 1])
@@ -329,6 +368,52 @@ def dsmoothstep(t):
     return 6 * t * (1 - t)
 
 
+def smootherstep(t):
+    t = np.clip(t, 0, 1)
+    return t * t * t * (t * (6 * t - 15) + 10)
+
+
+def dsmootherstep(t):
+    t = np.clip(t, 0, 1)
+    return 30 * t * t * (1 - t) * (1 - t)
+
+
+def catmull_rom_weights(t):
+    t2 = t * t
+    t3 = t2 * t
+    return ((-t3 + 2 * t2 - t) / 2, (3 * t3 - 5 * t2 + 2) / 2, (-3 * t3 + 4 * t2 + t) / 2, (t3 - t2) / 2)
+
+
+def cubic_1d(values: np.ndarray, f) -> np.ndarray:
+    """Catmull-Rom interpolation of evenly spaced values at fractional indices f (clamped, edges repeated)."""
+    n = len(values)
+    f = np.clip(np.asarray(f, float), 0, n - 1)
+    i = np.minimum(np.floor(f).astype(int), n - 2)
+    out = 0.0
+    for k, w in zip((-1, 0, 1, 2), catmull_rom_weights(f - i)):
+        out = out + w * values[np.clip(i + k, 0, n - 1)]
+    return out
+
+
+def cubic_2d(grid: np.ndarray, fu, fv) -> np.ndarray:
+    """Bicubic Catmull-Rom interpolation of a grid at fractional indices (clamped, edges repeated); src/lib/breastMap.ts
+    sums in the same order."""
+    nu, nv = grid.shape
+    fu = np.clip(np.asarray(fu, float), 0, nu - 1)
+    fv = np.clip(np.asarray(fv, float), 0, nv - 1)
+    i = np.minimum(np.floor(fu).astype(int), nu - 2)
+    j = np.minimum(np.floor(fv).astype(int), nv - 2)
+    wv = catmull_rom_weights(fv - j)
+    out = 0.0
+    for a, wa in zip((-1, 0, 1, 2), catmull_rom_weights(fu - i)):
+        ii = np.clip(i + a, 0, nu - 1)
+        row = 0.0
+        for b, wb in zip((-1, 0, 1, 2), wv):
+            row = row + wb * grid[ii, np.clip(j + b, 0, nv - 1)]
+        out = out + wa * row
+    return out
+
+
 def flow_velocity(a, d, s, top):
     """Velocity of the ptosis flow, from the stream function psi = -s L(a) delta(a) P(d / delta(a)).
 
@@ -338,20 +423,22 @@ def flow_velocity(a, d, s, top):
     (0 on the wall, 1 beyond the layer), so the descent is -s L p and the rest follows from incompressibility."""
     d_fold, d_up = FLOW["shearFold"], FLOW["shear"]
     lo_s, hi_s = FLOW["shearBlend"]
+    # the transitions along a are C2 (smootherstep): their derivatives enter the velocity, which must stay C1, or the
+    # flow creases the tissue along the lines where they start and end
     x = (a - lo_s) / (hi_s - lo_s)
-    delta = d_fold + (d_up - d_fold) * smoothstep(x)
-    ddelta = (d_up - d_fold) * dsmoothstep(x) / (hi_s - lo_s)
+    delta = d_fold + (d_up - d_fold) * smootherstep(x)
+    ddelta = (d_up - d_fold) * dsmootherstep(x) / (hi_s - lo_s)
     t = np.clip(d / delta, 0, None)
     inside = t < 1
     tc = np.minimum(t, 1)
     profile = tc * tc * (3 - 2 * tc)
     integral = np.where(inside, tc**3 - 0.5 * tc**4, 0.5 + (t - 1))
     lo, hi = FLOW["decel"]
-    up = smoothstep((top - a) / FLOW["rise"])
-    dup = -dsmoothstep((top - a) / FLOW["rise"]) / FLOW["rise"]
+    up = smootherstep((top - a) / FLOW["rise"])
+    dup = -dsmootherstep((top - a) / FLOW["rise"]) / FLOW["rise"]
     y = (a - lo) / (hi - lo)
-    down = FLOW["lmin"] + (1 - FLOW["lmin"]) * smoothstep(y)
-    ddown = (1 - FLOW["lmin"]) * dsmoothstep(y) / (hi - lo)
+    down = FLOW["lmin"] + (1 - FLOW["lmin"]) * smootherstep(y)
+    ddown = (1 - FLOW["lmin"]) * dsmootherstep(y) / (hi - lo)
     drive, ddrive = up * down, dup * down + up * ddown
     return -s * drive * profile, s * (ddrive * delta * integral + drive * ddelta * (integral - t * profile))
 
@@ -380,8 +467,8 @@ def tilt_velocity(a, d, k):
     reach = TILT["reach"]
     lo, hi = TILT["fade"]
     x = (a - lo) / (hi - lo)
-    m = 1 - smoothstep(x)
-    dm = -dsmoothstep(x) / (hi - lo)
+    m = 1 - smootherstep(x)
+    dm = -dsmootherstep(x) / (hi - lo)
     t = np.maximum(d, 0) / reach
     q = reach * t * t / (1 + t * t)
     integral = reach * reach * (t - np.arctan(t))
@@ -405,7 +492,7 @@ def tilt_advance(a, d, amp, tilt: float):
     return a, d
 
 
-def growth_velocity(breast: Breast, u, a, d, um: float, rates: tuple[float, float, float], hang: float):
+def growth_velocity(breast: Breast, u, a, d, um: float, rates: tuple[float, float, float], hang: float, fade):
     """Velocity of the hypertrophy flow at (u, a, d): the superficial tissue (beyond GROWTH.shear from the wall) moves
     away from the meridian (width) and, below the fold, down (length); depth grows everywhere in the footprint, less
     where the pouch hangs (`hang`: a pendulous breast lies along the abdominal wall instead of standing out). `rates`
@@ -415,10 +502,10 @@ def growth_velocity(breast: Breast, u, a, d, um: float, rates: tuple[float, floa
     superficial = smoothstep(d / GROWTH["shear"]) * taper
     below = smoothstep((GROWTH["blend"] - a) / (2 * GROWTH["blend"]))
     thin = 1 - hang * taper * smoothstep(-a / GROWTH["hangMm"])
-    return lw * superficial * (u - um), ll * superficial * below * a, d * (ld * taper + np.log(np.maximum(thin, 1e-3)))
+    return lw * superficial * (u - um), ll * superficial * below * a, d * (ld * taper * fade + np.log(np.maximum(thin, 1e-3)))
 
 
-def grow(breast: Breast, u, a, d, um: float, growth: dict):
+def grow(breast: Breast, u, a, d, um: float, growth: dict, fade):
     """Hypertrophy, applied to the flowed breast as a flow of its own (RK4 over unit time): it cannot fold the tissue,
     and the wall (d = 0) keeps its place."""
     rates = (np.log(growth["width"]), np.log(growth["length"]), np.log(growth["depth"]))
@@ -427,14 +514,20 @@ def grow(breast: Breast, u, a, d, um: float, growth: dict):
     u, a, d = np.asarray(u, float), np.asarray(a, float), np.asarray(d, float)
     h = 1.0 / GROWTH["steps"]
     for _ in range(GROWTH["steps"]):
-        k1 = growth_velocity(breast, u, a, d, um, rates, growth["hang"])
-        k2 = growth_velocity(breast, u + 0.5 * h * k1[0], a + 0.5 * h * k1[1], d + 0.5 * h * k1[2], um, rates, growth["hang"])
-        k3 = growth_velocity(breast, u + 0.5 * h * k2[0], a + 0.5 * h * k2[1], d + 0.5 * h * k2[2], um, rates, growth["hang"])
-        k4 = growth_velocity(breast, u + h * k3[0], a + h * k3[1], d + h * k3[2], um, rates, growth["hang"])
+        k1 = growth_velocity(breast, u, a, d, um, rates, growth["hang"], fade)
+        k2 = growth_velocity(breast, u + 0.5 * h * k1[0], a + 0.5 * h * k1[1], d + 0.5 * h * k1[2], um, rates, growth["hang"], fade)
+        k3 = growth_velocity(breast, u + 0.5 * h * k2[0], a + 0.5 * h * k2[1], d + 0.5 * h * k2[2], um, rates, growth["hang"], fade)
+        k4 = growth_velocity(breast, u + h * k3[0], a + h * k3[1], d + h * k3[2], um, rates, growth["hang"], fade)
         u = u + h * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]) / 6
         a = a + h * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]) / 6
         d = np.maximum(d + h * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]) / 6, 0)
     return u, a, d
+
+
+def growth_of(breast: Breast, state: dict) -> dict:
+    """The growth of a state on one breast (the contralateral one has its own depth factors, SIDE_DEPTH)."""
+    depth = SIDE_DEPTH.get(breast.ch.side, {}).get(state["id"])
+    return state["growth"] if depth is None else {**state["growth"], "depth": depth}
 
 
 def deform(breast: Breast, q: np.ndarray) -> list[np.ndarray]:
@@ -442,7 +535,10 @@ def deform(breast: Breast, q: np.ndarray) -> list[np.ndarray]:
     u, v, r = q[:, 0], q[:, 1], q[:, 2]
     d = r - breast.base(u, v)
     amp = breast.taper(u)
-    sel = (d > 0) & (amp > 1e-4)
+    gate = breast.gate(u, v)
+    sel = (d > 0) & (amp > 1e-4) & (gate > 1e-4)
+    g = gate[sel][:, None]
+    fade = smootherstep(breast.thickness(u[sel], v[sel]) / GROWTH["fadeMm"])  # at the rest position
     hinge = breast.curve("hinge", u[sel])
     top = breast.curve("top", u[sel]) - hinge
     a, dd, amp_s = v[sel] - hinge, d[sel], amp[sel]
@@ -453,11 +549,12 @@ def deform(breast: Breast, q: np.ndarray) -> list[np.ndarray]:
         a, dd = flow_advance(a, dd, amp_s, top, travelled, state["descent"])
         travelled = state["descent"]
         a2, d2 = tilt_advance(a, dd, amp_s, state["tilt"])
-        u2, a2, d2 = grow(breast, u[sel], a2, d2, um, state["growth"])
+        u2, a2, d2 = grow(breast, u[sel], a2, d2, um, growth_of(breast, state), fade)
         moved = q.copy()
         moved[sel, 0] = u2
         moved[sel, 1] = hinge + a2
         moved[sel, 2] = breast.base(u2, moved[sel, 1]) + d2
+        moved[sel] = q[sel] + g * (moved[sel] - q[sel])  # the gate fades the whole displacement (chart coordinates)
         out.append(moved)
     return out
 
@@ -585,17 +682,20 @@ def main() -> None:
         breast = breasts[side] = Breast(side, axis)
         ch = breast.ch
         data = breast.quantised.astype("<u2").tobytes()
+        thickness = breast.thickness_quantised.astype("<u2").tobytes()
         sides[side] = {
             "s": ch.s, "xc": ch.xc, "zc": ch.zc, "y0": ch.y0,
             "u0": breast.u0, "v0": breast.v0, "nu": int(breast.B.shape[0]), "nv": int(breast.B.shape[1]),
-            "byteOffset": offset, "qmin": breast.qmin, "qstep": B_STEP,
+            "byteOffset": offset, "qmin": breast.qmin, "qstep": B_STEP, "thicknessOffset": offset + len(data),
             "foldRange": [round(v, 2) for v in breast.fold_range],
             "fold": breast.curves["fold"].tolist(), "hinge": breast.curves["hinge"].tolist(), "top": breast.curves["top"].tolist(),
             "nippleChart": [round(float(c), 2) for c in ch.nipple],
+            "taperMedialMm": breast.taper_mm[0], "taperMm": breast.taper_mm[1],
+            "depth": SIDE_DEPTH.get(side, {}),
             "meshes": SIDE_MESHES[side],
         }
-        blobs.append(data)
-        offset += len(data)
+        blobs += [data, thickness]
+        offset += len(data) + len(thickness)
         measurements[side] = measure(breast, notch_skin, midline)
         vectors[side] = test_vectors(breast)
         m = measurements[side]
@@ -607,9 +707,9 @@ def main() -> None:
                 raise SystemExit(f"[{side}] {key}: the map folds the tissue (Jacobian {entry['minJacobian']} < {FOLD_LIMIT})")
     OUT_BIN.write_bytes(b"".join(blobs))
     model = {
-        "version": 1,
+        "version": 2,
         "unitsPerMm": MM,
-        "rref": RREF, "cell": CELL, "taperMm": TAPER_MM,
+        "rref": RREF, "cell": CELL, "taperMm": TAPER_MM, "taperMedialMm": TAPER_MEDIAL_MM, "taperReferenceMm": TAPER_REFERENCE_MM, "interpolation": "catmull-rom", "gate": GATE,
         "bin": "models/hybrid/breast-chart.bin", "byteLength": offset,
         "flow": FLOW, "tilt": TILT, "growth": GROWTH,
         "skin": SKIN,

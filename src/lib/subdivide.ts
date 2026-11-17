@@ -3,23 +3,28 @@
  * midpoint vertex, and the triangles around it are split accordingly (1-to-4 inside, 1-to-2 or 1-to-3
  * along the border), so the result has no cracks or T-junctions.
  *
- * Used on the trunk skin of the light (phone) model before the breast states are computed: its triangles
- * over the breast are about 7 mm wide and ptosis stretches the upper pole threefold, which would show as
- * facets. The refined surface is the same surface at rest (midpoints lie on the existing triangles); only
- * the deformation is sampled more finely.
+ * Used on the trunk skin before the breast states are computed: ptosis and hypertrophy stretch the upper pole up to
+ * tenfold, which shows as long facets. refineEdges halves the edges a state stretches beyond a limit, placing the
+ * midpoints on the curved surface of the vertex normals, so the refined skin is smooth at rest and samples the
+ * deformation finely (docs/plano-pele-habito-vasos.md, phase F).
  */
 import * as THREE from "three";
 
-/** One pass. `inside[i]` marks the vertices of the region. Returns the number of vertices added. */
-function refineOnce(geometry: THREE.BufferGeometry, inside: Uint8Array): { added: number; inside: Uint8Array } {
+/**
+ * One pass: every edge `split(a, b)` accepts gets a midpoint. With `smooth`, the midpoint of the positions lies on the
+ * curved surface the vertex normals describe (the edge of a PN triangle: m = (a + b) / 2 - [((b - a)·na) na +
+ * ((a - b)·nb) nb] / 8), so the refined surface is smooth at rest instead of keeping the facets of the coarse one; every
+ * other attribute is averaged (normals renormalised). Returns the number of vertices added.
+ */
+function refinePass(geometry: THREE.BufferGeometry, split: (a: number, b: number) => boolean, smooth: boolean): number {
   const index = geometry.index;
-  if (!index) return { added: 0, inside };
+  if (!index) return 0;
   const count = geometry.attributes.position.count;
   const old = index.array;
   const midpoint = new Map<number, number>();
   const pairs: number[] = [];
   const mid = (a: number, b: number) => {
-    if (!inside[a] || !inside[b]) return -1;
+    if (!split(a, b)) return -1;
     const key = a < b ? a * count + b : b * count + a;
     let id = midpoint.get(key);
     if (id === undefined) {
@@ -45,13 +50,18 @@ function refineOnce(geometry: THREE.BufferGeometry, inside: Uint8Array): { added
     else triangles.push(b, bc, ab, bc, c, ab, c, a, ab);
   }
   const added = pairs.length / 2;
-  if (!added) return { added: 0, inside };
+  if (!added) return 0;
+  // normals of the old vertices, for the curved midpoints
+  const normal = smooth ? geometry.attributes.normal : undefined;
+  const n = normal ? new Float32Array(count * 3) : null;
+  if (normal && n) for (let i = 0; i < count; i++) for (let k = 0; k < 3; k++) n[i * 3 + k] = normal.getComponent(i, k);
   // attributes as plain floats (what the shader sees), old vertices first, then the midpoints
   for (const name of Object.keys(geometry.attributes)) {
     const source = geometry.attributes[name];
     const size = source.itemSize;
     const values = new Float32Array((count + added) * size);
     for (let i = 0; i < count; i++) for (let k = 0; k < size; k++) values[i * size + k] = source.getComponent(i, k);
+    const curved = name === "position" && n !== null && size === 3;
     for (let m = 0; m < added; m++) {
       const a = pairs[m * 2], b = pairs[m * 2 + 1];
       const at = (count + m) * size;
@@ -60,65 +70,36 @@ function refineOnce(geometry: THREE.BufferGeometry, inside: Uint8Array): { added
         values[at + k] = (values[a * size + k] + values[b * size + k]) / 2;
         length += values[at + k] ** 2;
       }
+      if (curved) {
+        let wa = 0, wb = 0;
+        for (let k = 0; k < 3; k++) {
+          const e = values[b * 3 + k] - values[a * 3 + k];
+          wa += e * n[a * 3 + k];
+          wb -= e * n[b * 3 + k];
+        }
+        for (let k = 0; k < 3; k++) values[at + k] -= (wa * n[a * 3 + k] + wb * n[b * 3 + k]) / 8;
+      }
       if (name === "normal" && length > 0) for (let k = 0; k < size; k++) values[at + k] /= Math.sqrt(length);
     }
     geometry.setAttribute(name, new THREE.BufferAttribute(values, size));
   }
   geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(triangles), 1));
-  const grown = new Uint8Array(count + added);
-  grown.set(inside);
-  grown.fill(1, count);
-  return { added, inside: grown };
+  return added;
+}
+
+function refreshBounds(geometry: THREE.BufferGeometry) {
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.dispose();
 }
 
 /**
- * Refines the region of `geometry` marked by `inside` (one flag per vertex) `levels` times.
- * The geometry is changed in place (attributes become plain float arrays). Returns the vertices added.
+ * One pass of refinement driven by the edges themselves: every edge `split(a, b)` accepts is halved (the caller tests
+ * the deformed length, for instance), with curved midpoints when `smooth`. Old vertices keep their indices; the
+ * midpoints are appended. Returns the vertices added.
  */
-export function subdivideRegion(geometry: THREE.BufferGeometry, inside: Uint8Array, levels: number): number {
-  let total = 0;
-  let region = inside;
-  for (let level = 0; level < levels; level++) {
-    const result = refineOnce(geometry, region);
-    if (!result.added) break;
-    total += result.added;
-    region = result.inside;
-  }
-  if (total) {
-    geometry.computeBoundingBox();
-    geometry.computeBoundingSphere();
-    geometry.dispose();
-  }
-  return total;
-}
-
-/** Mean edge length (in the units of `positions`) of the triangles whose three vertices are inside the region. */
-export function meanEdgeLength(positions: ArrayLike<number>, index: ArrayLike<number>, inside: Uint8Array): number {
-  let sum = 0;
-  let n = 0;
-  for (let f = 0; f < index.length; f += 3) {
-    const a = index[f], b = index[f + 1], c = index[f + 2];
-    if (!inside[a] || !inside[b] || !inside[c]) continue;
-    for (const [i, j] of [[a, b], [b, c], [c, a]]) {
-      sum += Math.hypot(positions[i * 3] - positions[j * 3], positions[i * 3 + 1] - positions[j * 3 + 1], positions[i * 3 + 2] - positions[j * 3 + 2]);
-      n++;
-    }
-  }
-  return n ? sum / n : 0;
-}
-
-/**
- * Vertices of the triangles that some deformation stretches beyond `limit`: `positions` at rest and `shift` (the
- * displacement of every vertex) in the same units. Used to refine, once more, only where a large breast state
- * still stretches the skin into long facets (the upper pole of the pendulous breasts).
- */
-export function stretchedRegion(positions: ArrayLike<number>, shift: ArrayLike<number>, index: ArrayLike<number>, limit: number): Uint8Array {
-  const inside = new Uint8Array(positions.length / 3);
-  const at = (i: number, k: number) => positions[i * 3 + k] + shift[i * 3 + k];
-  const length = (i: number, j: number) => Math.hypot(at(i, 0) - at(j, 0), at(i, 1) - at(j, 1), at(i, 2) - at(j, 2));
-  for (let f = 0; f < index.length; f += 3) {
-    const a = index[f], b = index[f + 1], c = index[f + 2];
-    if (length(a, b) > limit || length(b, c) > limit || length(c, a) > limit) inside[a] = inside[b] = inside[c] = 1;
-  }
-  return inside;
+export function refineEdges(geometry: THREE.BufferGeometry, split: (a: number, b: number) => boolean, smooth = true): number {
+  const added = refinePass(geometry, split, smooth);
+  if (added) refreshBounds(geometry);
+  return added;
 }

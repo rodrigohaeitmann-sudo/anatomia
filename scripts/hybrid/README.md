@@ -30,6 +30,10 @@ npm run fetch:hybrid   # baixa as fontes (~140 MB) em assets/source/hybrid/ e ex
 npm run build:hybrid   # registra, monta, gera o manifesto e comprime com meshopt (gltfpack)
 ```
 
+A pele do HRA é recortada por uma superfície lisa, com um aro de 3 mm para dentro nas bordas (`SKIN_CROP`, `SKIN_RIM_MM`). O GLB do celular sai do próprio pipeline, simplificado por tecido (`MOBILE_KEEP`: pele, aréola e mamilo inteiros).
+
+Ordem completa, depois de mudar o modelo: `build:hybrid` → `layers:hybrid` → `breast:hybrid` → `habitus:hybrid` → `mammaplasty:hybrid` → `poses:hybrid`.
+
 `select_bp3d43.py` regenera `bp3d43-selection.json`, a lista curada de malhas do 4.3 com regras explícitas por nome. Rode-o só para mudar a seleção. O arquivo versionado garante builds idênticos.
 
 ## Camadas de estudo (marcos, fixações, fibras, marcação, zonas)
@@ -136,6 +140,7 @@ Gera `src/data/armPoses.json` (posições, cinemática, matrizes dos ossos por q
 | Cinemática | Tórax → clavícula → escápula → úmero; ângulo glenoumeral resolvido para a elevação umerotorácica pedida; inclinação posterior resolvida pelo contato do ângulo inferior com o gradil costal |
 | Pesos | Campo harmônico na superfície de cada músculo entre os ossos de origem e inserção; vasos, nervos, linfonodos e fáscias herdam dos músculos e ossos vizinhos |
 | Deformação | Quatérnios duais; fibras alongadas recolocadas na corda entre as extremidades (peitoral maior, grande dorsal, redondo maior); volume muscular; deslizamento sobre o tórax; colisão com os ossos |
+| Vasos e nervos | Pesos dos vizinhos misturados só dentro do mesmo tecido, suavizados ao longo da malha e por difusão de calor na superfície (10 mm); do braço para baixo, as estruturas do membro acompanham o úmero; vasos das costelas ficam com o tórax; deslizamento e colisão aplicados por secção transversal e espalhados ao longo do vaso |
 
 ## Mama: carta e ptose
 
@@ -157,6 +162,37 @@ Gera `src/data/breastModel.json` (carta dos dois lados, curvas do sulco, parâme
 
 `--figures DIR` grava os perfis de cada estado no meridiano da mama, para revisão.
 
+O mapa é suave e limitado (`docs/plano-pele-habito-vasos.md`, fase C): transições C² (`smootherstep`) nas velocidades e nas faixas medial (55 mm) e lateral (50 mm), escaladas pela largura do sulco de cada mama (`TAPER_REFERENCE_MM`); base, curvas e espessura interpoladas por Catmull–Rom; altura da pele sobre a base suavizada acima do sulco (`SKIN_LAYER`); crescimento em profundidade apagado onde o monte tem menos de 8 mm (`GROWTH.fadeMm`); nada se move fora da janela nem mais de 120 mm abaixo da dobradiça (`GATE`). A mama contralateral tem fatores de profundidade próprios (`SIDE_DEPTH`), para os dois lados terem o mesmo volume em cada estado.
+
+## Hábito corporal
+
+```bash
+npm run habitus:hybrid   # decode_model.mjs → build_habitus.py (~5 s) → check:habitus; depois de breast:hybrid e antes de mammaplasty:hybrid
+```
+
+Gera `src/data/habitusModel.json`, `public/models/hybrid/habitus.bin` (≈ 0,2 MB) e `scripts/hybrid/habitus-test-vectors.json`. Ptose III, G3 e G4 vêm com obesidade, que acompanha o grau: a cintura cresce 3, 10 e 18 cm sobre o modelo (`WAIST_GAIN_MM`, medida em y = −240 mm).
+
+| Etapa | Como |
+|---|---|
+| Carta | Cilíndrica em volta do eixo do tronco: θ a partir da linha média anterior e altura y, grade de 3° × 5 mm |
+| Por célula | Raio da pele em repouso; espessura subcutânea (pele até músculo, osso ou cartilagem; 25 mm no abdome, sem parede próxima); normal da pele suavizada (20 mm); máscara dos montes das mamas (σ = 15 mm), onde manda o mapa da mama |
+| Deslocamento | Para fora, por estado: pesos por região (abdome, flancos, rolos lateral e dorsal, axila, infraclavicular), suavizados por 25 mm e escalados até o perímetro da cintura chegar ao alvo; nulo nas aberturas dos braços |
+| Contato | O abdome fica pelo menos 1 mm atrás da face de trás da bolsa de cada mama: o sulco de contato da paciente obesa em pé |
+| No app | `src/lib/habitusMap.ts` avalia o campo em cada vértice. A pele recebe o deslocamento inteiro. Vasos, nervos, linfonodos e fáscias recebem a fração da sua profundidade na tela subcutânea (nada na fáscia profunda) e nada fora da pele do tronco. Músculos, ossos e as estruturas do braço não se movem |
+
+O passo a passo da mamoplastia (`build_mammaplasty_steps.py`) soma o hábito do caso às malhas que grava.
+
+## Conferências
+
+| Comando | O que confere |
+|---|---|
+| `npm run check:breast` | O mapa da mama do app (`breastMap.ts`) contra o pipeline, nos vetores de teste (≤ 0,02 mm) |
+| `npm run check:habitus` | O hábito do app contra o pipeline (`check_habitus_map.mjs`), os perímetros, a folga entre bolsa e abdome e quanto o hábito move vasos, nervos e fáscias (`check_habitus.py`) |
+| `npm run check:skin` | Vincos do mapa, pele movida fora da mama, arestas e bordas do recorte (`check_skin.py`); refinamento e normais da pele como o app os faz, no desktop e no celular (`check_skin_app.mjs`) |
+| `npm run check:poses` | Vasos e nervos nas posições do braço: estiramento das arestas, trechos parados além do cotovelo e raiz dos ramos esquemáticos no vaso de origem (`check_pose_followers.py`) |
+
+Todas falham quando um limite é excedido. As de pele, poses e hábito em Python gravam `assets/build/checks/*.json` e, com `--report`, só relatam.
+
 `pilot_mammaplasty.py` é o piloto das fases 2 e 3 do plano (marcação de Wise e volumes de pedículo e de ressecção sobre a mama ptótica). Não gera dados para o app: imprime medidas e volumes, grava `assets/build/mammaplasty-pilot.json` e, com `--figures DIR`, as figuras.
 
 ## Limitações conhecidas
@@ -165,4 +201,5 @@ Gera `src/data/breastModel.json` (carta dos dois lados, curvas do sulco, parâme
 - O braço da pele do HRA está abduzido e o do BodyParts3D, pendente. Por isso a pele foi recortada no tronco, e úmero, deltoide e vasos/nervos do braço ficam sem cobertura cutânea.
 - As fáscias toracolombares do Z-Anatomy são superfícies de baixa resolução (160–313 triângulos), mantidas como estão na fonte.
 - A ptose é um modelo geométrico (fluxo com volume preservado), não uma simulação física, e parte de uma única mama, de cadáver em decúbito.
+- O hábito obeso é um campo geométrico sobre o tronco do modelo: espessa a tela subcutânea por região, mas não muda músculos nem ossos e não modela o braço, que não tem pele.
 - Os linfonodos do Z-Anatomy representam grupos (anterior, posterior, lateral, central, apical, interpeitoral, paraesternal), não linfonodos individuais.

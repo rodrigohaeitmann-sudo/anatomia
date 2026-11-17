@@ -9,7 +9,57 @@ Quatro objetivos, pedidos juntos:
 3. **Vasos e nervos no movimento do braço.** Hoje, partes deles ficam paradas enquanto o resto acompanha o braço, e esticam. Verificar e corrigir.
 4. **Vasos e nervos em todas as variações.** Revisar como vasos e nervos seguem as formas da mama, as posições do braço e, agora, o hábito, e mudá-los onde estiverem representados.
 
-**Situação: plano, não aplicado.** Nada do app nem do pipeline foi alterado. Os números são medidos no estado atual (`main` em `45e18a3`, segunda revisão das técnicas), com os scripts de conferência descritos em "Reprodução das medidas".
+**Situação: implementado** (fases A a J), com as decisões da seção 6: o hábito acompanha o grau, nos níveis propostos, e os dois extras foram feitos. O mapeamento de tons ficou no neutro por padrão; o ACES anterior aparece com `?tm=aces` no endereço, até a escolha pelas capturas lado a lado. Os números depois da implementação estão em "Resultado medido", logo abaixo. As diferenças em relação ao planejado estão em "O que mudou em relação ao plano". Os números do diagnóstico (seções 1 e 2) são os do estado anterior (`main` em `45e18a3`).
+
+## Resultado medido
+
+Medido com as conferências da fase A (`npm run check:skin`, `npm run check:poses`, `python3 scripts/hybrid/check_habitus.py`) e `npm run check:breast`.
+
+| Item | Antes | Meta | Depois |
+|---|---|---|---|
+| Vincos do mapa (todos os estados, as duas mamas) | até 50° (G4) | ≤ 8° | ≤ 5,9° |
+| Pele movida fora da mama (y < −200 mm) | 425 vértices, até 90 mm | 0 | 0 |
+| Maior aresta deformada da pele, após o refinamento | ≈ 19 mm (desktop), ≈ 25 mm (celular) | ≤ 5 / ≤ 7 mm | 5,1 / 7,0 mm |
+| Erro das normais (p95) | 6,8° (desktop) e 18,7° (celular), G4 | ≤ 1° | 1,1–1,6° (desktop) e 1,3–2,1° (celular) |
+| Erro das normais (máximo) | 31° (desktop) e 89° (celular) | ≤ 3° | 13–32°, em vértices isolados do sulco inframamário, onde a pele já faz a dobra em repouso |
+| Bordas (comprimento ÷ suavizado; dente de serra p95) | ×1,25–1,47; 2,6–5,2 mm | ≤ ×1,05; ≤ 0,5 mm | ×1,002–1,006; 0,12–0,18 mm |
+| Pele no celular | 18.506 vértices | a do desktop | 54.899, a mesma do desktop (o recorte liso acrescenta vértices na borda) |
+| Volumes (mL) | 527 / 641 / 866 / 1.684 / 2.105 (operada); 533 / 643 / 863 / 1.670 / 2.085 (contralateral) | ±2% | 527 / 641 / 866 / 1.684 / 2.105 nas duas |
+| Graus e mamilo | — | graus iguais; mamilo a ±3 mm | graus de Regnault e Berrocal iguais; altura do mamilo em relação ao sulco a ±1,5 mm; projeção 2 a 13 mm maior (ptose I a G4) |
+| Hábito: cintura (y = −240 mm) | 935 mm em todos | +30 / +100 / +180 mm (±10) | +30 / +100 / +180 mm |
+| Contato bolsa–abdome | — | folga ≥ 1 mm | folga de 1,7 a 2,7 mm |
+| Braço: estiramento de vasos e nervos (p99 / máx.) | até ×40,7 / ×193 | ≤ ×1,6 / ≤ ×4 | POSES_P99 |
+| Braço: trechos além do cotovelo parados | ≈ 100% | 0 | 0 |
+| Ramos esquemáticos: raiz ao vaso de origem | até 16,9 mm | ≤ 1 mm | 1,0–2,1 mm |
+| Comprimento dos ramos esquemáticos por estado | — | ±2% | mediana 1,6%, p90 7,5%; os ramos cutâneos anteriores do 3º e do 5º ficaram 19–22% mais curtos em ptose III a G4: a faixa medial mais larga move menos o tecido junto ao esterno, onde a pele é aderida |
+| Vasos e nervos com o hábito | — | ≥ 1 mm da pele; nada dentro de músculo | nenhum vértice fora da pele; só estruturas do tronco se movem (fáscias do dorso até 14 mm, fáscia peitoral até 8 mm, veia torácica lateral até 5 mm) |
+| Preparo da pele (refinamento, medido em Node) | — | ≤ +30% | 1,4–1,6 s no desktop (+67 mil vértices), 0,6–0,7 s no celular (+20 mil) |
+| Tamanho | GLB do celular 2,93 MB | ≤ 3,4 MB | 3,37 MB; desktop 8,93 MB (era 8,91); `habitus.bin` 0,2 MB |
+
+Duas metas não foram atingidas por inteiro:
+
+- **Normais.** O p95 ficou entre 1,1° e 2,1°, acima de 1°. O máximo fica em poucos vértices do sulco inframamário, onde a pele em repouso já tem a dobra. Na tela, isso não aparece como faceta.
+- **Projeção do mamilo.** As faixas de transição mais largas tiram crescimento das bordas do monte. Para manter o volume, o centro cresce mais, e a mama projeta 5 a 13 mm a mais de ptose II a G4. A altura do mamilo e os graus não mudaram.
+
+## O que mudou em relação ao plano
+
+- **C2, faixas de transição.** Ficaram com 50 mm (lateral) e 55 mm (medial), em vez de 40 mm. Com 40 mm sobravam vincos junto ao esterno e à axila, e a parede medial das mamas grandes dobrava em G4. Cada mama escala as faixas pela largura do próprio sulco: a contralateral é 11% mais estreita. Ela também tem fatores de profundidade próprios (`SIDE_DEPTH`), 1% a 3% maiores, para os dois lados terem o mesmo volume, com projeções a até 5 mm uma da outra.
+- **C4, altura da pele.** Só é suavizada de 10 mm acima do sulco para cima, com 20 mm de transição. Abaixo dele, a bolsa pende sobre a base e herdava os vincos.
+- **Ajustes do mapa fora do plano.**
+  - O crescimento em profundidade se apaga onde o monte tem menos de 8 mm em repouso. Assim, a borda sai da base com a inclinação de repouso, sem vinco.
+  - As transições de velocidade dos fluxos passaram a C².
+- **D, hábito.**
+  - A cintura é medida em y = −240 mm, abaixo da bolsa: em y = −180 mm, a bolsa do G4 se apoia no abdome.
+  - A máscara dos montes é suavizada (σ = 15 mm), e as aberturas dos braços têm máscara própria.
+  - Vasos braquiais, nervos do braço e circunflexos do úmero não recebem o hábito. Ficam com a forma deles e com as posições do braço.
+- **F2, normais pelo mapa.** Não foi aplicada. Com as arestas a 5 e 7 mm, as normais das facetas ficam a p95 ≤ 2,1° das exatas, e as quatro avaliações extras do mapa por vértice dobrariam o tempo de preparo. O refinamento faz até 4 passadas, e não 3.
+- **H, vasos e nervos no braço.** Depois das mudanças H1–H3, ainda havia rasgos locais (p99 até ×9). Eles tinham três causas, cada uma com sua correção:
+  - **Empurrão para fora dos ossos e deslizamento sobre o tórax.** Eram aplicados vértice a vértice: a metade do tubo dentro da clavícula saía, e a outra ficava. Agora são tomados por secção transversal e espalhados ao longo do vaso (`CorrectionSpread`). Sobram até ≈ 5 mm de vaso dentro de osso em poucos pontos, sob a clavícula na abdução.
+  - **Pesos diferentes entre os dois lados de cada tubo.** Os pesos passam por uma difusão de calor na superfície de cada malha (10 mm).
+  - **Braço e antebraço herdando peso do tórax e da escápula.** Por proximidade, porque o braço pende junto ao tórax. As estruturas do membro passam ao úmero entre 20 e 120 mm abaixo do centro da cabeça do úmero.
+- **Extras (decisão 4).**
+  - As veias superficiais dilatadas aparecem na pele entre G3 e G4.
+  - As tampas de corte pintam o interior cortado de músculos, ossos, cartilagens, gordura, glândula, ductos, vasos, nervos e linfonodos com a cor do tecido, um pouco mais escura, quando a ferramenta **Corte** está ativa.
 
 > **Leitura do pedido.** "Poses maiores" foi lido como **ptoses maiores**, isto é, os estados grandes da mama: ptose III, G3 e G4. No quarto item, "poses" foi lido nos dois sentidos que o app tem: as **formas da mama** e as **posições do braço**. "Texturas" foi lido como a **aparência da superfície** da pele e dos tecidos da mama (malha, sombreamento, material e cor). Hoje nenhum desses tecidos usa imagem de textura.
 
@@ -449,12 +499,14 @@ O que é regenerado: os GLBs (desktop e celular), as malhas decodificadas, as ca
 7. **Tamanho.** O GLB do celular cresce de 0,3 a 0,5 MB, e o `habitus.bin` tem ≈ 0,2 MB.
 8. **C4 mexe na base junto à pele.** Pontos a menos de 8 mm mudam de profundidade em até 2 mm. Volumes e jacobiano são conferidos.
 
-## 6. Decisões para você confirmar
+## 6. Decisões
 
-1. **Hábito ligado ao grau.** Está ligado ao grau (padrão proposto), como em "ptoses maiores, obesidade maior". A alternativa é um controle separado: "Hábito: acompanha o grau / sem obesidade / obeso".
-2. **Níveis.** Proposta: ptose III com +3 cm de cintura, G3 com +10 cm e G4 com +18 cm sobre o modelo (≈ +2, +6 e +11 de IMC). Alternativa mais contida: +0, +6 e +12 cm.
-3. **Mapeamento de tons neutro.** Muda a cor aparente de todos os tecidos. Proposta: decidir depois das capturas A/B da fase G.
-4. **Extras opcionais**, fora do escopo se você não quiser:
+Respondidas antes da implementação:
+
+1. **Hábito ligado ao grau.** Decidido: acompanha o grau automaticamente, como em "ptoses maiores, obesidade maior". A alternativa era um controle separado: "Hábito: acompanha o grau / sem obesidade / obeso".
+2. **Níveis.** Decidido: a intensidade sugerida, isto é, ptose III com +3 cm de cintura, G3 com +10 cm e G4 com +18 cm sobre o modelo (≈ +2, +6 e +11 de IMC). A alternativa mais contida era +0, +6 e +12 cm.
+3. **Mapeamento de tons neutro.** Muda a cor aparente de todos os tecidos. Decidido: avaliar com capturas lado a lado. Até a escolha, o neutro é o padrão e o ACES aparece com `?tm=aces`.
+4. **Extras opcionais.** Decidido: sim, os dois:
    - tampas de corte preenchidas na ferramenta **Corte** (a gordura da mama já é fechada: nenhuma aresta de borda e 67 arestas não-manifold);
    - veias superficiais dilatadas em G4.
 

@@ -56,6 +56,10 @@ SHEET_STYLE = {
 ORDINAL = {2: "second", 3: "third", 4: "fourth", 5: "fifth", 6: "sixth", 7: "seventh"}
 SKIN_CLEARANCE = 0.5  # mm left between the surface of a tube and the skin, in every breast state
 
+# branches that leave a real vessel which moves in the arm poses: their root follows it there (the rest of the branch
+# stays with the breast, which the poses do not move)
+FOLLOW = {"lit_lateral_mammary": "Left lateral thoracic artery", "lit_thoracoacromial_branch": "Pectoral branch of left thoraco-acromial artery"}
+FOLLOW_FADE_MM = 40.0
 BY_SOURCE: dict[str, list[str]] = {}
 for record in bb.MANIFEST["meshes"]:
     BY_SOURCE.setdefault(record["sourceName"], []).append(record["name"])
@@ -533,6 +537,10 @@ def main() -> None:
         if "points" in item:
             verts, faces = tube_mesh(item["points"], item["radius"])
             geometry[item["name"]] = {"kind": "tube", "points": r4((item["points"] * MM).ravel()), "radiusMm": [round(x, 2) for x in item["radius"]], **courses[item["name"]]}
+            parent = FOLLOW.get(item["name"].rstrip("0123456789").rstrip("_")) or FOLLOW.get(item["name"])
+            if parent:
+                # in the arm poses the root goes with the vessel it leaves, fading along the branch (HybridModel)
+                geometry[item["name"]]["follow"] = {"parent": BY_SOURCE[parent][0], "fadeMm": FOLLOW_FADE_MM}
             anchor = item["points"][len(item["points"]) * 2 // 3]
         else:
             verts, faces = sheet_mesh(item["grid"])
