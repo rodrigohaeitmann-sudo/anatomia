@@ -58,6 +58,7 @@ Duas metas não foram atingidas por inteiro:
   - **Empurrão para fora dos ossos e deslizamento sobre o tórax.** Eram aplicados vértice a vértice: a metade do tubo dentro da clavícula saía, e a outra ficava. Agora são tomados por secção transversal e espalhados ao longo do vaso (`CorrectionSpread`). Sobram até ≈ 5 mm de vaso dentro de osso em poucos pontos, sob a clavícula na abdução.
   - **Pesos diferentes entre os dois lados de cada tubo.** Os pesos passam por uma difusão de calor na superfície de cada malha (10 mm).
   - **Braço e antebraço herdando peso do tórax e da escápula.** Por proximidade, porque o braço pende junto ao tórax. As estruturas do membro passam ao úmero entre 20 e 120 mm abaixo do centro da cabeça do úmero.
+- **Tecidos internos da mama atrás da pele opaca.** Gordura, glândula, ductos e ligamentos ficam ocultos quando a pele está opaca e sem corte nem janela. Nas formas grandes, só a pele é refinada, e os triângulos longos desses tecidos atravessavam a pele nas regiões côncavas (vale entre as mamas, axila), como estrias amarelas e uma linha pontilhada na linha média. Com a pele translúcida, a janela ou a ferramenta **Corte**, eles voltam.
 - **Extras (decisão 4).**
   - As veias superficiais dilatadas aparecem na pele entre G3 e G4.
   - As tampas de corte pintam o interior cortado de músculos, ossos, cartilagens, gordura, glândula, ductos, vasos, nervos e linfonodos com a cor do tecido, um pouco mais escura, quando a ferramenta **Corte** está ativa.

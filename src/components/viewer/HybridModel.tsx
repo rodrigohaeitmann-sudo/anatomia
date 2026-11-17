@@ -255,6 +255,9 @@ export const proximityRamp = [
 ];
 const proximityTissues = new Set<Tissue>(["muscle", "fat", "fascia", "bone", "cartilage", "gland", "ligament", "lymph-node", "artery", "vein", "nerve"]);
 
+/** Tissues inside the breasts, and the structures they belong to (hidden behind an opaque skin, see the material loop). */
+const BREAST_INNER_TISSUES = new Set(["fat", "gland", "duct", "ligament"]);
+const BREAST_STRUCTURES = new Set(["breast", "breast-fat", "breast-ligaments", "contralateral-breast"]);
 export const superficialForCut = new Set(["skin", "breast-fat", "breast-ligaments", "contralateral-breast", "pectoral-fascia", "deltoid-fascia", "thoracolumbar-fascia"]);
 const stepWindowStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
 
@@ -912,6 +915,9 @@ export function HybridModel(props: Props) {
     const fades: Fade[] = [];
     const previousClones = new Set(fadeClones.current);
     const opacityOf = (material: THREE.Material) => (material.transparent ? material.opacity : 1);
+    // behind an opaque skin with no window in it, the inner tissues of the breasts show nothing; in the large states their
+    // long triangles (the skin is refined, they are not) cut through the skin where it is concave, so they are left out
+    const skinClosed = visible("skin") && Boolean(solid?.has("skin")) && !translucent?.has("skin") && !planes.skin && !planes.step;
     scene.traverse((object) => {
       if (!isMesh(object)) return;
       const record = recordFor(object);
@@ -921,7 +927,9 @@ export function HybridModel(props: Props) {
       }
       const wasVisible = object.visible;
       const before = object.material as THREE.MeshStandardMaterial;
-      const show = visible(record.structure);
+      const cutOpen = planes.cut !== null && (planes.cutScope === "all" || superficialForCut.has(record.structure));
+      const hidden = skinClosed && !cutOpen && BREAST_INNER_TISSUES.has(record.tissue) && BREAST_STRUCTURES.has(record.structure);
+      const show = visible(record.structure) && !hidden;
       if (!show) {
         if (fading && wasVisible && before?.color) {
           const clone = fadeClone(before);
