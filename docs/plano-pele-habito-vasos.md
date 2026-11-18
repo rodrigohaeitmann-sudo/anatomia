@@ -509,7 +509,9 @@ Respondidas antes da implementação:
 
 1. **Hábito ligado ao grau.** Decidido: acompanha o grau automaticamente, como em "ptoses maiores, obesidade maior". A alternativa era um controle separado: "Hábito: acompanha o grau / sem obesidade / obeso".
 2. **Níveis.** Decidido: a intensidade sugerida, isto é, ptose III com +3 cm de cintura, G3 com +10 cm e G4 com +18 cm sobre o modelo (≈ +2, +6 e +11 de IMC). A alternativa mais contida era +0, +6 e +12 cm.
-3. **Mapeamento de tons neutro.** Muda a cor aparente de todos os tecidos. Decidido: avaliar com capturas lado a lado. Até a escolha, o neutro é o padrão e o ACES aparece com `?tm=aces`.
+3. **Mapeamento de tons neutro.** Muda a cor aparente de todos os tecidos. Decidido: avaliar com capturas lado a lado. Até a escolha, o neutro é o padrão e o ACES aparece com `?tm=aces`. Para voltar ao ACES, basta trocar o padrão em `lookOf` (`src/components/AnatomyViewer.tsx`) e refazer as capas.
+
+   ![Mapeamento de tons lado a lado: neutro (padrão) à esquerda e ACES à direita, em G4 e ptose II de frente, G4 de perfil, sem ptose de perfil e corte sagital do G4](img/pele-tons.jpg)
 4. **Extras opcionais.** Decidido: sim, os dois:
    - tampas de corte preenchidas na ferramenta **Corte** (a gordura da mama já é fechada: nenhuma aresta de borda e 67 arestas não-manifold);
    - veias superficiais dilatadas em G4.
