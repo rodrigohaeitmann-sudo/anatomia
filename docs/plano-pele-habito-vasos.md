@@ -13,7 +13,11 @@ Quatro objetivos, pedidos juntos:
 
 ## Resultado medido
 
-Medido com as conferências da fase A (`npm run check:skin`, `npm run check:poses`, `python3 scripts/hybrid/check_habitus.py`) e `npm run check:breast`.
+Medido com as conferências da fase A (`npm run check:skin`, `npm run check:poses`, `npm run check:habitus`) e `npm run check:breast`.
+
+![Antes e depois, nas mesmas vistas do diagnóstico: polo superior na ptose II no celular e no desktop, borda do recorte na axila e borda inferior do tronco em G4](img/pele-antes-depois.jpg)
+
+*Antes e depois, nas mesmas vistas do diagnóstico. a) e b) Listras e vincos no polo superior da ptose II. c) Borda serrilhada do recorte. d) Pontas na borda inferior do tronco em G4, que agora tem o tronco alargado pelo hábito.*
 
 | Item | Antes | Meta | Depois |
 |---|---|---|---|
