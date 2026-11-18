@@ -127,6 +127,21 @@ BP43_STRUCTURE_MAP = {"spine": "chest-wall", "scapula-clavicle": "axilla", "hume
 # Heavy meshes that are reduced; every other mesh keeps its full source resolution.
 DECIMATE = {"intercostal-muscles": 0.3, "contralateral-breast-fat": 0.2}
 
+# Trunk skin crop (BP3D frame, mm): above the hips, below the neck, inside the arm cuts (wider at the shoulder). The
+# border is the zero level of a smooth function with rounded corners, so triangles are cut along it instead of being
+# kept or dropped whole (a sawtooth of 3 to 6 mm before; docs/plano-pele-habito-vasos.md).
+SKIN_CROP = {"zLow": 870.0, "zHigh": 1415.0, "xTrunk": 178.0, "xShoulder": 215.0, "shoulderZ": (1290.0, 1370.0), "roundMm": 6.0, "snapMm": 0.4}
+SKIN_RIM_MM = 3.0  # the cut skin gets this thickness: a strip extruded inwards along every border
+
+# Phone model: share of the triangles kept per tissue (the skin keeps all of its own, the nipple and areola most) and
+# the largest simplification error accepted (relative to the mesh diagonal, absolute cap in mm), as gltfpack -se did.
+OUT_GLB_MOBILE = ROOT / "assets" / "build" / "hybrid-torso-mobile.raw.glb"
+MOBILE_KEEP = {
+    "skin": 1.0, "nipple": 0.7, "areola": 0.5, "lymph-node": 0.5, "nerve": 0.45, "fat": 0.4, "gland": 0.35, "duct": 0.35,
+    "ligament": 0.35, "fascia": 0.35, "artery": 0.3, "vein": 0.3, "cartilage": 0.3, "bone": 0.2, "muscle": 0.17,
+}
+MOBILE_MAX_ERROR = (0.015, 2.0)
+
 ZA_MESHES = {
     "Pectoral_fascial": ("pectoral-fascia", "fascia"),
     "Clavipectoral_fascial": ("pectoral-fascia", "fascia"),
@@ -184,6 +199,95 @@ def add_mesh(mesh_id: str, verts: np.ndarray, faces: np.ndarray, structure: str,
 def decimate(verts: np.ndarray, faces: np.ndarray, keep: float) -> tuple[np.ndarray, np.ndarray]:
     v, f = fast_simplification.simplify(verts.astype(np.float32), faces.astype(np.int32), target_reduction=1 - keep)
     return v.astype(np.float64), f.astype(np.int64)
+
+
+def decimate_bounded(verts: np.ndarray, faces: np.ndarray, keep: float) -> tuple[np.ndarray, np.ndarray]:
+    """Decimation that keeps the shape: the share is raised (halfway to 1, up to four times) while any source vertex
+    lies farther from the simplified surface than MOBILE_MAX_ERROR (relative to the diagonal, capped in mm)."""
+    if keep >= 1 or len(faces) < 200:
+        return verts, faces
+    diagonal = float(np.linalg.norm(verts.max(0) - verts.min(0)))
+    limit = min(MOBILE_MAX_ERROR[0] * diagonal, MOBILE_MAX_ERROR[1])
+    for _ in range(5):
+        v, f = decimate(verts, faces, keep)
+        if len(f) >= 4:
+            samples = sample_surface(v, f, max(2000, int(trimesh.Trimesh(v, f, process=False).area / 0.25)))
+            error = float(cKDTree(np.vstack([samples, v])).query(verts)[0].max())
+            if error <= limit:
+                return v, f
+        keep = (keep + 1) / 2
+    return verts, faces
+
+
+def smootherstep(t: np.ndarray) -> np.ndarray:
+    t = np.clip(t, 0, 1)
+    return t * t * t * (t * (6 * t - 15) + 10)
+
+
+def skin_crop_field(p: np.ndarray) -> np.ndarray:
+    """Signed crop function of the trunk skin (mm, negative inside), a soft maximum of the hip, neck and arm cuts."""
+    c = SKIN_CROP
+    lo, hi = c["shoulderZ"]
+    limit = c["xTrunk"] + (c["xShoulder"] - c["xTrunk"]) * smootherstep((p[:, 2] - lo) / (hi - lo))
+    terms = np.stack([c["zLow"] - p[:, 2], p[:, 2] - c["zHigh"], np.abs(p[:, 0]) - limit], 1)
+    k = c["roundMm"]
+    top = terms.max(1)
+    return top + k * np.log(np.exp((terms - top[:, None]) / k).sum(1))
+
+
+def clip_mesh(verts: np.ndarray, faces: np.ndarray, s: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Keeps the part of the mesh where s < 0, cutting the triangles that cross s = 0 along that level (linear on the
+    edges, winding kept). Values within SKIN_CROP.snapMm of zero are pushed off it, so no sliver is left at the border."""
+    snap = SKIN_CROP["snapMm"]
+    s = np.where(np.abs(s) < snap, np.where(s < 0, -snap, snap), s)
+    inside = s < 0
+    count = inside[faces].sum(1)
+    out = [faces[count == 3]]
+    extra: list[np.ndarray] = []
+    cache: dict[tuple[int, int], int] = {}
+
+    def cut(a: int, b: int) -> int:
+        key = (a, b) if a < b else (b, a)
+        if key not in cache:
+            t = s[a] / (s[a] - s[b])
+            cache[key] = len(verts) + len(extra)
+            extra.append(verts[a] + t * (verts[b] - verts[a]))
+        return cache[key]
+
+    crossing = (count == 1) | (count == 2)
+    for (a, b, c), n in zip(faces[crossing], count[crossing]):
+        if n == 1:
+            while not inside[a]:
+                a, b, c = b, c, a
+            out.append(np.array([[a, cut(a, b), cut(a, c)]]))
+        else:
+            while inside[c]:
+                a, b, c = b, c, a
+            bc, ac = cut(b, c), cut(a, c)
+            out.append(np.array([[a, b, bc], [a, bc, ac]]))
+    v = np.vstack([verts, np.array(extra).reshape(-1, 3)])
+    f = np.vstack(out)
+    if not np.isfinite(v).all():
+        raise SystemExit("skin crop: non-finite vertex")
+    used = np.unique(f)
+    remap = np.full(len(v), -1)
+    remap[used] = np.arange(len(used))
+    return v[used], remap[f]
+
+
+def add_rim(verts: np.ndarray, faces: np.ndarray, depth: float) -> tuple[np.ndarray, np.ndarray]:
+    """Gives the cut skin a thickness: every border is extruded `depth` mm inwards (against the outward normal) in a
+    strip of the same mesh, so the cut reads as a slice of skin and deforms with it."""
+    normals = np.asarray(trimesh.Trimesh(verts, faces, process=False).vertex_normals)
+    directed = np.vstack([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+    _, inverse, counts = np.unique(np.sort(directed, axis=1), axis=0, return_inverse=True, return_counts=True)
+    border = directed[counts[inverse.ravel()] == 1]
+    ring = np.unique(border)
+    inner = {int(v): len(verts) + i for i, v in enumerate(ring)}
+    strip = []
+    for a, b in border:  # the skin face holds a -> b; the strip continues past that edge with b -> a
+        strip += [[b, a, inner[int(a)]], [b, inner[int(a)], inner[int(b)]]]
+    return np.vstack([verts, verts[ring] - depth * normals[ring]]), np.vstack([faces, np.array(strip)])
 
 
 # --------------------------------------------------------------------------------------
@@ -356,11 +460,11 @@ def conform_breast_base(parts: dict[str, tuple[np.ndarray, np.ndarray]], wall: n
 
 
 def load_hra(transform: np.ndarray, skin: trimesh.Trimesh, report: dict) -> None:
-    # Skin: trunk only (the HRA arms are abducted and do not match the BP3D arm pose)
-    c = skin.triangles_center
-    keep = (c[:, 2] > 870) & (c[:, 2] < 1415) & ((np.abs(c[:, 0]) < 178) | (c[:, 2] > 1330)) & (np.abs(c[:, 0]) < 215)
-    sub = skin.submesh([np.where(keep)[0]], append=True)
-    add_mesh("hra_VH_F_skin", np.asarray(sub.vertices), np.asarray(sub.faces), "skin", "skin", "HRA", "VH_F_skin (trunk region)")
+    # Skin: trunk only (the HRA arms are abducted and do not match the BP3D arm pose), cut along a smooth line and
+    # given the thickness of a slice of skin at the cut
+    v, f = clip_mesh(np.asarray(skin.vertices), np.asarray(skin.faces), skin_crop_field(np.asarray(skin.vertices)))
+    v, f = add_rim(v, f, SKIN_RIM_MM)
+    add_mesh("hra_VH_F_skin", v, f, "skin", "skin", "HRA", "VH_F_skin (trunk region)")
 
     deep_structs = {"chest-wall", "costal-cartilages", "serratus-anterior", "trapezius", "axilla", "pectoralis-major", "pectoralis-minor", "rhomboids", "latissimus-dorsi", "external-oblique"}
     deep = bp_points(deep_structs, per_mesh=3000)
@@ -468,7 +572,8 @@ TISSUE_COLORS = {
 }
 
 
-def write_glb(path: Path, t_za: np.ndarray) -> list[dict]:
+def write_glb(path: Path, t_za: np.ndarray, keep: dict[str, float] | None = None) -> list[dict]:
+    """Writes the GLB; with `keep`, every mesh is simplified to that share of its triangles per tissue (phone model)."""
     tissues = sorted({m["tissue"] for m in MESHES})
     materials = [{"name": t, "pbrMetallicRoughness": {"baseColorFactor": TISSUE_COLORS[t] + [1.0], "metallicFactor": 0.0, "roughnessFactor": 0.6}, "doubleSided": True} for t in tissues]
     buffers = bytearray()
@@ -483,8 +588,11 @@ def write_glb(path: Path, t_za: np.ndarray) -> list[dict]:
         return len(views) - 1
 
     for m in MESHES:
-        verts = to_view(m["verts"], t_za).astype(np.float32)
-        faces = m["faces"][:, ::-1].astype(np.uint32)  # reflection flips winding
+        source_verts, source_faces = m["verts"], m["faces"]
+        if keep is not None:
+            source_verts, source_faces = decimate_bounded(source_verts, source_faces, keep.get(m["tissue"], 1.0))
+        verts = to_view(source_verts, t_za).astype(np.float32)
+        faces = source_faces[:, ::-1].astype(np.uint32)  # reflection flips winding
         mesh = trimesh.Trimesh(verts, faces, process=False)
         normals = np.asarray(mesh.vertex_normals, dtype=np.float32)
         pv = push(verts.tobytes(), 34962)
@@ -525,6 +633,8 @@ def main() -> None:
     t_hra, skin = register_hra(report)
     load_hra(t_hra, skin, report)
     records = write_glb(OUT_GLB, t_za)
+    mobile = write_glb(OUT_GLB_MOBILE, t_za, MOBILE_KEEP)
+    print(f"phone model: {sum(r['triangles'] for r in mobile)} triangles ({sum(r['triangles'] for r in mobile) / sum(r['triangles'] for r in records):.0%})")
     structures = {}
     for sid, meta in STRUCTURES.items():
         names = [r["name"] for r in records if r["structure"] == sid]

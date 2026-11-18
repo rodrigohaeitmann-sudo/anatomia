@@ -25,7 +25,9 @@ Pipeline (see docs/movimento-membro-superior.md):
      (cross-section ~ 1/sqrt(stretch), profile sin(pi*u) from origin to insertion);
    * sliding: tissue near the chest wall keeps most of its rest clearance from the thoracic envelope;
    * collisions: soft-tissue vertices that end up inside a bone are pushed back to its surface;
-   * the corrections of each muscle are carried over to the vessels, nerves and fasciae around it.
+   * the corrections of each muscle are carried over to the vessels, nerves and fasciae around it;
+   * vessels, nerves, nodes and fasciae: weights smoothed by heat flow on each mesh, the limb structures with the
+     humerus from the axilla down, and sliding and collisions taken over whole cross-sections and spread along them.
 5. Output per model variant (desktop/mobile GLB, decoded by decode_model.mjs): sparse morph deltas
    (int16, 0.025 mm) per keyframe, loaded on demand by the app and played as morph targets.
 
@@ -101,6 +103,31 @@ MUSCLES: dict[str, tuple[tuple[int, ...], int]] = {
 }
 # soft tissue that follows its neighbours (vessels, nerves, nodes, fasciae)
 FOLLOWER_TISSUES = {"artery", "vein", "nerve", "lymph-node", "fascia"}
+# vessels of the rib cage (intercostal spaces, inner face of the wall), which the arm does not move: borrowing weights
+# from the muscles over them dragged parts of them (docs/plano-pele-habito-vasos.md, phase H)
+RIB_BOUND = {"intercostal-vessels", "internal-thoracic-vessels"}
+# smoothing of the follower weights along each mesh: the change from thorax to arm spreads over about this length (a
+# vessel or nerve that crosses the axilla stretches along its course instead of at one place)
+FOLLOWER_SMOOTH_MM = 25.0
+# then a heat-flow smoothing on the surface of each mesh (implicit step, cotangent Laplacian: the same length whatever the
+# triangles), which evens out the two sides of each tube: the arm swings 200-500 mm away from the thorax, so a weight
+# difference of 1% across a nerve opens it by millimetres (docs/plano-pele-habito-vasos.md, phase H)
+FOLLOWER_HEAT_MM = 10.0
+# Structures of the limb: from the axilla down they go with the humerus. Their weights came from the muscles and bones
+# nearby, and the arm hangs against the chest at rest, so the medial arm took up to a third of thorax weight (from the
+# ribs and the serratus) and the forearm, past the last muscle of the model, a few % of scapula: the arm part lagged
+# behind the arm and tore at both sides of each tube. LIMB_BAND_MM: distance along the humerus from the glenohumeral
+# centre over which the weights pass to the humerus (the axilla; the arm proper starts about 100 mm down).
+LIMB_STRUCTURES = {"arm-nerves", "brachial-vessels", "axillary-vessels", "circumflex-humeral-vessels", "intercostobrachial-nerve"}
+LIMB_SOURCES = ("cord of left brachial nerve plexus",)  # the cords; not the trunks (neck) nor the subscapular nerves
+LIMB_BAND_MM = (20.0, 120.0)
+# The sliding over the thorax and the push out of the bones move single vertices; on a vessel or nerve that tore the tube
+# (the half inside the clavicle moved out, the other half stayed). For the followers the correction is taken over each
+# cross-section (the largest within SPREAD_DILATE_MM), spread along the mesh by a heat step of SPREAD_HEAT_MM and
+# recomputed at the new positions SPREAD_ROUNDS times. What is left (a few mm inside a bone at most) stays.
+SPREAD_DILATE_MM = 8.0
+SPREAD_HEAT_MM = 4.0
+SPREAD_ROUNDS = 2
 # Muscles whose belly spans the axilla between trunk and arm. Blended skinning swings their middle
 # portion around the glenohumeral centre (an arc, a hook at large elevations); a stretched muscle runs
 # straight between its attachments instead. Strength of the fibre-chord correction (see chord_correct).
@@ -183,6 +210,39 @@ def adjacency(n: int, idx: np.ndarray):
     a.data[:] = 1.0
     deg = np.asarray(a.sum(1)).ravel()
     return diags(1 / np.maximum(deg, 1)) @ a
+
+
+_heat_cache: dict[tuple, tuple] = {}
+
+
+def mesh_heat(key: tuple, pos: np.ndarray, idx: np.ndarray, sigma_mm: float):
+    """Smoothing of per-vertex values on the surface of a mesh: one implicit heat-flow step (M + t L) v = M v0 with the
+    cotangent Laplacian L and lumped areas M, t = sigma^2 / 2. Works on the welded mesh (seams do not cut it). Cached."""
+    cache_key = (*key, sigma_mm)
+    if cache_key not in _heat_cache:
+        wpos, widx, winv = weld(pos, idx)
+        lap = cotan_laplacian(wpos, widx)
+        area = np.linalg.norm(np.cross(wpos[widx[:, 1]] - wpos[widx[:, 0]], wpos[widx[:, 2]] - wpos[widx[:, 0]]), axis=1) / 6
+        mass = np.zeros(len(wpos))
+        for k in range(3):
+            np.add.at(mass, widx[:, k], area)
+        mass = np.maximum(mass, 1e-12 * MM**2)
+        lu = splu((diags(mass) + 0.5 * (sigma_mm * MM) ** 2 * lap).tocsc())
+        _heat_cache[cache_key] = (lu, mass, winv, np.bincount(winv, minlength=len(wpos)).astype(float))
+    lu, mass, winv, count = _heat_cache[cache_key]
+
+    def apply(values: np.ndarray) -> np.ndarray:
+        v = np.zeros((len(count), values.shape[1]))
+        np.add.at(v, winv, values)
+        v /= count[:, None]
+        return np.column_stack([lu.solve(mass * v[:, c]) for c in range(values.shape[1])])[winv]
+
+    return apply
+
+
+def smootherstep(x: np.ndarray) -> np.ndarray:
+    x = np.clip(x, 0.0, 1.0)
+    return x * x * x * (x * (6 * x - 15) + 10)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -413,29 +473,34 @@ def muscle_weights(source: str, origins: tuple[int, ...], insertion: int, bone_t
 class FollowerField:
     """Smooths per-vertex quantities over all the followers (vessels, nerves, nodes, fasciae) of a variant.
 
-    Values are averaged per 4 mm voxel, blurred with a Gaussian over the neighbouring voxels within 16 mm,
-    whatever structure they belong to, read back at each vertex and smoothed along its own mesh. Whole
-    cross-sections of a vessel and both sides of a branch junction therefore move together: tubes do not
-    open into ribbons (their two sides borrowing weights from different muscles) and branches stay on their
-    parent vessel.
+    Values are averaged per 4 mm voxel, blurred with a Gaussian over the neighbouring voxels within 16 mm of the
+    same tissue (arteries with arteries, nerves with nerves...), read back at each vertex and smoothed along its own
+    mesh. Whole cross-sections of a vessel and both sides of a branch junction therefore move together: tubes do
+    not open into ribbons (their two sides borrowing weights from different muscles) and branches stay on their
+    parent vessel; a vein does not take the weights of the nerve next to it.
     """
 
-    def __init__(self, variant: str, names: list[str], radius_mm: float = 16.0, voxel_mm: float = 4.0, iters: int = 10):
-        self.slices, pts, start = {}, [], 0
+    def __init__(self, variant: str, names: list[str], radius_mm: float = 16.0, voxel_mm: float = 4.0, smooth_mm: float = FOLLOWER_SMOOTH_MM):
+        self.slices, pts, start, family = {}, [], 0, []
+        tissues = sorted({BY_NAME[name]["tissue"] for name in names})
         for name in names:
             p = raw_mesh(variant, name)[0]
             self.slices[name] = (start, len(p))
             start += len(p)
             pts.append(p)
+            family.append(np.full(len(p), tissues.index(BY_NAME[name]["tissue"])))
         pts = np.vstack(pts)
-        _, inv, counts = np.unique(np.floor(pts / (voxel_mm * MM)).astype(np.int64), axis=0, return_inverse=True, return_counts=True)
+        family = np.concatenate(family)
+        keys = np.c_[np.floor(pts / (voxel_mm * MM)).astype(np.int64), family]
+        _, first, inv, counts = np.unique(keys, axis=0, return_index=True, return_inverse=True, return_counts=True)
         self.inv = inv.ravel()
         na = len(counts)
         self.mean = diags(1 / counts) @ coo_matrix((np.ones(len(pts)), (self.inv, np.arange(len(pts)))), shape=(na, len(pts))).tocsr()
         anchors = self.mean @ pts
+        anchor_family = family[first]
         tree = cKDTree(anchors)
         dist = tree.sparse_distance_matrix(tree, radius_mm * MM, output_type="coo_matrix")
-        off = dist.row != dist.col
+        off = (dist.row != dist.col) & (anchor_family[dist.row] == anchor_family[dist.col])
         sigma = 0.5 * radius_mm * MM
         g = coo_matrix(
             (np.r_[np.exp(-(dist.data[off] ** 2) / (2 * sigma**2)) * counts[dist.col[off]], counts.astype(float)], (np.r_[dist.row[off], np.arange(na)], np.r_[dist.col[off], np.arange(na)])),
@@ -446,19 +511,21 @@ class FollowerField:
         for name in names:
             pos, idx = raw_mesh(variant, name)
             wpos, widx, winv = weld(pos, idx)
-            self.meshes[name] = (adjacency(len(wpos), widx), winv, np.bincount(winv, minlength=len(wpos)).astype(float))
-        self.iters = iters
+            # Jacobi steps of the neighbour mean spread a value over sqrt(steps / 2) edges: as many as reach smooth_mm
+            edge = float(np.linalg.norm(wpos[widx[:, 0]] - wpos[widx[:, 1]], axis=1).mean()) if len(widx) else 1.0
+            steps = int(np.clip(2 * (smooth_mm * MM / max(edge, 1e-9)) ** 2, 10, 3000))
+            self.meshes[name] = (adjacency(len(wpos), widx), winv, np.bincount(winv, minlength=len(wpos)).astype(float), steps)
 
     def __call__(self, values: np.ndarray) -> np.ndarray:
         """values: stacked per-vertex rows of every follower (in construction order)."""
         blurred = (self.blur @ (self.mean @ values))[self.inv]
         out = np.empty_like(blurred)
         for name, (a, n) in self.slices.items():
-            adj, winv, count = self.meshes[name]
+            adj, winv, count, steps = self.meshes[name]
             v = np.zeros((len(count), values.shape[1]))
             np.add.at(v, winv, blurred[a:a + n])
             v /= count[:, None]
-            for _ in range(self.iters):
+            for _ in range(steps):
                 v = 0.5 * v + 0.5 * (adj @ v)
             out[a:a + n] = v[winv]
         return out
@@ -468,23 +535,67 @@ class FollowerField:
 
 
 def follower_names() -> list[str]:
-    return [rec["name"] for rec in MANIFEST["meshes"] if rec["tissue"] in FOLLOWER_TISSUES and not rec["sourceName"].startswith("Right")]
+    return [rec["name"] for rec in MANIFEST["meshes"] if rec["tissue"] in FOLLOWER_TISSUES and not rec["sourceName"].startswith("Right") and rec["structure"] not in RIB_BOUND]
+
+
+def harmonic_extend(pos: np.ndarray, idx: np.ndarray, w: np.ndarray, known: np.ndarray) -> np.ndarray:
+    """Weights of the vertices without a carrier, continued along the mesh from those with one (harmonic, Dirichlet on
+    the known ones): the forearm parts of the limb vessels and nerves, beyond any muscle or bone of the model, go with
+    the arm instead of staying on the thorax. Parts of a mesh with no known vertex keep the thorax."""
+    wpos, widx, winv = weld(pos, idx)
+    n = len(wpos)
+    acc, cnt = np.zeros((n, 4)), np.zeros(n)
+    np.add.at(acc, winv[known], w[known])
+    np.add.at(cnt, winv[known], 1)
+    fixed = cnt > 0
+    out = np.zeros((n, 4))
+    out[fixed] = acc[fixed] / cnt[fixed, None]
+    free, fix = np.nonzero(~fixed)[0], np.nonzero(fixed)[0]
+    lap = cotan_laplacian(wpos, widx)
+    eps = 1e-6 * float(np.mean(np.abs(lap.diagonal())))
+    lu = splu((lap[free][:, free] + identity(len(free)) * eps).tocsc())
+    lfc = lap[free][:, fix]
+    for body in range(4):
+        out[free, body] = lu.solve(-lfc @ out[fix, body] + (eps if body == T else 0.0))
+    out = np.clip(out, 0, None)
+    out /= np.maximum(out.sum(1, keepdims=True), 1e-12)
+    return out[winv]
 
 
 def follower_weights(names: list[str], carrier_tree, carrier_w) -> dict[str, np.ndarray]:
-    """Weights of the nearest muscles and bones (inverse square, k = 12 within 40 mm), then smoothed over all followers."""
+    """Weights of the nearest muscles and bones (inverse square, k = 12 within 40 mm), continued along the mesh where
+    there is none, then smoothed over the followers of the same tissue."""
     raw = []
     for name in names:
-        pos = raw_mesh("desktop", name)[0]  # by mesh name: several meshes share a source name
+        pos, idx = raw_mesh("desktop", name)  # by mesh name: several meshes share a source name
         d, j = carrier_tree.query(pos, k=12, distance_upper_bound=40 * MM)
         ok = np.isfinite(d)
         inv = np.where(ok, 1 / np.maximum(d, 0.5 * MM) ** 2, 0)
         w = (inv[..., None] * carrier_w[np.where(ok, j, 0)]).sum(1)
-        w[w.sum(1) < 1e-12, T] = 1
+        known = w.sum(1) >= 1e-12
+        if known.all():
+            pass
+        elif known.any():
+            w = harmonic_extend(pos, idx, w / np.maximum(w.sum(1, keepdims=True), 1e-12), known)
+        else:
+            w[:, T] = 1
         raw.append(w / w.sum(1, keepdims=True))
     field = FollowerField("desktop", names)
     smoothed = field(np.vstack(raw))
-    return field.split(smoothed / smoothed.sum(1, keepdims=True))
+    out = field.split(smoothed / smoothed.sum(1, keepdims=True))
+    j = joints()
+    axis = (j["elbow"] - j["gh"]) / np.linalg.norm(j["elbow"] - j["gh"])
+    for name in names:
+        pos, idx = raw_mesh("desktop", name)
+        w = np.clip(mesh_heat(("desktop", name), pos, idx, FOLLOWER_HEAT_MM)(out[name]), 0, None)
+        w /= np.maximum(w.sum(1, keepdims=True), 1e-12)
+        rec = BY_NAME[name]
+        if rec["structure"] in LIMB_STRUCTURES or any(k in rec["sourceName"] for k in LIMB_SOURCES):
+            along = (pos - j["gh"]) @ axis / MM
+            b = smootherstep((along - LIMB_BAND_MM[0]) / (LIMB_BAND_MM[1] - LIMB_BAND_MM[0]))[:, None]
+            w = (1 - b) * w + b * np.eye(4)[H]
+        out[name] = w
+    return out
 
 
 class MuscleCorrections:
@@ -812,6 +923,40 @@ class BoneColliders:
 # --------------------------------------------------------------------------------------------------
 # 5. output
 # --------------------------------------------------------------------------------------------------
+class CorrectionSpread:
+    """Sliding over the thorax and push out of the bones for a follower, taken over whole cross-sections and spread along
+    it (SPREAD_*): a vessel under the rising clavicle moves out of it as a tube, without opening."""
+
+    def __init__(self, variant: str, colliders: "BoneColliders"):
+        self.variant, self.colliders = variant, colliders
+        self.trees: dict[str, cKDTree] = {}
+
+    def __call__(self, name: str, rest: np.ndarray, idx: np.ndarray, posed: np.ndarray, sel: np.ndarray, mats) -> tuple[np.ndarray, int, int]:
+        out = posed.copy()
+        slid = pushed = 0
+        for k in range(SPREAD_ROUNDS):
+            fixed, n_slid = thorax_layering((self.variant, name), rest, out, sel)
+            fixed[sel], n_pushed = self.colliders.push_out(fixed[sel], mats)
+            if k == 0:
+                slid, pushed = n_slid, n_pushed
+            delta = fixed - out
+            mag = np.linalg.norm(delta, axis=1)
+            moved = np.nonzero(mag > 1e-4 * MM)[0]
+            if not len(moved):
+                break
+            # each vertex takes the largest correction within SPREAD_DILATE_MM (its whole cross-section and a margin)
+            if name not in self.trees:
+                self.trees[name] = cKDTree(rest)
+            pairs = self.trees[name].sparse_distance_matrix(cKDTree(rest[moved]), SPREAD_DILATE_MM * MM, output_type="coo_matrix")
+            order = np.lexsort((mag[moved][pairs.col], pairs.row))
+            rows, cols = pairs.row[order], pairs.col[order]
+            last = np.r_[np.nonzero(np.diff(rows))[0], len(rows) - 1]
+            dilated = np.zeros_like(delta)
+            dilated[rows[last]] = delta[moved[cols[last]]]
+            out = out + mesh_heat((self.variant, name), rest, idx, SPREAD_HEAT_MM)(dilated)
+        return out, slid, pushed
+
+
 def main() -> None:
     j = joints()
     print(f"GH centre {np.round(j['gh'], 4)} (head radius {j['ghRadiusMm']:.1f} mm)")
@@ -835,10 +980,13 @@ def main() -> None:
             w = weights[rec["name"]] if variant == "desktop" else transfer(rec["name"], weights[rec["name"]])
             sel = np.nonzero(w[:, T] < 1 - 1e-4)[0]
             if len(sel):
+                if rec["tissue"] in FOLLOWER_TISSUES:
+                    sel = np.arange(len(w))  # the spread corrections can reach the parts that stay with the thorax
                 candidates[rec["name"]] = (sel, w)
         posed_all = {pose["id"]: {} for pose in POSES}
         pushed = slid = 0
         corrections = MuscleCorrections(variant, follower_names())
+        spread = CorrectionSpread(variant, colliders)
         # muscles first: their corrections after skinning are carried over to the vessels, nerves and fasciae
         order = sorted(candidates, key=lambda n: BY_NAME[n]["sourceName"] not in MUSCLES)
         for pose in POSES:
@@ -863,7 +1011,11 @@ def main() -> None:
                             posed, stretch = muscle_volume(pos, idx, posed, posed_n, w, origins, insertion)
                             if k == KEYFRAMES - 1 and variant == "desktop":
                                 stretch_report.setdefault(pose["id"], {})[source] = round(float(stretch), 3)
-                    if rec["tissue"] not in ("bone", "cartilage"):
+                    if rec["tissue"] in FOLLOWER_TISSUES:
+                        posed, n_slid, n_pushed = spread(name, pos, idx, posed, sel, mats)
+                        slid += n_slid
+                        pushed += n_pushed
+                    elif rec["tissue"] not in ("bone", "cartilage"):
                         posed, n_slid = thorax_layering((variant, name), pos, posed, sel)
                         slid += n_slid
                         posed[sel], n_pushed = colliders.push_out(posed[sel], mats)

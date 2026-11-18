@@ -6,10 +6,11 @@ import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { manipulations as manipulationDefs } from "@/data/surgicalSpaces";
 import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
-import { buildSchematicMeshes, loadPlan, planPieceMeshes, schematicMeshNames, sheetVertices, tubeClearance, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
-import { breastDisplacements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
+import { buildSchematicMeshes, loadPlan, planPieceMeshes, schematicMeshNames, sheetVertices, tubeClearance, tubeFollow, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
+import { breastDisplacements, breastMeasurements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
+import { applyCaps, applySurfaceLook, restAttributes, skinUniforms, type SurfaceLook } from "@/lib/skinShader";
 import { loadSteps, stepFramesOf, stepHoleOf } from "@/lib/mammaplastySteps";
-import { meanEdgeLength, stretchedRegion, subdivideRegion } from "@/lib/subdivide";
+import { refineEdges } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
 import type { PickInfo, ViewMode } from "@/lib/viewerTypes";
@@ -71,45 +72,95 @@ function vertexNormals(positions: Float32Array, index: ArrayLike<number> | null,
 }
 
 type MorphSet = { positions: THREE.BufferAttribute[]; normals: THREE.BufferAttribute[] };
+type MorphSlot = "state" | "pose";
 
 /**
- * Attaches relative morph targets to a mesh: one per keyframe, from vertex displacements in the mesh's
- * local space (normals are recomputed on every deformed keyframe), or a set built before for the same
- * geometry. Returns the set.
+ * A mesh can carry two blocks of morph targets at once: its states (breast states with the body habitus, or the
+ * frames of a step sequence) and the arm pose. Both are kept per mesh and put on the geometry together, states first.
  */
-function setMorphTargets(mesh: THREE.Mesh, deltas: Float32Array[] | MorphSet): MorphSet {
+const morphSlots = new WeakMap<THREE.Mesh, { state: MorphSet | null; pose: MorphSet | null }>();
+/** Number of targets of each block on the geometry, for the influence writers. */
+const morphBlocks = new WeakMap<THREE.Mesh, { state: number; pose: number }>();
+
+/**
+ * A set of relative morph targets from vertex displacements in the mesh's local space: one per keyframe. Normals are
+ * the given ones (displacements of the rest normal, e.g. carried by the breast map) or are recomputed on every
+ * deformed keyframe.
+ */
+function morphSetOf(mesh: THREE.Mesh, deltas: Float32Array[], normals?: Float32Array[]): MorphSet {
   const geometry = mesh.geometry;
-  let set: MorphSet;
-  if (Array.isArray(deltas)) {
-    const attribute = geometry.attributes.position;
-    const count = attribute.count;
-    const v = new THREE.Vector3();
-    const base = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) v.fromBufferAttribute(attribute, i).toArray(base, i * 3);
-    const index = geometry.index ? geometry.index.array : null;
-    const restNormals = vertexNormals(base, index, count);
-    set = { positions: [], normals: [] };
-    for (const delta of deltas) {
-      const posed = base.slice();
-      for (let i = 0; i < posed.length; i++) posed[i] += delta[i];
-      const posedNormals = vertexNormals(posed, index, count);
-      for (let i = 0; i < posedNormals.length; i++) posedNormals[i] -= restNormals[i];
+  const set: MorphSet = { positions: [], normals: [] };
+  if (normals) {
+    deltas.forEach((delta, k) => {
       set.positions.push(new THREE.BufferAttribute(delta, 3));
-      set.normals.push(new THREE.BufferAttribute(posedNormals, 3));
-    }
-  } else {
-    set = deltas;
+      set.normals.push(new THREE.BufferAttribute(normals[k], 3));
+    });
+    return set;
   }
-  geometry.morphAttributes.position = set.positions;
-  geometry.morphAttributes.normal = set.normals;
-  geometry.morphTargetsRelative = true;
-  mesh.updateMorphTargets();
+  const attribute = geometry.attributes.position;
+  const count = attribute.count;
+  const v = new THREE.Vector3();
+  const base = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) v.fromBufferAttribute(attribute, i).toArray(base, i * 3);
+  const index = geometry.index ? geometry.index.array : null;
+  const restNormals = vertexNormals(base, index, count);
+  for (const delta of deltas) {
+    const posed = base.slice();
+    for (let i = 0; i < posed.length; i++) posed[i] += delta[i];
+    const posedNormals = vertexNormals(posed, index, count);
+    for (let i = 0; i < posedNormals.length; i++) posedNormals[i] -= restNormals[i];
+    set.positions.push(new THREE.BufferAttribute(delta, 3));
+    set.normals.push(new THREE.BufferAttribute(posedNormals, 3));
+  }
+  return set;
+}
+
+/** Puts both blocks of a mesh on its geometry (influences start at zero: the callers write them again). */
+function applyMorphs(mesh: THREE.Mesh) {
+  const geometry = mesh.geometry;
+  const slots = morphSlots.get(mesh) ?? { state: null, pose: null };
+  const positions = [...(slots.state?.positions ?? []), ...(slots.pose?.positions ?? [])];
+  const normals = [...(slots.state?.normals ?? []), ...(slots.pose?.normals ?? [])];
+  morphBlocks.set(mesh, { state: slots.state?.positions.length ?? 0, pose: slots.pose?.positions.length ?? 0 });
+  if (positions.length) {
+    geometry.morphAttributes.position = positions;
+    geometry.morphAttributes.normal = normals;
+    geometry.morphTargetsRelative = true;
+    mesh.updateMorphTargets();
+  } else {
+    delete geometry.morphAttributes.position;
+    delete geometry.morphAttributes.normal;
+    mesh.morphTargetInfluences = undefined;
+    mesh.morphTargetDictionary = undefined;
+  }
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   // three keeps one morph texture per geometry and rebuilds it only when the target count changes:
   // disposing drops it (and the GPU buffers, re-uploaded on the next frame)
   geometry.dispose();
+}
+
+/**
+ * Attaches relative morph targets to one block of a mesh (states by default), from displacements in the mesh's local
+ * space or a set built before for the same geometry, keeping the other block. Returns the set.
+ */
+function setMorphTargets(mesh: THREE.Mesh, deltas: Float32Array[] | MorphSet | null, slot: MorphSlot = "state", normals?: Float32Array[]): MorphSet | null {
+  const set = deltas === null ? null : Array.isArray(deltas) ? morphSetOf(mesh, deltas, normals) : deltas;
+  const slots = morphSlots.get(mesh) ?? { state: null, pose: null };
+  slots[slot] = set;
+  morphSlots.set(mesh, slots);
+  applyMorphs(mesh);
   return set;
+}
+
+/** Writes the influences of one block of a mesh (the other block keeps its values). */
+function writeInfluences(mesh: THREE.Mesh, slot: MorphSlot, influences: number[]) {
+  const target = mesh.morphTargetInfluences;
+  const blocks = morphBlocks.get(mesh);
+  if (!target || !blocks) return;
+  const start = slot === "state" ? 0 : blocks.state;
+  const count = slot === "state" ? blocks.state : blocks.pose;
+  for (let k = 0; k < count; k++) target[start + k] = influences[k] ?? 0;
 }
 
 /** Breast morph targets per (shared) geometry: computed once, put back at once when the canvas is mounted anew. */
@@ -132,17 +183,19 @@ function insidePolygon(x: number, y: number, polygon: [number, number][]) {
 }
 const boxOf = (polygon: [number, number][]) => polygon.reduce((box, [u, v]) => [Math.min(box[0], u), Math.min(box[1], v), Math.max(box[2], u), Math.max(box[3], v)], [Infinity, Infinity, -Infinity, -Infinity]);
 
-/** Skin edges the largest breast state stretches beyond this (mm) are refined once more before the states are computed. */
-const STRETCHED_EDGE_MM = 12;
+/** Skin edges any state stretches beyond this (mm, deformed) are halved, in up to SKIN_REFINE_PASSES passes. */
+const SKIN_EDGE_MM = { desktop: 5, phone: 7 };
+const SKIN_REFINE_PASSES = 4;
+/** most vertices the refinement may add to the skin */
+const SKIN_REFINE_BUDGET = { desktop: 80000, phone: 30000 };
+/** tissues that follow the body habitus (by their depth in the subcutaneous layer), besides skin and breasts */
+const HABITUS_TISSUES = new Set(["artery", "vein", "nerve", "lymph-node", "fascia"]);
+/** the arm, outside the trunk skin, keeps its shape (and its own deformation in the arm poses) */
+const ARM_STRUCTURES = new Set(["brachial-vessels", "arm-nerves", "circumflex-humeral-vessels"]);
 
 function clearMorphTargets(mesh: THREE.Mesh) {
-  delete mesh.geometry.morphAttributes.position;
-  delete mesh.geometry.morphAttributes.normal;
-  mesh.morphTargetInfluences = undefined;
-  mesh.morphTargetDictionary = undefined;
-  mesh.geometry.computeBoundingBox();
-  mesh.geometry.computeBoundingSphere();
-  mesh.geometry.dispose();
+  morphSlots.delete(mesh);
+  applyMorphs(mesh);
 }
 
 /** Morph influences for a level on an axis of `count` keyframes (0 = rest, k = k-th keyframe), piecewise linear. */
@@ -202,6 +255,9 @@ export const proximityRamp = [
 ];
 const proximityTissues = new Set<Tissue>(["muscle", "fat", "fascia", "bone", "cartilage", "gland", "ligament", "lymph-node", "artery", "vein", "nerve"]);
 
+/** Tissues inside the breasts, and the structures they belong to (hidden behind an opaque skin, see the material loop). */
+const BREAST_INNER_TISSUES = new Set(["fat", "gland", "duct", "ligament"]);
+const BREAST_STRUCTURES = new Set(["breast", "breast-fat", "breast-ligaments", "contralateral-breast"]);
 export const superficialForCut = new Set(["skin", "breast-fat", "breast-ligaments", "contralateral-breast", "pectoral-fascia", "deltoid-fascia", "thoracolumbar-fascia"]);
 const stepWindowStructures = new Set(["skin", "pectoral-fascia", "thoracolumbar-fascia", "deltoid-fascia"]);
 
@@ -223,7 +279,7 @@ function ghostly(material: THREE.Material) {
   material.customProgramCacheKey = () => "ghost-skin";
 }
 
-function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; ghost?: boolean; solid: boolean; vertexColors: boolean; base?: string; baseOpacity?: number }) {
+function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMode; selected: boolean; override?: string; emphasis: boolean; planes: THREE.Plane[]; lowPower: boolean; translucent: boolean; ghost?: boolean; solid: boolean; vertexColors: boolean; base?: string; baseOpacity?: number; cutting?: boolean }) {
   const color = new THREE.Color(opts.vertexColors ? "#ffffff" : opts.override ?? opts.base ?? tissueColors[tissue]);
   let opacity = opts.solid ? 1 : opts.baseOpacity ?? tissueOpacity[tissue] ?? 1;
   if (opts.translucent) opacity = Math.min(opacity, opts.ghost ? GHOST_OPACITY : 0.3);
@@ -244,7 +300,7 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
     clipShadows: true,
     vertexColors: opts.vertexColors,
     emissive: glow && !opts.vertexColors ? (opts.selected ? new THREE.Color("#fde68a") : color.clone()).multiplyScalar(glow) : opts.selected ? new THREE.Color("#fde68a").multiplyScalar(0.25) : new THREE.Color("#000000"),
-    roughness: vascular ? 0.32 : tissue === "bone" ? 0.72 : tissue === "skin" ? 0.5 : 0.58,
+    roughness: vascular ? 0.32 : tissue === "bone" ? 0.72 : tissue === "skin" ? 0.55 : 0.58,
     metalness: 0,
   };
   if (opts.ghost && opts.translucent) {
@@ -253,16 +309,34 @@ function makeMaterial(tissue: Tissue, opts: { active: boolean; viewMode: ViewMod
     ghostly(ghost);
     return ghost;
   }
-  if (opts.lowPower) return new THREE.MeshStandardMaterial(common);
-  return new THREE.MeshPhysicalMaterial({
-    ...common,
-    clearcoat: vascular || tissue === "duct" ? 0.7 : tissue === "muscle" ? 0.15 : 0,
-    clearcoatRoughness: 0.35,
-    sheen: tissue === "skin" || tissue === "muscle" || tissue === "nerve" ? 0.45 : 0,
-    sheenColor: new THREE.Color(tissue === "skin" ? "#ffd9c7" : "#ffffff"),
-    sheenRoughness: 0.6,
-  });
+  // procedural surface (skinShader.ts): skin, nipple-areola complex and the tissues of the breast; none for painted
+  // (distance map) or faded meshes, whose flat colour carries the information
+  const look: SurfaceLook | null = opts.vertexColors || faded ? null : tissue === "skin" ? (opts.lowPower ? "skin-lite" : "skin") : opts.lowPower ? null : tissue === "areola" || tissue === "nipple" ? "areola" : tissue === "fat" ? "fat" : tissue === "gland" ? "gland" : null;
+  const material = opts.lowPower
+    ? new THREE.MeshStandardMaterial(common)
+    : new THREE.MeshPhysicalMaterial({
+        ...common,
+        clearcoat: vascular || tissue === "duct" ? 0.7 : tissue === "muscle" ? 0.15 : 0,
+        clearcoatRoughness: 0.35,
+        // skin: a soft sheen and the specular reflectance of skin (F0 about 0.028)
+        sheen: tissue === "skin" ? 0.2 : tissue === "muscle" || tissue === "nerve" ? 0.45 : 0,
+        sheenColor: new THREE.Color(tissue === "skin" ? "#ffd9c7" : "#ffffff"),
+        sheenRoughness: 0.6,
+        specularIntensity: tissue === "skin" || tissue === "areola" || tissue === "nipple" ? 0.7 : 1,
+      });
+  if (look) applySurfaceLook(material, look, mm, tissue === "skin" ? breastCentres : undefined);
+  // the section tool fills the cut of closed meshes (the skin, fasciae and septa are open sheets)
+  if (opts.cutting && CAP_TISSUES.has(tissue) && !opts.vertexColors) applyCaps(material);
+  return material;
 }
+
+/** closed meshes, whose cut is shown filled */
+const CAP_TISSUES = new Set(["muscle", "bone", "cartilage", "fat", "gland", "duct", "artery", "vein", "nerve", "lymph-node"]);
+
+/** Rest nipples of both breasts (model units): the dilated veins of gigantomastia lie round them. */
+const breastCentres: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(...breastMeasurements.op.rest.nipple), new THREE.Vector3(...breastMeasurements.contra.rest.nipple)];
+/** tissues that carry the attributes of the procedural looks */
+const LOOK_TISSUES = new Set(["skin", "areola", "nipple", "fat", "gland"]);
 
 /** A copy of a material for a fade, with the shader changes of the original (Material.clone leaves them out). */
 function fadeClone<M extends THREE.Material>(material: M): M {
@@ -283,9 +357,14 @@ export function HybridModel(props: Props) {
     // Geometries are shared with the cached glTF. Morph targets left by a previous mount (resetting the
     // camera remounts the canvas) would be drawn by meshes that have no influences yet: start clean and
     // let the viewer prepare the current arm pose and breast state again.
+    clone.updateMatrixWorld(true);
     clone.traverse((object) => {
       if (!isMesh(object)) return;
       if (object.geometry.morphAttributes.position || object.geometry.morphAttributes.normal) clearMorphTargets(object);
+      // rest position in mm (and the cut rim of the trunk skin) for the procedural looks; the clone has no parent yet,
+      // so its world matrices are mesh-to-model
+      const record = recordFor(object);
+      if (record && LOOK_TISSUES.has(record.tissue)) restAttributes(object.geometry, object.matrixWorld, mm, record.name === breastSkinMesh);
       // the trunk skin is whole again until a step-by-step view opens it
       const hole = skinHoles.get(object.geometry);
       if (hole && object.geometry.index !== hole.full) object.geometry.setIndex(hole.full);
@@ -335,9 +414,12 @@ export function HybridModel(props: Props) {
 
   // ---- arm poses: morph targets computed offline (build_poses.py) ---------------------------------------
   const clearPose = () => {
-    pose.current.meshes.forEach(clearMorphTargets);
+    const meshes = pose.current.meshes;
+    meshes.forEach((mesh) => setMorphTargets(mesh, null, "pose"));
     pose.current.id = null;
     pose.current.meshes = [];
+    // the state block of those meshes starts again from zero influences
+    if (meshes.length) setBreastLevel(breast.current.level);
   };
   const preparePose = async (poseId: string | null) => {
     // the latest request wins: a slower download for an earlier choice never overwrites it
@@ -368,20 +450,63 @@ export function HybridModel(props: Props) {
           }
           return delta;
         });
-        setMorphTargets(mesh, frames);
+        setMorphTargets(mesh, frames, "pose");
+        meshes.push(mesh);
+      }
+    }
+    // schematic branches that leave a posed vessel: the root goes with the vessel, fading along the branch (the rest
+    // of it stays with the breast, which the poses do not move)
+    const byName = new Map(deltas.map((entry) => [entry.name, entry]));
+    for (const name of schematicMeshNames) {
+      const follow = tubeFollow(name);
+      const entry = follow ? byName.get(follow.parent) : undefined;
+      if (!follow || !entry) continue;
+      for (const mesh of meshesByName.get(name) ?? []) {
+        const tube = mesh.userData.tube as TubeSpec | undefined;
+        const parent = meshesByName.get(follow.parent)?.[0];
+        if (!tube || !parent) continue;
+        // the vertex of the source vessel nearest to the root, among those the pose moves
+        const toModel = restMatrix(parent);
+        const attribute = parent.geometry.attributes.position;
+        const root = new THREE.Vector3().fromArray(tube.points, 0);
+        let best = -1;
+        let bestDistance = Infinity;
+        for (let j = 0; j < entry.indices.length; j++) {
+          const distance = v.fromBufferAttribute(attribute, entry.indices[j]).applyMatrix4(toModel).distanceToSquared(root);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            best = j;
+          }
+        }
+        if (best < 0) continue;
+        const count = tube.points.length / 3;
+        const weight = new Float32Array(count);
+        let along = 0;
+        for (let i = 0; i < count; i++) {
+          if (i) along += Math.hypot(tube.points[i * 3] - tube.points[i * 3 - 3], tube.points[i * 3 + 1] - tube.points[i * 3 - 2], tube.points[i * 3 + 2] - tube.points[i * 3 - 1]);
+          const t = Math.min(along / (follow.fadeMm * mm), 1);
+          weight[i] = 1 - t * t * t * (t * (6 * t - 15) + 10);
+        }
+        const rest = tubeVertices(tube.points, tube.radii, tube.sides);
+        const frames = entry.deltas.map((frame) => {
+          const shift = [frame[best * 3] * unit, frame[best * 3 + 1] * unit, frame[best * 3 + 2] * unit];
+          const moved = tube.points.map((value, i) => value + weight[Math.floor(i / 3)] * shift[i % 3]);
+          const posed = tubeVertices(moved, tube.radii, tube.sides);
+          for (let i = 0; i < posed.length; i++) posed[i] -= rest[i];
+          return posed;
+        });
+        setMorphTargets(mesh, frames, "pose");
         meshes.push(mesh);
       }
     }
     pose.current.id = poseId;
     pose.current.meshes = meshes;
+    // composing the blocks zeroed the state influences of these meshes
+    setBreastLevel(breast.current.level);
   };
   const setPoseFraction = (t: number) => {
     const influences = influencesAt(t);
-    for (const mesh of pose.current.meshes) {
-      const target = mesh.morphTargetInfluences;
-      if (!target) continue;
-      for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
-    }
+    for (const mesh of pose.current.meshes) writeInfluences(mesh, "pose", influences);
     invalidate();
   };
 
@@ -389,11 +514,11 @@ export function HybridModel(props: Props) {
   const breast = useRef<{ meshes: THREE.Mesh[]; pending: Promise<void> | null; level: number }>({ meshes: [], pending: null, level: 0 });
   const setBreastLevel = (level: number) => {
     breast.current.level = level;
+    // the dilated veins of gigantomastia come in between G3 and G4
+    const veins = Math.min(Math.max(level - (breastStates.length - 1), 0), 1);
+    skinUniforms.uVeins.value = veins * veins * (3 - 2 * veins);
     const influences = levelInfluences(level, breastStates.length);
-    for (const mesh of breast.current.meshes) {
-      const target = mesh.morphTargetInfluences;
-      if (target) for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
-    }
+    for (const mesh of breast.current.meshes) writeInfluences(mesh, "state", influences);
     invalidate();
   };
   const prepareBreast = () => {
@@ -406,7 +531,14 @@ export function HybridModel(props: Props) {
         // the schematic structures belong to the operated breast and follow it (the pieces of the surgical plans are
         // prepared case by case, when a view shows one: preparePlans)
         const schematic = schematicMeshNames.filter((name) => !planPieceMeshes.has(name)).map((name) => [name, ["op"]] as [string, BreastSideId[]]);
-        for (const [name, which] of [...breastMeshSides, ...schematic]) {
+        // vessels, nerves, nodes and fasciae follow the body habitus of the large states by their depth in the fat
+        const habitusOnly: [string, BreastSideId[]][] = [];
+        for (const [name, list] of meshesByName) {
+          if (breastMeshSides.has(name) || schematicMeshNames.includes(name)) continue;
+          const record = recordFor(list[0]);
+          if (record && HABITUS_TISSUES.has(record.tissue) && !ARM_STRUCTURES.has(record.structure)) habitusOnly.push([name, []]);
+        }
+        for (const [name, which] of [...breastMeshSides, ...schematic, ...habitusOnly]) {
           for (const mesh of meshesByName.get(name) ?? []) {
             if (!alive.current) return;
             const known = breastMorphs.get(mesh.geometry);
@@ -450,27 +582,38 @@ export function HybridModel(props: Props) {
               return out;
             };
             let rest = restPositions();
-            let deltas = breastDisplacements(sides, which, rest);
-            // the light model's skin is too coarse over the breast for the stretch of the upper pole: refine it there
+            const habitusMode = name === breastSkinMesh ? "skin" : "depth";
+            let deltas = breastDisplacements(sides, which, rest, habitusMode);
+            // the skin is refined where a state stretches its edges (breast map and habitus) beyond SKIN_EDGE_MM, with
+            // midpoints on the curved rest surface; old vertices keep their indices and only the new ones need the map
             if (deltas && name === breastSkinMesh && mesh.geometry.index) {
-              const last = deltas[deltas.length - 1];
-              const index = mesh.geometry.index.array;
-              const moved = new Uint8Array(rest.length / 3);
-              for (let i = 0; i < moved.length; i++) if (last[i * 3] || last[i * 3 + 1] || last[i * 3 + 2]) moved[i] = 1;
-              const region = moved.slice();
-              for (let f = 0; f < index.length; f += 3) if (moved[index[f]] || moved[index[f + 1]] || moved[index[f + 2]]) region[index[f]] = region[index[f + 1]] = region[index[f + 2]] = 1;
-              const edgeMm = meanEdgeLength(rest, index, region) / mm;
-              // the most deformed state rides along the refinement (a midpoint gets the mean of its ends) to find where
-              // its facets are still too long: the upper pole of the pendulous breasts gets one more level there
-              mesh.geometry.setAttribute("breastShift", new THREE.BufferAttribute(last.slice(), 3));
-              let refined = subdivideRegion(mesh.geometry, region, edgeMm > 9 ? 2 : edgeMm > 4.5 ? 1 : 0) > 0;
-              if (refined) rest = restPositions();
-              const shift = mesh.geometry.attributes.breastShift.array;
-              if (subdivideRegion(mesh.geometry, stretchedRegion(rest, shift, mesh.geometry.index.array, STRETCHED_EDGE_MM * mm), 1)) refined = true;
-              mesh.geometry.deleteAttribute("breastShift");
-              if (refined) {
+              const limit = (lowPower ? SKIN_EDGE_MM.phone : SKIN_EDGE_MM.desktop) * mm;
+              const budget = lowPower ? SKIN_REFINE_BUDGET.phone : SKIN_REFINE_BUDGET.desktop;
+              let added = 0;
+              for (let pass = 0; pass < SKIN_REFINE_PASSES && added < budget && deltas; pass++) {
+                const frames: Float32Array[] = deltas;
+                const p = rest;
+                const tooLong = (a: number, b: number) => {
+                  for (const frame of frames) {
+                    const dx = p[a * 3] + frame[a * 3] - p[b * 3] - frame[b * 3];
+                    const dy = p[a * 3 + 1] + frame[a * 3 + 1] - p[b * 3 + 1] - frame[b * 3 + 1];
+                    const dz = p[a * 3 + 2] + frame[a * 3 + 2] - p[b * 3 + 2] - frame[b * 3 + 2];
+                    if (dx * dx + dy * dy + dz * dz > limit * limit) return true;
+                  }
+                  return false;
+                };
+                const before = rest.length / 3;
+                const more = refineEdges(mesh.geometry, tooLong);
+                if (!more) break;
+                added += more;
                 rest = restPositions();
-                deltas = breastDisplacements(sides, which, rest);
+                const fresh = breastDisplacements(sides, which, rest.subarray(before * 3), habitusMode);
+                deltas = frames.map((frame, k) => {
+                  const grown = new Float32Array(rest.length);
+                  grown.set(frame);
+                  if (fresh) grown.set(fresh[k], before * 3);
+                  return grown;
+                });
               }
             }
             const count = rest.length / 3;
@@ -561,10 +704,7 @@ export function HybridModel(props: Props) {
   const setSurgeryLevel = (level: number) => {
     surgery.current.level = level;
     const influences = levelInfluences(level, Math.max(stepFramesOf(surgery.current.key ?? "").length - 1, 0));
-    for (const mesh of surgery.current.meshes) {
-      const target = mesh.morphTargetInfluences;
-      if (target) for (let k = 0; k < target.length; k++) target[k] = influences[k] ?? 0;
-    }
+    for (const mesh of surgery.current.meshes) writeInfluences(mesh, "state", influences);
     invalidate();
   };
   const prepareSurgery = async (technique: string) => {
@@ -587,8 +727,11 @@ export function HybridModel(props: Props) {
           geometry.setAttribute("position", new THREE.BufferAttribute(base, 3));
           geometry.setAttribute("normal", new THREE.BufferAttribute(vertexNormals(base, step.index, base.length / 3), 3));
           geometry.setIndex(new THREE.BufferAttribute(step.index, 1));
+          // the procedural looks read the first frame (model space) as the rest position
+          if (geometry.attributes.restMm) geometry.deleteAttribute("restMm");
+          restAttributes(geometry, new THREE.Matrix4(), mm, false);
           const deltas = step.positions.slice(1).map((frame) => frame.map((value, i) => value - base[i]));
-          stepMorphs.set(geometry, setMorphTargets(mesh, deltas));
+          stepMorphs.set(geometry, setMorphTargets(mesh, deltas)!);
         }
         meshes.push(mesh);
       }
@@ -772,6 +915,9 @@ export function HybridModel(props: Props) {
     const fades: Fade[] = [];
     const previousClones = new Set(fadeClones.current);
     const opacityOf = (material: THREE.Material) => (material.transparent ? material.opacity : 1);
+    // behind an opaque skin with no window in it, the inner tissues of the breasts show nothing; in the large states their
+    // long triangles (the skin is refined, they are not) cut through the skin where it is concave, so they are left out
+    const skinClosed = visible("skin") && Boolean(solid?.has("skin")) && !translucent?.has("skin") && !planes.skin && !planes.step;
     scene.traverse((object) => {
       if (!isMesh(object)) return;
       const record = recordFor(object);
@@ -781,7 +927,9 @@ export function HybridModel(props: Props) {
       }
       const wasVisible = object.visible;
       const before = object.material as THREE.MeshStandardMaterial;
-      const show = visible(record.structure);
+      const cutOpen = planes.cut !== null && (planes.cutScope === "all" || superficialForCut.has(record.structure));
+      const hidden = skinClosed && !cutOpen && BREAST_INNER_TISSUES.has(record.tissue) && BREAST_STRUCTURES.has(record.structure);
+      const show = visible(record.structure) && !hidden;
       if (!show) {
         if (fading && wasVisible && before?.color) {
           const clone = fadeClone(before);
@@ -815,6 +963,7 @@ export function HybridModel(props: Props) {
         vertexColors: painted,
         base: record.color,
         baseOpacity: record.opacity,
+        cutting: planes.cut !== null && list.includes(planes.cut),
       };
       const key = `${record.tissue}|${record.color ?? ""}|${record.opacity ?? ""}|${opts.active}|${viewMode}|${opts.selected}|${override}|${opts.emphasis}|${opts.translucent}|${opts.ghost}|${opts.solid}|${painted}|${list.includes(planes.cut as THREE.Plane)}${list.includes(planes.skin as THREE.Plane)}${list.includes(planes.step as THREE.Plane)}`;
       let material = cache.get(key);

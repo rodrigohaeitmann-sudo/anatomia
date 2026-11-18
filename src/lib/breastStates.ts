@@ -4,7 +4,9 @@
  * src/lib/breastMap.ts (a few kB of parameters instead of megabytes of per-vertex deltas).
  */
 import data from "@/data/breastModel.json";
+import habitusData from "@/data/habitusModel.json";
 import { blendStates, BreastSide, type BreastModelParams, type BreastSideData, type BreastStateData } from "@/lib/breastMap";
+import { Habitus, type HabitusData } from "@/lib/habitusMap";
 
 export type BreastSideId = "op" | "contra";
 
@@ -57,15 +59,23 @@ export const breastMeshSides = new Map<string, BreastSideId[]>();
 breastMeshSides.set(raw.skin, ["op", "contra"]);
 
 let pending: Promise<Record<BreastSideId, BreastSide>> | null = null;
+/** Body habitus of the large states (docs/plano-pele-habito-vasos.md): loaded with the breast sides. */
+let habitus: Habitus | null = null;
+const habitusMeta = habitusData as unknown as HabitusData;
+
+async function fetchBuffer(path: string) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`${path}: ${response.status}`);
+  return response.arrayBuffer();
+}
 
 export function loadBreastSides(): Promise<Record<BreastSideId, BreastSide>> {
   if (!pending) {
-    pending = fetch(raw.bin)
-      .then((response) => {
-        if (!response.ok) throw new Error(`breast chart: ${response.status}`);
-        return response.arrayBuffer();
+    pending = Promise.all([fetchBuffer(raw.bin), fetchBuffer(habitusMeta.bin)])
+      .then(([buffer, habitusBuffer]) => {
+        habitus = new Habitus(habitusMeta, habitusBuffer, breastStates.map((state) => state.id));
+        return { op: new BreastSide(raw.sides.op, raw, buffer), contra: new BreastSide(raw.sides.contra, raw, buffer) };
       })
-      .then((buffer) => ({ op: new BreastSide(raw.sides.op, raw, buffer), contra: new BreastSide(raw.sides.contra, raw, buffer) }))
       .catch((error) => {
         pending = null;
         throw error;
@@ -74,25 +84,33 @@ export function loadBreastSides(): Promise<Record<BreastSideId, BreastSide>> {
   return pending;
 }
 
+/** States with a body habitus (the trunk widens with them). */
+export const habitusStates = new Set(Object.keys(habitusMeta.states));
+export const habitusOf = (id: string | null | undefined) => (id ? habitusMeta.states[id] ?? null : null);
+
 /**
- * Per-state displacements (model units) of rest-pose points, for the sides that carry them.
+ * Per-state displacements (model units) of rest-pose points: the breast map of the sides that carry them, plus the
+ * body habitus ("none" leaves it out; "skin": the points are the skin itself and move by the whole offset; "depth": by
+ * their depth in the subcutaneous layer, zero below the deep fascia). The habitus is zero inside the mounds.
  * The two breasts never overlap, so their displacements simply add up.
  */
-export function breastDisplacements(sides: Record<BreastSideId, BreastSide>, which: BreastSideId[], positions: ArrayLike<number>): Float32Array[] | null {
+export function breastDisplacements(sides: Record<BreastSideId, BreastSide>, which: BreastSideId[], positions: ArrayLike<number>, withHabitus: "depth" | "skin" | "none" = "depth"): Float32Array[] | null {
   let total: Float32Array[] | null = null;
-  for (const side of which) {
-    const deltas = sides[side].displacements(positions);
-    if (!deltas) continue;
+  const add = (deltas: Float32Array[] | null) => {
+    if (!deltas) return;
     if (!total) total = deltas;
     else total.forEach((frame, k) => frame.forEach((_, i) => (frame[i] += deltas[k][i])));
-  }
+  };
+  for (const side of which) add(sides[side].displacements(positions));
+  if (withHabitus !== "none" && habitus) add(habitus.displacements(positions, withHabitus === "skin"));
   return total;
 }
 
 /** Carries loose points (markings, anchors) to a breast level; points outside the breasts are returned as they are. */
 export function displacePoints<P extends [number, number, number]>(sides: Record<BreastSideId, BreastSide>, points: P[], level: number): P[] {
   if (level <= 0 || !points.length) return points;
-  const deltas = breastDisplacements(sides, ["op", "contra"], points.flat());
+  // markings and anchors lie on the skin
+  const deltas = breastDisplacements(sides, ["op", "contra"], points.flat(), "skin");
   if (!deltas) return points;
   return points.map((point, index) => {
     const d = blendStates(deltas, index, level);

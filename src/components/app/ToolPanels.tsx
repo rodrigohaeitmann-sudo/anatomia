@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { stretchSummary } from "@/lib/armPoseSummary";
 import { armPoseById, armPoses } from "@/lib/armPoses";
-import { breastStateById, breastStates, measurementsOf } from "@/lib/breastStates";
+import { breastStateById, breastStates, habitusOf, measurementsOf } from "@/lib/breastStates";
 import { modelStructures } from "@/lib/modelConfig";
 import { deleteNote } from "@/lib/store";
 import { hiddenByLayer } from "@/lib/viewerTypes";
@@ -40,6 +40,9 @@ export function ShapePanel({ ctl, columns = 3 }: { ctl: ViewerController; column
   const regnault = measured.regnault;
   // what a reduction to the breast this state aims at would remove: the hypertrophy grade (Berrocal Revueltas)
   const reduction = measured.berrocal ? `Redução a ${measured.reductionToMl} mL: ≈ ${measured.reductionG} g, hipertrofia ${measured.berrocal} de Berrocal.` : null;
+  // the large states come with obesity: the trunk widens with them (build_habitus.py)
+  const habitus = habitusOf(settled ? state : ctl.breastSettled);
+  const habitusText = habitus ? `Tronco com obesidade: cintura ${cm(habitus.waistGainMm)} cm maior que a do modelo.` : null;
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap gap-2">
@@ -68,6 +71,7 @@ export function ShapePanel({ ctl, columns = 3 }: { ctl: ViewerController; column
           </span>
         )}
         {reduction && <span className="text-muted"> {reduction}</span>}
+        {habitusText && <span className="text-muted"> {habitusText}</span>}
       </p>
     </div>
   );

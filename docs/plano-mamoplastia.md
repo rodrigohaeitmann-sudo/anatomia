@@ -91,6 +91,19 @@ A ptose acentuada soma um segundo fluxo do mesmo tipo, a **inclinação**: abaix
 
 Ptose quase nunca vem sozinha: cada grau traz a hipertrofia que costuma acompanhá-lo (leve, moderada, acentuada). É um crescimento aplicado depois dos fluxos, com quatro fatores por estado: espessura (`depth`), largura em torno do meridiano do mamilo (`width`), comprimento abaixo do sulco (`length`) e o quanto a bolsa afina ao pender (`hang`: a mama pendente fica junto à parede abdominal em vez de se projetar). O volume de cada estado é **medido** pelo jacobiano do mapa inteiro, sobre o monte à frente da superfície-base, e aparece no seletor e nas vistas.
 
+### Suavidade e limites do mapa
+
+A pele que o mapa leva aos estados não pode ganhar vincos nem facetas (`docs/plano-pele-habito-vasos.md`, fase C):
+
+- **Transições suaves.** As velocidades da descida, da inclinação e do crescimento mudam por `smootherstep` (C²). O mapa se apaga em faixas de 55 mm junto ao esterno e de 50 mm junto à axila, escaladas pela largura do sulco de cada mama.
+- **Interpolação.** A superfície-base, as curvas do sulco, da dobradiça e do topo e a espessura do monte são interpoladas por Catmull–Rom (C¹, iguais em Python e TypeScript).
+- **Pele sobre a base.** Acima do sulco, onde a pele fica a menos de 8 mm da base, a altura dela sobre a base é suavizada (σ = 4 mm). O mapa move um ponto pela sua profundidade, e as ondulações da pele viravam vincos.
+- **Borda do monte.** O crescimento em profundidade se apaga onde o monte tem menos de 8 mm em repouso: a borda sai da base com a inclinação que tem em repouso.
+- **Limites.** Fora da janela gravada e a mais de 120 mm abaixo da dobradiça, nada se move: o abdome fica onde está.
+- **Volumes.** Os fatores de profundidade dos estados foram reajustados para manter os volumes (527, 641, 866, 1.684 e 2.105 mL). A mama contralateral tem fatores próprios, 1% a 3% maiores, para ter o mesmo volume.
+
+Ptose III, G3 e G4 trazem também o hábito obeso do tronco (cintura +3, +10 e +18 cm), um campo próprio que soma ao mapa fora dos montes (`src/lib/habitusMap.ts`).
+
 Duas escolhas ficaram registradas no caminho: a parede do fluxo é a superfície-base (o tronco sem o monte), não a fáscia, porque com a parede na fáscia o polo superior afundava até o músculo e deixava um degrau em volta da mama; e a inclinação substituiu tanto o giro polar em torno do sulco (que espremia tecido parede abaixo) quanto um rolamento do conteúdo da bolsa (que criava um degrau no topo).
 
 ### Marcação pré-operatória

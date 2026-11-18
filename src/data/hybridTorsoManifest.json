@@ -44,7 +44,7 @@
       }
     }
   },
-  "totalTriangles": 2011302,
+  "totalTriangles": 2016152,
   "landmarks": {
     "frame": "viewer (old Z-Anatomy torso frame); operative side presented as right",
     "nipple": [
@@ -3245,7 +3245,7 @@
       "source": "HRA",
       "sourceName": "VH_F_skin (trunk region)",
       "license": "CC BY 4.0",
-      "triangles": 103267
+      "triangles": 108117
     },
     {
       "name": "hra_VH_F_suspensory_ligaments_L",

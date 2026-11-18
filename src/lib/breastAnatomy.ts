@@ -22,7 +22,9 @@ import { stepMeshNames } from "@/lib/mammaplastySteps";
  * `clearance`: per breast state, a sparse push of the centre line (sample index, then xyz in model units) that keeps the
  * tube under the skin where the map thins the layer above it; `lengthsMm`: length of the course at rest and per state.
  */
-type TubeData = { kind: "tube"; points: number[]; radiusMm: number[]; clearance?: Record<string, number[][]>; lengthsMm?: Record<string, number> };
+type TubeData = { kind: "tube"; points: number[]; radiusMm: number[]; clearance?: Record<string, number[][]>; lengthsMm?: Record<string, number>; follow?: TubeFollow };
+/** A branch that leaves a real vessel moved by the arm poses: its root goes with that vessel, fading along `fadeMm`. */
+export type TubeFollow = { parent: string; fadeMm: number };
 type SheetData = { kind: "sheet"; size: number[]; points: number[]; thicknessMm: number };
 /** closed mesh in a plan's binary (`plan`: which case): positions as uint16 between min and max, then uint16 indices */
 type SolidData = { kind: "solid"; byteOffset: number; vertices: number; triangles: number; min: number[]; max: number[]; plan?: number };
@@ -134,6 +136,12 @@ export function tubeClearance(name: string, stateIds: string[]): (Float32Array |
     for (const [index, x, y, z] of sparse) dense.set([x, y, z], index * 3);
     return dense;
   });
+}
+
+/** Source vessel of a schematic branch, when it has one that moves in the arm poses. */
+export function tubeFollow(name: string): TubeFollow | null {
+  const item = geometryData[name];
+  return item?.kind === "tube" && item.follow ? item.follow : null;
 }
 
 /** Lengths (mm) of the schematic tubes at rest ("rest") and in every breast state, by mesh name. */
