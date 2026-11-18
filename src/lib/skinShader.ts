@@ -185,6 +185,17 @@ export function applySurfaceLook(material: THREE.MeshStandardMaterial, look: Sur
 	reflectedLight.directDiffuse += skWrap * directLight.color * skScatter * BRDF_Lambert( material.diffuseColor );`,
         ),
       );
+      // double-sided skin: where a deformed breast turns almost edge-on to the camera, thin triangles flip in screen
+      // space and were shaded as the inner side (normal turned inwards), a dotted dark line along the medial wall and
+      // the fold. A fragment counts as the inner side only when its normal faces away from the camera too (the inside
+      // seen through the cut borders still does).
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <normal_fragment_begin>",
+        THREE.ShaderChunk.normal_fragment_begin.replace(
+          "float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;",
+          "float faceDirection = gl_FrontFacing || dot( vNormal, vViewPosition ) > 0.0 ? 1.0 : - 1.0;",
+        ),
+      );
       fragment = shader.fragmentShader;
     }
     if (look === "skin" || look === "areola") {

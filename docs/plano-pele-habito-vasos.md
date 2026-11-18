@@ -28,7 +28,7 @@ Medido com as conferências da fase A (`npm run check:skin`, `npm run check:pose
 | Graus e mamilo | — | graus iguais; mamilo a ±3 mm | graus de Regnault e Berrocal iguais; altura do mamilo em relação ao sulco a ±1,5 mm; projeção 2 a 13 mm maior (ptose I a G4) |
 | Hábito: cintura (y = −240 mm) | 935 mm em todos | +30 / +100 / +180 mm (±10) | +30 / +100 / +180 mm |
 | Contato bolsa–abdome | — | folga ≥ 1 mm | folga de 1,7 a 2,7 mm |
-| Braço: estiramento de vasos e nervos (p99 / máx.) | até ×40,7 / ×193 | ≤ ×1,6 / ≤ ×4 | POSES_P99 |
+| Braço: estiramento de vasos e nervos (p99 / máx.) | até ×40,7 / ×193 | ≤ ×1,6 / ≤ ×4 | pior ×2,2 / ×4,2 (abdução a 90°), ×2,1 / ×5,3 (flexão a 90°), ×3,6 / ×6,4 (mão na nuca); mediana ×1,06–1,09; dentro da meta: 76, 78 e 70 das 86 estruturas |
 | Braço: trechos além do cotovelo parados | ≈ 100% | 0 | 0 |
 | Ramos esquemáticos: raiz ao vaso de origem | até 16,9 mm | ≤ 1 mm | 1,0–2,1 mm |
 | Comprimento dos ramos esquemáticos por estado | — | ±2% | mediana 1,6%, p90 7,5%; os ramos cutâneos anteriores do 3º e do 5º ficaram 19–22% mais curtos em ptose III a G4: a faixa medial mais larga move menos o tecido junto ao esterno, onde a pele é aderida |
@@ -37,9 +37,10 @@ Medido com as conferências da fase A (`npm run check:skin`, `npm run check:pose
 | Quadros por segundo | — | queda ≤ 10% | não medido: o ambiente de teste só renderiza por software (SwiftShader); fica para conferir num aparelho |
 | Tamanho | GLB do celular 2,93 MB | ≤ 3,4 MB | 3,37 MB; desktop 8,93 MB (era 8,91); `habitus.bin` 0,2 MB |
 
-Duas metas não foram atingidas por inteiro:
+Três metas não foram atingidas por inteiro:
 
 - **Normais.** O p95 ficou entre 1,1° e 2,1°, acima de 1°. O máximo fica em poucos vértices do sulco inframamário, onde a pele em repouso já tem a dobra. Na tela, isso não aparece como faceta.
+- **Estiramento no braço.** Os trechos parados e os rasgos acabaram, mas de 8 a 16 das 86 estruturas passam de ×1,6 (p99) em alguma posição: as que cruzam a axila (toracodorsal, torácica lateral, escapular dorsal e os nervos do braço junto à axila), que alongam ao ir do tórax ao braço. Sem deslizamento entre os tecidos, o modelo distribui esse alongamento ao longo da estrutura, mas não o elimina. A conferência (`check:poses`) usa ×4 (p99) e ×8 (máximo) como trava contra regressões.
 - **Projeção do mamilo.** As faixas de transição mais largas tiram crescimento das bordas do monte. Para manter o volume, o centro cresce mais, e a mama projeta 5 a 13 mm a mais de ptose II a G4. A altura do mamilo e os graus não mudaram.
 
 ## O que mudou em relação ao plano
@@ -58,7 +59,8 @@ Duas metas não foram atingidas por inteiro:
   - **Empurrão para fora dos ossos e deslizamento sobre o tórax.** Eram aplicados vértice a vértice: a metade do tubo dentro da clavícula saía, e a outra ficava. Agora são tomados por secção transversal e espalhados ao longo do vaso (`CorrectionSpread`). Sobram até ≈ 5 mm de vaso dentro de osso em poucos pontos, sob a clavícula na abdução.
   - **Pesos diferentes entre os dois lados de cada tubo.** Os pesos passam por uma difusão de calor na superfície de cada malha (10 mm).
   - **Braço e antebraço herdando peso do tórax e da escápula.** Por proximidade, porque o braço pende junto ao tórax. As estruturas do membro passam ao úmero entre 20 e 120 mm abaixo do centro da cabeça do úmero.
-- **Tecidos internos da mama atrás da pele opaca.** Gordura, glândula, ductos e ligamentos ficam ocultos quando a pele está opaca e sem corte nem janela. Nas formas grandes, só a pele é refinada, e os triângulos longos desses tecidos atravessavam a pele nas regiões côncavas (vale entre as mamas, axila), como estrias amarelas e uma linha pontilhada na linha média. Com a pele translúcida, a janela ou a ferramenta **Corte**, eles voltam.
+- **Tecidos internos da mama atrás da pele opaca.** Gordura, glândula, ductos e ligamentos ficam ocultos quando a pele está opaca e sem corte nem janela. Nas formas grandes, só a pele é refinada, e os triângulos longos desses tecidos atravessavam a pele nas regiões côncavas, perto da axila, como estrias amarelas. Com a pele translúcida, a janela ou a ferramenta **Corte**, eles voltam.
+- **Pele de dupla face.** Onde a mama deformada fica quase de perfil para a câmera (a parede medial e o sulco), triângulos finos se invertiam na tela. O renderizador os tratava como a face interna, com a normal virada para dentro, e eles apareciam como uma linha pontilhada escura. Na pele, um fragmento só conta como face interna quando a normal também aponta para longe da câmera. A face interna vista pelas bordas do recorte continua correta.
 - **Extras (decisão 4).**
   - As veias superficiais dilatadas aparecem na pele entre G3 e G4.
   - As tampas de corte pintam o interior cortado de músculos, ossos, cartilagens, gordura, glândula, ductos, vasos, nervos e linfonodos com a cor do tecido, um pouco mais escura, quando a ferramenta **Corte** está ativa.

@@ -39,13 +39,25 @@ Pipeline: `scripts/hybrid/build_poses.py` (`npm run poses:hybrid`). Execução n
 - Inclinação posterior da escápula resolvida pelo contato: ≈ 19° a 90° de abdução, ≈ 23° a 90° de flexão, 30° (teto) a 130°. Valores dentro das faixas de estudos cinemáticos 3D.
 - Variação de comprimento dos músculos (distância entre as extremidades): mostrada no seletor de posição ("No modelo: …"). Direções coerentes com a função: na abdução alongam-se peitoral maior, grande dorsal e redondo maior e encurtam-se supraespinal, deltoide acromial e serrátil; na flexão encurtam-se a parte clavicular do peitoral maior, o deltoide clavicular, o coracobraquial e a cabeça curta do bíceps, e alongam-se o deltoide espinal e a cabeça longa do tríceps.
 - A cabeça longa do bíceps fica fora dessa medida: o tendão desliza no sulco intertubercular e a inserção (tuberosidade do rádio) não está no modelo.
+- **Vasos e nervos** (`npm run check:poses`, 86 estruturas do lado operado):
+  - nenhum trecho do membro fica parado além do cotovelo, e nenhuma estrutura abre em fita;
+  - estiramento das arestas, mediana de p99 de ×1,06 a ×1,09, pior caso:
+
+    | Posição | p99 | Máximo |
+    |---|---|---|
+    | Abdução a 90° | ×2,2 | ×4,2 |
+    | Flexão a 90° | ×2,1 | ×5,3 |
+    | Mão na nuca | ×3,6 | ×6,4 |
+
+    Na versão anterior chegava a ×40,7 e ×193;
+  - os ramos esquemáticos da mama ficam a 1,0–2,1 mm do vaso de origem.
 
 ## Limitações
 
 - **Não é simulação física.** Não há contração ativa, deslizamento entre músculos nem contato músculo-músculo. A deformação é geométrica (pesos anatômicos + correções) e serve para a topografia, não para biomecânica.
 - **Pele.** A pele do tronco (HRA) não acompanha o braço e fica oculta nas posições; o braço não tem pele no modelo.
 - **Mama.** Permanece na posição anatômica; o deslocamento da mama com a abdução não é modelado.
-- **Vasos e nervos** acompanham os músculos e ossos vizinhos. O trajeto é plausível, mas não foi validado contra imagem em posição cirúrgica.
+- **Vasos e nervos** acompanham os músculos e ossos vizinhos. O trajeto é plausível, mas não foi validado contra imagem em posição cirúrgica. Sem deslizamento dentro da bainha, os que cruzam a axila alongam ao ir do tórax ao braço (p99 até ×3,6 na mão na nuca), e em poucos pontos sobram até ≈ 5 mm de vaso dentro de osso, sob a clavícula.
 - **Mão na nuca** é a posição de maior amplitude: a deformação é mais aproximada.
 - **Tamanho.** Cada posição baixa 1,6 MB no celular e 4,5 MB no desktop, uma única vez (fica em cache).
 
