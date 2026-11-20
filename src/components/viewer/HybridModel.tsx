@@ -9,7 +9,7 @@ import { deltaUnit, influencesAt, loadPose, variantOf } from "@/lib/armPoses";
 import { buildSchematicMeshes, loadPlan, planPieceMeshes, schematicMeshNames, sheetVertices, tubeClearance, tubeFollow, tubeVertices, type SheetSpec, type TubeSpec } from "@/lib/breastAnatomy";
 import { breastDisplacements, breastMeasurements, breastMeshSides, breastSkinMesh, breastStates, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
 import { applyCaps, applySurfaceLook, restAttributes, skinUniforms, type SurfaceLook } from "@/lib/skinShader";
-import { loadSteps, stepFramesOf, stepHoleOf } from "@/lib/mammaplastySteps";
+import { loadSteps, stepFramesOf, stepHolesOf, type StepHole } from "@/lib/mammaplastySteps";
 import { refineEdges } from "@/lib/subdivide";
 import { tissueColors, tissueOpacity, type Tissue } from "@/lib/modelConfig";
 import type { SliceTarget } from "@/lib/sectioning";
@@ -169,7 +169,7 @@ const breastMorphs = new WeakMap<THREE.BufferGeometry, MorphSet | null>();
 const stepMorphs = new WeakMap<THREE.BufferGeometry, MorphSet>();
 /** Trunk skin with and without the triangles over the operated breast (step-by-step views), per geometry. */
 /** the trunk skin's own index and, per outline (one per case of the step sequences), the index with that patch cut out */
-const skinHoles = new WeakMap<THREE.BufferGeometry, { full: THREE.BufferAttribute; open: Map<[number, number][], THREE.BufferAttribute> }>();
+const skinHoles = new WeakMap<THREE.BufferGeometry, { full: THREE.BufferAttribute; open: Map<StepHole[], THREE.BufferAttribute> }>();
 
 /** Even-odd test of a point against a polygon. */
 function insidePolygon(x: number, y: number, polygon: [number, number][]) {
@@ -243,6 +243,8 @@ type Props = {
   proximity?: string[] | null;
   /** > 0: meshes fade (opacity and colour) into their new look, and in and out of view, over this many ms */
   fadeMs?: number;
+  /** meshes not drawn whatever their structure (in the steps of a reconstruction, those its sequence carries itself) */
+  hiddenMeshes?: Set<string> | null;
   onReady: (handle: ModelHandle) => void;
   onPick: (structure: string | null, info?: PickInfo) => void;
 };
@@ -347,7 +349,7 @@ function fadeClone<M extends THREE.Material>(material: M): M {
 }
 
 export function HybridModel(props: Props) {
-  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, solid, proximity = null, fadeMs = 0, onReady, onPick } = props;
+  const { modelPath, visible, activeStructures, viewMode, planes, selected, highlight, emphasised, manipulation, retracted, lowPower, selectedMeshes = null, translucent, solid, proximity = null, fadeMs = 0, hiddenMeshes = null, onReady, onPick } = props;
   const gltf = useGLTF(modelPath, false, true);
   const scene = useMemo(() => {
     const clone = gltf.scene.clone(true);
@@ -742,8 +744,8 @@ export function HybridModel(props: Props) {
   };
   const setSkinHole = async (on: boolean, technique?: string) => {
     let changed = false;
-    const outline = stepHoleOf(technique ?? surgery.current.key ?? "");
-    const holeBox = boxOf(outline);
+    const outlines = stepHolesOf(technique ?? surgery.current.key ?? "");
+    const boxes = outlines.map((hole) => boxOf(hole.outline));
     for (const mesh of meshesByName.get(breastSkinMesh) ?? []) {
       const geometry = mesh.geometry;
       let hole = skinHoles.get(geometry);
@@ -754,27 +756,37 @@ export function HybridModel(props: Props) {
         hole = { full: geometry.index, open: new Map() };
         skinHoles.set(geometry, hole);
       }
-      let open = hole.open.get(outline);
+      let open = hole.open.get(outlines);
       if (on && !open) {
         const side = (await loadBreastSides()).op;
         if (!alive.current) return;
-        // a triangle goes when its three corners (rest pose) fall inside the outline of the patch, drawn in the chart
-        // of the operated breast slightly inside the patch: the skin that stays then overlaps the patch, never leaves a gap
+        // a triangle goes when its three corners (rest pose) fall inside the outline of a patch, drawn in the chart of
+        // the operated breast slightly inside the patch: the skin that stays then overlaps the patch, never leaves a gap.
+        // The outline round the breast is tested in front of the base of the breast only; those of the back and the
+        // abdomen anywhere (u unwrapped past the posterior midline of the operated side, as build_flaps.py draws them)
         const index = hole.full.array;
         const attribute = geometry.attributes.position;
         const toModel = restMatrix(mesh);
         const p = new THREE.Vector3();
         const within = new Uint8Array(attribute.count);
+        const turn = 2 * Math.PI * 170;
         for (let i = 0; i < attribute.count; i++) {
           p.fromBufferAttribute(attribute, i).applyMatrix4(toModel);
-          const [u, v, depth] = side.chart(p.x, p.y, p.z);
-          within[i] = depth > -30 && u > holeBox[0] && u < holeBox[2] && v > holeBox[1] && v < holeBox[3] && insidePolygon(u, v, outline) ? 1 : 0;
+          const [chartU, v, depth] = side.chart(p.x, p.y, p.z);
+          const u = chartU < -360 ? chartU + turn : chartU;
+          within[i] = outlines.some((item, k) => {
+            const box = boxes[k];
+            if (item.depth && depth <= -30) return false;
+            return u > box[0] && u < box[2] && v > box[1] && v < box[3] && insidePolygon(u, v, item.outline);
+          })
+            ? 1
+            : 0;
         }
         const kept: number[] = [];
         for (let f = 0; f < index.length; f += 3) if (!(within[index[f]] && within[index[f + 1]] && within[index[f + 2]])) kept.push(index[f], index[f + 1], index[f + 2]);
         const array = index instanceof Uint32Array ? Uint32Array.from(kept) : Uint16Array.from(kept);
         open = new THREE.BufferAttribute(array, 1);
-        hole.open.set(outline, open);
+        hole.open.set(outlines, open);
       }
       const index = on && open ? open : hole.full;
       if (geometry.index !== index) {
@@ -929,7 +941,7 @@ export function HybridModel(props: Props) {
       const before = object.material as THREE.MeshStandardMaterial;
       const cutOpen = planes.cut !== null && (planes.cutScope === "all" || superficialForCut.has(record.structure));
       const hidden = skinClosed && !cutOpen && BREAST_INNER_TISSUES.has(record.tissue) && BREAST_STRUCTURES.has(record.structure);
-      const show = visible(record.structure) && !hidden;
+      const show = visible(record.structure) && !hidden && !hiddenMeshes?.has(record.name);
       if (!show) {
         if (fading && wasVisible && before?.color) {
           const clone = fadeClone(before);
@@ -958,7 +970,7 @@ export function HybridModel(props: Props) {
         lowPower,
         translucent: Boolean(translucent?.has(record.structure)),
         // the skin of the operated breast in the steps: see-through as a ghost
-        ghost: record.tissue === "skin" && record.structure.startsWith("mamo-step-"),
+        ghost: record.tissue === "skin" && (record.structure.startsWith("mamo-step-") || record.structure.startsWith("recon-")),
         solid: Boolean(solid?.has(record.structure)),
         vertexColors: painted,
         base: record.color,
@@ -1042,7 +1054,7 @@ export function HybridModel(props: Props) {
       cancelAnimationFrame(frame);
       cache.forEach((material) => material.dispose());
     };
-  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, solid, proximityKey, highlight, emphasised, lowPower, fadeMs, invalidate]);
+  }, [scene, visible, activeStructures, viewMode, planes, selected, selectedMeshes, translucent, solid, proximityKey, highlight, emphasised, lowPower, fadeMs, hiddenMeshes, invalidate]);
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     if (event.delta > 6) return;

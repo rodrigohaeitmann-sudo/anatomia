@@ -34,7 +34,15 @@ type TechniqueData = {
   arrows: StepArrow[];
   /** height of the new nipple above the fold in the result (mm) */
   nippleAboveFoldMm: number;
+  /**
+   * reconstructions (build_flaps.py): the outlines where the trunk skin gives way, in the chart of the trunk (u, v);
+   * `depth`: tested only in front of the base of the breast (the breast patch), as the mammaplasty hole
+   */
+  holes?: StepHole[];
+  /** structures and meshes of the torso model this sequence carries itself (not shown twice in its steps) */
+  replaces?: { structures: string[]; meshes: string[] };
 };
+export type StepHole = { outline: [number, number][]; depth: boolean };
 export type StepArrow = { frame: number; from: [number, number, number]; to: [number, number, number]; color: string };
 
 type StepFile = { hole: [number, number][]; techniques: Record<string, TechniqueData>; structures: Record<string, unknown> };
@@ -47,10 +55,20 @@ export const stepCaseOf = (key: string) => techniques[key]?.case ?? "ptose-2";
 
 /** Key frames of a technique (its schedule: the closure has its own stages in every technique). */
 export const stepFramesOf = (key: string) => techniques[key]?.frames ?? [];
-/** Outline (rest chart of the operated breast) of the skin patch of a technique: the trunk skin gives way inside it. */
-const holes = new Map<string, [number, number][]>();
-files.forEach((file) => Object.keys(file.techniques).forEach((key) => holes.set(key, file.hole)));
-export const stepHoleOf = (key: string) => holes.get(key) ?? files[0].hole;
+/**
+ * Outlines (rest chart of the operated breast, u v) of the skin patches of a technique: the trunk skin gives way inside
+ * them. A mammaplasty has one, round the breast; a flap reconstruction also opens the back or the abdomen.
+ */
+const holes = new Map<string, StepHole[]>();
+files.forEach((file) => Object.entries(file.techniques).forEach(([key, item]) => holes.set(key, item.holes ?? [{ outline: file.hole, depth: true }])));
+const firstHoles = [{ outline: files[0].hole, depth: true }];
+export const stepHolesOf = (key: string) => holes.get(key) ?? firstHoles;
+const noReplace = { structures: [] as string[], meshes: [] as string[] };
+/** What of the torso model a technique carries itself (hidden in its steps). */
+export const stepReplacesOf = (key: string) => techniques[key]?.replaces ?? noReplace;
+const reconstructionKeys = new Set(Object.entries(techniques).filter(([, item]) => item.holes).map(([key]) => key));
+/** A mastectomy or flap reconstruction (build_flaps.py), not a reduction mammaplasty. */
+export const isReconstruction = (key: string) => reconstructionKeys.has(key);
 /** technique of every step mesh */
 export const stepMeshTechnique = new Map<string, string>();
 Object.entries(techniques).forEach(([key, item]) => item.meshes.forEach((mesh) => stepMeshTechnique.set(mesh.name, key)));
@@ -65,6 +83,21 @@ export const stepBranches = (key: string) => techniques[key].branches;
 export const stepArrows = (key: string) => techniques[key]?.arrows ?? [];
 /** Structures of the step-by-step sequence of a technique (listed with the anatomy while one of its views is open). */
 export const stepStructuresOf = (key: string) => Object.keys(structures).filter((id) => id.endsWith(`-${key}`));
+type MeshRecord = { name: string; structure: string; tissue: string };
+const tissuesOf = new Map<string, Set<string>>();
+files.forEach((file) => ((file as unknown as { meshes: MeshRecord[] }).meshes ?? []).forEach((mesh) => tissuesOf.set(mesh.structure, (tissuesOf.get(mesh.structure) ?? new Set()).add(mesh.tissue))));
+const only = (id: string, kinds: string[]) => [...(tissuesOf.get(id) ?? [])].every((tissue) => kinds.includes(tissue)) && tissuesOf.has(id);
+/**
+ * The skin of a technique's steps (the first is its main patch): what the skin buttons of the viewer act on with the
+ * skin of the trunk.
+ */
+export const stepSkinIdsOf = (key: string) =>
+  isReconstruction(key) ? stepStructuresOf(key).filter((id) => only(id, ["skin"])).sort((a, b) => Number(!a.startsWith("recon-skin-")) - Number(!b.startsWith("recon-skin-"))) : [`mamo-step-skin-${key}`, `mamo-step-disc-${key}`];
+/** The vessels and nerves of a technique's steps (the Vasos button). */
+export const stepVesselIdsOf = (key: string) =>
+  isReconstruction(key) ? stepStructuresOf(key).filter((id) => only(id, ["artery", "vein", "nerve"])) : ["arteries", "nerves", "arteries-cut", "nerves-cut"].map((part) => `mamo-step-${part}-${key}`);
+/** Measures of a reconstruction (build_flaps.py: mm, mL, cm², degrees). */
+export const reconstructionMeasures = (key: string) => (techniques[key]?.measures ?? {}) as unknown as Record<string, number>;
 
 export type StepGeometry = { positions: Float32Array[]; index: Uint16Array };
 

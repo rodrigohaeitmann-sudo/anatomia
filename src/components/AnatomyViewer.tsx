@@ -18,7 +18,7 @@ import type { BreastSide } from "@/lib/breastMap";
 import { planPieceStructures, plansOf } from "@/lib/breastAnatomy";
 import { breastLevel, breastStateAt, displacePoints, loadBreastSides, type BreastSideId } from "@/lib/breastStates";
 import { skinUniforms } from "@/lib/skinShader";
-import { stepArrows, stepFramesOf } from "@/lib/mammaplastySteps";
+import { stepArrows, stepFramesOf, stepReplacesOf, stepSkinIdsOf } from "@/lib/mammaplastySteps";
 import { hiddenInSteps } from "@/lib/surgeryVisibility";
 import { AttachmentAreas, FibreLines, LandmarkDots, PerforatorZones, QuizFeedback, RegionHighlight, Ruler, SkinMarkings, useLayerBuffers } from "./viewer/StudyLayers";
 import { viewAnnotations, type AnnotationEntry, type LabelMode } from "@/lib/annotations";
@@ -388,8 +388,8 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
   const cutFrame = view.surgery ? stepFramesOf(view.surgery.technique).findIndex((item) => item.id === "resseccao") : -1;
   const inSteps = Boolean(view.surgery);
   const visible = useCallback(
-    (id: string) => (Boolean(visibility[id]) || forced.has(id)) && !hidden.has(id) && !(inSteps && hiddenInSteps(id, stepFrame, cutFrame)),
-    [visibility, hidden, forced, inSteps, stepFrame, cutFrame],
+    (id: string) => (Boolean(visibility[id]) || forced.has(id)) && !hidden.has(id) && !(inSteps && hiddenInSteps(id, stepFrame, cutFrame, view.surgery?.technique)),
+    [visibility, hidden, forced, inSteps, stepFrame, cutFrame, view.surgery?.technique],
   );
   const highlight = useMemo(() => {
     const map = new Map<string, string>(Object.entries(view.tint ?? {}));
@@ -762,7 +762,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     return names.length ? new Set(names) : null;
   }, [selectedPart]);
   // the skin of a surgical step: as the view draws it, or as the user asked (opaque or see-through)
-  const skinIds = useMemo(() => (view.surgery ? ["skin", `mamo-step-skin-${view.surgery.technique}`, `mamo-step-disc-${view.surgery.technique}`] : []), [view.surgery]);
+  const skinIds = useMemo(() => (view.surgery ? ["skin", ...stepSkinIdsOf(view.surgery.technique)] : []), [view.surgery]);
   const translucent = useMemo(() => {
     const set = new Set([...(attachmentFocus ? [attachmentFocus] : []), ...(view.translucent ?? []), ...(userTranslucent ?? [])]);
     if (skinMode === "opaque") skinIds.forEach((id) => set.delete(id));
@@ -775,7 +775,9 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
     if (skinMode === "translucent") skinIds.forEach((id) => set.delete(id));
     return set;
   }, [view.solid, skinMode, skinIds]);
-  const skinOpaque = Boolean(view.surgery) && solid.has(`mamo-step-skin-${view.surgery?.technique}`);
+  const skinOpaque = Boolean(view.surgery) && solid.has(stepSkinIdsOf(view.surgery?.technique ?? "")[0]);
+  // in the steps of a reconstruction, the meshes of the trunk its sequence carries itself (moved by the operation)
+  const replacedMeshes = useMemo(() => (view.surgery ? new Set(stepReplacesOf(view.surgery.technique).meshes) : null), [view.surgery]);
   // skin markings and perforator zones are drawn on the trunk skin, which does not follow the arm (anatomical
   // position only) but does carry the breast: in a breast state their points go through the same map
   const overSkin = !settledPose && !animating && (settledBreast <= 0 || Boolean(breastSides));
@@ -868,6 +870,7 @@ export function AnatomyViewer(props: AnatomyViewerProps) {
               solid={solid}
               proximity={study.proximity}
               fadeMs={view.surgery ? 650 : 0}
+              hiddenMeshes={replacedMeshes}
               onReady={handleReady}
               onPick={(structure, info) => {
                 // a tap within 9 mm of a shown landmark picks the landmark (rulers and quizzes still get the point)
