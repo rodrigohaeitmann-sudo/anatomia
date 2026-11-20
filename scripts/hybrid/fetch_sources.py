@@ -1,6 +1,7 @@
 """Downloads every raw source used by build_hybrid_model.py into assets/source/hybrid/ (git-ignored).
 
-  * BodyParts3D 4.3: the meshes listed in bp3d43-selection.json + the male skin used for registration
+  * BodyParts3D 4.3: the meshes listed in bp3d43-selection.json + the male skin used for registration, and those of
+    flap-sources.json (abdominal wall vessels and bones of the TRAM, outside the torso model: build_flap_sources.py)
   * BodyParts3D 3.0: left latissimus dorsi (FMA13359, absent from 4.x)
   * HRA Visible Human Female v1.3: skin and both mammary glands
   * Z-Anatomy: muscular, lymphoid and nervous FBX (then run extract_zanatomy.mjs)
@@ -50,7 +51,7 @@ def download(item: tuple[str, str]) -> int:
 
 
 def main() -> None:
-    selection = json.loads((HERE / "bp3d43-selection.json").read_text())
+    selection = json.loads((HERE / "bp3d43-selection.json").read_text()) + json.loads((HERE / "flap-sources.json").read_text())
     items = list(FILES.items()) + [(f"bp3d-4.3/obj/{s['fj']}.obj", BP43 + urllib.parse.quote(s["file"])) for s in selection]
     with cf.ThreadPoolExecutor(12) as ex:
         total = sum(ex.map(download, items))
