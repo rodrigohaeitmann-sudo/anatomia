@@ -280,6 +280,8 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 
 ## 6. Resultado medido
 
+![Três passos de cada sequência no app: mastectomia (marcação, exérese, fechamento), grande dorsal (ilha no dorso, túnel axilar, inserção sobre o implante) e TRAM (ilha e zonas, transposição de 180°, resultado)](img/retalhos-passo-a-passo.jpg)
+
 Os números são do modelo, gravados em `src/data/reconstructionSteps.json`.
 
 **Mastectomia** (6 passos, 0,9 MB de dados)
