@@ -1,0 +1,128 @@
+[
+ {
+  "fj": "FJ3511",
+  "file": "meshes/FJ3511_BP22007_FMA20689_Left inferior epigastric artery.obj",
+  "name": "Left inferior epigastric artery",
+  "part": "diea",
+  "tissue": "artery"
+ },
+ {
+  "fj": "FJ3512",
+  "file": "meshes/FJ3512_BP20837_FMA21164_Left inferior epigastric vein.obj",
+  "name": "Left inferior epigastric vein",
+  "part": "diev",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3529",
+  "file": "meshes/FJ3529_BP23984_FMA20736_Left superficial epigastric artery.obj",
+  "name": "Left superficial epigastric artery",
+  "part": "siea",
+  "tissue": "artery"
+ },
+ {
+  "fj": "FJ2122",
+  "file": "meshes/FJ2122_BP21197_FMA44341_Left superficial epigastric vein.obj",
+  "name": "Left superficial epigastric vein",
+  "part": "siev",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3466",
+  "file": "meshes/FJ3466_BP23478_FMA69391_Trunk proper of left external iliac artery.obj",
+  "name": "Trunk proper of left external iliac artery",
+  "part": "iliac",
+  "tissue": "artery"
+ },
+ {
+  "fj": "FJ3484",
+  "file": "meshes/FJ3484_BP23965_FMA18886_Left external iliac vein.obj",
+  "name": "Left external iliac vein",
+  "part": "iliac",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3522",
+  "file": "meshes/FJ3522_BP23965_FMA18886_Left external iliac vein.obj",
+  "name": "Left external iliac vein",
+  "part": "iliac",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3523",
+  "file": "meshes/FJ3523_BP23965_FMA18886_Left external iliac vein.obj",
+  "name": "Left external iliac vein",
+  "part": "iliac",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3524",
+  "file": "meshes/FJ3524_BP23965_FMA18886_Left external iliac vein.obj",
+  "name": "Left external iliac vein",
+  "part": "iliac",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3604",
+  "file": "meshes/FJ3604_BP22048_FMA20688_Right inferior epigastric artery.obj",
+  "name": "Right inferior epigastric artery",
+  "part": "contra-epigastric",
+  "tissue": "artery"
+ },
+ {
+  "fj": "FJ3605",
+  "file": "meshes/FJ3605_BP20785_FMA21163_Right inferior epigastric vein.obj",
+  "name": "Right inferior epigastric vein",
+  "part": "contra-epigastric",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ1936",
+  "file": "meshes/FJ1936_BP21309_FMA3988_Right superior epigastric artery.obj",
+  "name": "Right superior epigastric artery",
+  "part": "contra-epigastric",
+  "tissue": "artery"
+ },
+ {
+  "fj": "FJ3615",
+  "file": "meshes/FJ3615_BP21143_FMA4771_Right superior epigastric vein.obj",
+  "name": "Right superior epigastric vein",
+  "part": "contra-epigastric",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ3567",
+  "file": "meshes/FJ3567_BP23461_FMA69390_Trunk proper of right external iliac artery.obj",
+  "name": "Trunk proper of right external iliac artery",
+  "part": "contra-iliac",
+  "tissue": "artery"
+ },
+ {
+  "fj": "FJ3568",
+  "file": "meshes/FJ3568_BP22755_FMA18885_Right external iliac vein.obj",
+  "name": "Right external iliac vein",
+  "part": "contra-iliac",
+  "tissue": "vein"
+ },
+ {
+  "fj": "FJ7211",
+  "file": "meshes/FJ7211_BP29441_FMA21965_Left inguinal ligament.obj",
+  "name": "Left inguinal ligament",
+  "part": "inguinal",
+  "tissue": "ligament"
+ },
+ {
+  "fj": "FJ7307",
+  "file": "meshes/FJ7307_BP29444_FMA21964_Right inguinal ligament.obj",
+  "name": "Right inguinal ligament",
+  "part": "inguinal",
+  "tissue": "ligament"
+ },
+ {
+  "fj": "FJ3152",
+  "file": "meshes/FJ3152_BP23294_FMA16586_Right hip bone.obj",
+  "name": "Right hip bone",
+  "part": "contra-hip",
+  "tissue": "bone"
+ }
+]

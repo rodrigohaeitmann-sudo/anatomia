@@ -5,6 +5,7 @@
  */
 import anatomy from "@/data/breastAnatomy.json";
 import { planDetails } from "@/data/mammaplasty";
+import { reconstructionDetails } from "@/data/reconstruction";
 import { tubeLengths } from "@/lib/breastAnatomy";
 import { breastStates } from "@/lib/breastStates";
 
@@ -24,6 +25,7 @@ export type AnatomyDetail = {
 
 export const anatomyDetails: Record<string, AnatomyDetail> = {
   ...planDetails,
+  ...reconstructionDetails,
   "latissimus-dorsi": {
     summary: "Músculo largo e plano do dorso, em leque, que converge da região toracolombar para o sulco intertubercular do úmero. Unidade doadora do retalho do grande dorsal.",
     origin: "Processos espinhosos de T7–T12 e vértebras lombares/sacrais via fáscia toracolombar, terço posterior da crista ilíaca, 3–4 últimas costelas e, frequentemente, o ângulo inferior da escápula.",

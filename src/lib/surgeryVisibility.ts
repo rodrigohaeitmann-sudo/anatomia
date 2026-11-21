@@ -6,6 +6,7 @@
  * shown there (and not listed).
  */
 import { breastMeshSides } from "@/lib/breastStates";
+import { stepReplacesOf } from "@/lib/mammaplastySteps";
 import { modelMeshes, modelStructures } from "@/lib/modelConfig";
 
 const structureOf = new Map(modelMeshes.map((mesh) => [mesh.name, mesh.structure]));
@@ -17,13 +18,17 @@ const breastAsScanned = new Set<string>([
 ]);
 breastAsScanned.delete("");
 
-/** Hidden in a step view at this key frame (`cutFrame`: the frame of the resection, from which the marking is cut). */
-export function hiddenInSteps(id: string, frame: number, cutFrame: number) {
+/**
+ * Hidden in a step view at this key frame (`cutFrame`: the frame of the resection, from which the marking is cut). In
+ * the steps of a reconstruction, the structures of the trunk its sequence carries itself are hidden too.
+ */
+export function hiddenInSteps(id: string, frame: number, cutFrame: number, technique?: string) {
   if (breastAsScanned.has(id)) return true;
+  if (technique && stepReplacesOf(technique).structures.includes(id)) return true;
   if (id.startsWith("mamo-pedicle-") || id.startsWith("mamo-resection-")) return true;
   if ((id.startsWith("mamo-marking-") || id.startsWith("mamo-reference-lines")) && frame >= cutFrame) return true;
   return false;
 }
 
-/** Listed in the structure list while a step view is open. */
-export const listedInSteps = (id: string) => !hiddenInSteps(id, 0, Infinity) && !id.startsWith("mamo-marking-") && !id.startsWith("mamo-reference-lines");
+/** Listed in the structure list while a step view of `technique` is open. */
+export const listedInSteps = (id: string, technique?: string) => !hiddenInSteps(id, 0, Infinity, technique) && !id.startsWith("mamo-marking-") && !id.startsWith("mamo-reference-lines");

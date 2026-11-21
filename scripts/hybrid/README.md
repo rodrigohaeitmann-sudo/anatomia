@@ -126,6 +126,28 @@ Gera, por caso, `src/data/mammaplastySteps<-caso>.json` (os quadros de cada téc
 
 O script imprime, por técnica, quantos triângulos do fechamento invertem (só lascas degeneradas no sulco), quanto o contorno se afasta da pele em pé e as medidas antes e depois.
 
+## Mastectomia e reconstrução com retalhos (grande dorsal e TRAM)
+
+```bash
+npm run flaps:hybrid   # decode_model.mjs → build_flap_sources.py → build_flaps.py → check:flaps (~1 min ao todo)
+python3 scripts/hybrid/build_flaps.py --only tram --figures DIR   # uma sequência só; renders de todos os quadros
+```
+
+Plano e resultados: [docs/plano-retalhos-miocutaneos.md](../../docs/plano-retalhos-miocutaneos.md).
+
+| Script | O que faz |
+|---|---|
+| `build_flap_sources.py` | Traz a parede abdominal que o tronco não tem: retos, piramidais, linha alba, oblíquos e fáscia do Z-Anatomy, vasos epigástricos e ilíacos e osso do quadril do BodyParts3D (`flap-sources.json`) e a pele do tronco inferior do HRA, com as mesmas transformações do modelo (refeitas aqui, a 0,01 mm do GLB). Acomoda a parede abdominal masculina sob a pele feminina: um campo radial suave a desloca para a frente, deixando 31–40 mm de subcutâneo do epigástrio ao abdome inferior, e se apaga nas inserções do reto e nos flancos (`CONFORM`). Grava `assets/build/flap-meshes/` |
+| `flap_geometry.py` | Carta do tronco (a da mama, estendida ao dorso e ao abdome, sem costura na linha média posterior do lado operado), campos de raio da pele e da parede, plano desenrolado (σ = comprimento de arco sobre a parede suavizada, τ = altura, h = altura sobre a parede), malha de Delaunay conforme no plano, blocos fechados (pele + gordura), dobra em página (`curl`), linha central de vasos e curva de pedículo com comprimento fixo |
+| `build_flaps.py` | As três sequências no formato dos passos da mamoplastia: `src/data/reconstructionSteps.json` e `public/models/hybrid/reconstruction-<mastectomia\|grande-dorsal\|tram>.bin`. Cada técnica traz os contornos onde a pele do tronco se abre (`holes`: mama, dorso, abdome) e o que do tronco ela substitui (`replaces`) |
+| `check_flaps.py` | Pedículo do grande dorsal nunca mais longo que o livre; pele deitada no corpo com ≤ 1% de triângulos invertidos; borda da ilha na borda do defeito (p95 ≤ 2 mm); tecido do retalho dentro da pele da mama, o reto do TRAM sob a pele posta sobre ele e o implante fora da parede (`npm run check:flaps`) |
+
+Como as peças se movem:
+
+- Mastectomia: retalhos levantados girando em volta dos limites (38°), peça rígida para fora, leito = parede + 6 mm (o coxim retromamário sai), fechamento por mapa harmônico com a cicatriz 12 mm além das pontas.
+- Grande dorsal: a ilha é o defeito no tamanho da pele, levado de volta ao dorso pela transposição (rotação no plano que põe o hilo o mais perto possível da origem do pedículo); o músculo é tomado na medida da loja; dobra em página para mostrar o pedículo; túnel = giro em volta do ponto fixo da transposição, recolhido pela metade no meio do caminho e sob a pele fora da loja; o tendão fica no úmero. O implante é o espaço que sobra no envelope da mama em repouso descontadas as coberturas. A modelagem final é afim (exata) dentro da ilha e por spline de placa fina fora dela.
+- TRAM: ilha em lente da prega suprapúbica a 15 mm acima do umbigo, de espinha a espinha; zonas por linha média e bordas dos retos; rotação de 180° em volta do ponto fixo (o meio do caminho entre a ilha e o defeito), recolhida no túnel; a gordura enche o envelope da mama por fração da espessura. O reto entre o rebordo e a ilha (mais longo que o caminho) fica no leito, dobra-se e volta por cima com meia torção, estreitando-se como um feixe; no último 30% segue o mapa do retalho. A pele do abdome e a da mama são postas sobre a dobra (o abaulamento epigástrico). Os vasos epigástricos são tubos refeitos em cada quadro ao longo da linha central das malhas. A bainha anterior fica logo acima da aponeurose do oblíquo externo; aberta, suas folhas se afastam até as bordas do leito, onde aparecem a bainha posterior e, abaixo da linha arqueada (a um terço do caminho do umbigo ao púbis), a fáscia transversal. O oblíquo externo é cortado na linha semilunar. Fechamento do abdome coluna a coluna (o retalho superior estica até a incisão suprapúbica).
+
 ## Posições do membro superior
 
 ```bash
@@ -190,6 +212,7 @@ O passo a passo da mamoplastia (`build_mammaplasty_steps.py`) soma o hábito do 
 | `npm run check:habitus` | O hábito do app contra o pipeline (`check_habitus_map.mjs`), os perímetros, a folga entre bolsa e abdome e quanto o hábito move vasos, nervos e fáscias (`check_habitus.py`) |
 | `npm run check:skin` | Vincos do mapa, pele movida fora da mama, arestas e bordas do recorte (`check_skin.py`); refinamento e normais da pele como o app os faz, no desktop e no celular (`check_skin_app.mjs`) |
 | `npm run check:poses` | Vasos e nervos nas posições do braço: estiramento das arestas, trechos parados além do cotovelo e raiz dos ramos esquemáticos no vaso de origem (`check_pose_followers.py`) |
+| `npm run check:flaps` | Mastectomia e retalhos: pedículo, pele deitada no corpo, encaixe da ilha, tecido dentro da pele e da parede (`check_flaps.py`) |
 
 Todas falham quando um limite é excedido. As de pele, poses e hábito em Python gravam `assets/build/checks/*.json` e, com `--report`, só relatam.
 
@@ -203,3 +226,5 @@ Todas falham quando um limite é excedido. As de pele, poses e hábito em Python
 - A ptose é um modelo geométrico (fluxo com volume preservado), não uma simulação física, e parte de uma única mama, de cadáver em decúbito.
 - O hábito obeso é um campo geométrico sobre o tronco do modelo: espessa a tela subcutânea por região, mas não muda músculos nem ossos e não modela o braço, que não tem pele.
 - Os linfonodos do Z-Anatomy representam grupos (anterior, posterior, lateral, central, apical, interpeitoral, paraesternal), não linfonodos individuais.
+- A parede abdominal masculina fica ~10 cm atrás da pele feminina; nos passos do TRAM ela é acomodada sob a pele (`build_flap_sources.py`), o que muda a forma dos retos e oblíquos. Na região lombar, o grande dorsal atravessa a pele em até 20 mm e é recolhido para dentro dela nos passos do grande dorsal.
+- Os retalhos se movem por mapas suaves, não por simulação de tecidos: a dobra do reto no TRAM estica parte dos triângulos do músculo. No TRAM, as zonas I a III (mais de 3 vezes a mama nesta paciente) são comprimidas no envelope da mama em vez de aparadas.

@@ -1,5 +1,6 @@
 // Extracts the Z-Anatomy meshes used by the hybrid torso (fasciae, axillary lymph nodes, lateral pectoral
-// nerve, plus serratus/latissimus used only to register Z-Anatomy onto BodyParts3D) in FBX world space.
+// nerve, plus serratus/latissimus used only to register Z-Anatomy onto BodyParts3D) and those of the abdominal wall
+// used by the flap reconstructions, in FBX world space.
 // Usage: node scripts/hybrid/extract_zanatomy.mjs
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -24,6 +25,10 @@ const wanted = new Set([
   "Anterior_axillary_nodesl", "Posterior_axillary_nodesl", "Lateral_axillary_nodesl", "Central_axillary_nodesl",
   "Apical_axillary_nodesl", "Interpectoral_nodesl", "Parasternal_nodesl",
   "Lateral_pectoral_nervel", "Serratus_anterior_musclel", "Latissimus_dorsi_musclel",
+  // abdominal wall of the TRAM flap (scripts/hybrid/build_flap_sources.py; not in the torso model)
+  "Rectus_abdominis_musclel", "Rectus_abdominis_muscler", "Pyramidalis_musclel", "Pyramidalis_muscler", "Linea_alba",
+  "Internal_abdominal_oblique_musclel", "Transversus_abdominis_musclel", "External_abdominal_oblique_muscler",
+  "Investing_abdominal_fascial", "Investing_abdominal_fasciar", "Inguinal_ligamentl", "Inguinal_ligamentr",
 ]);
 
 mkdirSync(outDir, { recursive: true });

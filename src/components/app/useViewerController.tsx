@@ -10,7 +10,7 @@ import { attachmentsFor, landmarkById, layerLandmarks, loadLayerBuffers, partByM
 import { viewAnnotations, type AnnotationEntry, type LabelMode } from "@/lib/annotations";
 import { planCaseOf } from "@/lib/breastAnatomy";
 import { breastStateById } from "@/lib/breastStates";
-import { stepStructuresOf } from "@/lib/mammaplastySteps";
+import { isReconstruction, stepCaseOf, stepSkinIdsOf, stepStructuresOf, stepVesselIdsOf } from "@/lib/mammaplastySteps";
 import { hybridTorsoModel, modelStructures, structureGroups, type Landmark } from "@/lib/modelConfig";
 import { useReview } from "@/lib/review";
 import { axisComponent } from "@/lib/sectioning";
@@ -147,7 +147,11 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   const viewKey = free ? FREE_PACK : `${pack.id}/${view.id}`;
   const labelMode: LabelMode = labelsHidden ? "hidden" : settings.labelNames ? "names" : "pins";
   // the step-by-step sequences are drawn on the breast they were planned on
-  const breastLock = view.surgery ? `Nos passos da cirurgia a mama fica na forma em que a técnica foi planejada (${breastStateById.get(view.breast ?? "")?.label ?? "ptose grau II com hipertrofia moderada"}).` : undefined;
+  const breastLock = view.surgery
+    ? isReconstruction(view.surgery.technique) && stepCaseOf(view.surgery.technique) === "repouso"
+      ? "Nos passos da mastectomia e da reconstrução a mama é a do modelo como escaneada (sem ptose, 427 mL), a forma que a reconstrução refaz."
+      : `Nos passos da cirurgia a mama fica na forma em que a técnica foi planejada (${breastStateById.get(view.breast ?? "")?.label ?? "ptose grau II com hipertrofia moderada"}).`
+    : undefined;
   // the pieces, vessels and sutures of the technique on screen can be shown or hidden like any structure
   const stepStructures = useMemo(() => (view.surgery ? stepStructuresOf(view.surgery.technique) : []), [view.surgery]);
   const modelPath = lowPower ? hybridTorsoModel.modelPath.replace(/\.glb$/, "-mobile.glb") : hybridTorsoModel.modelPath;
@@ -406,7 +410,7 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   const handleSection = useCallback((report: SectionReport) => setSection(report), []);
   const toggleStructure = (id: string) => {
     // in the steps of a surgery the skin is the skin of the trunk and that of the steps together
-    const ids = view.surgery && id === "skin" ? ["skin", `mamo-step-skin-${view.surgery.technique}`, `mamo-step-disc-${view.surgery.technique}`] : [id];
+    const ids = view.surgery && id === "skin" ? ["skin", ...stepSkinIdsOf(view.surgery.technique)] : [id];
     const next = !visibility[id];
     const changes = Object.fromEntries(ids.map((item) => [item, next]));
     if (view.surgery) rememberStep(changes);
@@ -424,7 +428,7 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   const toggleNeuro = () => {
     // in the steps of a surgery, the vessels and nerves are those that follow the operation
     if (view.surgery) {
-      const ids = ["arteries", "nerves", "arteries-cut", "nerves-cut"].map((part) => `mamo-step-${part}-${view.surgery?.technique}`).filter((id) => modelStructures.some((item) => item.id === id));
+      const ids = stepVesselIdsOf(view.surgery.technique).filter((id) => modelStructures.some((item) => item.id === id));
       const next = !ids.every((id) => visibility[id]);
       const changes = Object.fromEntries(ids.map((id) => [id, next]));
       rememberStep(changes);
@@ -460,7 +464,7 @@ export function useViewerController({ compact, active }: { compact: boolean; act
   const viewCases = useMemo(() => new Set(view.structures.map(planCaseOf).filter((index) => index !== undefined)), [view.structures]);
   const allowed = useCallback(
     (id: string) => {
-      if (view.surgery) return listedInSteps(id);
+      if (view.surgery) return listedInSteps(id, view.surgery.technique);
       const plan = planCaseOf(id);
       return plan === undefined || viewCases.has(plan);
     },

@@ -5,6 +5,7 @@
  * zona projetada (polígono cujos vértices são pontos reais das estruturas de referência).
  */
 import { mammaplastyFolder, mammaplastyGroups, mammaplastyOverviewPack } from "@/data/mammaplasty";
+import { reconstructionGroup } from "@/data/reconstruction";
 import { breastStates, measurementsOf } from "@/lib/breastStates";
 import type { SectionAxis } from "@/lib/sectioning";
 import type { SkinWindow } from "@/lib/viewerTypes";
@@ -547,6 +548,8 @@ export const packGroups: PackGroup[] = [
   },
   // reduction mammaplasty: one group per degree of ptosis (I, II, III) and per hypertrophy (G3, G4)
   ...mammaplastyGroups,
+  // mastectomy and immediate reconstruction with pedicled myocutaneous flaps (src/data/reconstruction.ts)
+  reconstructionGroup,
   {
     id: "axila",
     title: "Axila",
