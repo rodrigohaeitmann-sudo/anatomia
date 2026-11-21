@@ -42,7 +42,7 @@ import numpy as np
 import shapely
 from scipy.ndimage import gaussian_filter
 from scipy.spatial import cKDTree
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import unary_union
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -448,6 +448,7 @@ class Mastectomy:
         writer.add("recon_mast_scar", sid("scar"), "Cicatriz transversa", COLORS["scar"], 1.0, "marking", faces, frames_)
         points = self.anchors(model, motion, scar)
         values = self.measures(model)
+        values["scarMm"] = round(fg.polyline_length(scar))
         start = np.array(points["specimen"]) / MM
         arrows = [{"frame": k_of["resseccao:1"], "from": r3(start * MM), "to": r3(motion[k_of["resseccao"]](start[None])[0] * MM), "color": "#e08a2e"}]
         info = {"frames": [{"id": f, "label": label} for f, label in frames], "points": points, "measures": values, "arrows": arrows}
@@ -468,7 +469,6 @@ class Mastectomy:
 
     def anchors(self, model: dict, motion, scar: np.ndarray) -> dict:
         """Label anchors (model units): points of the skin and of the specimen."""
-        tr = self.trunk
         def on(xy, pose="rest"):
             i = int(np.argmin(np.linalg.norm(self.pts - np.asarray(xy), axis=1)))
             return model[pose][i]
@@ -523,12 +523,11 @@ class Mastectomy:
         p = model["rest"]
         area = 0.5 * np.linalg.norm(np.cross(p[tri[:, 1]] - p[tri[:, 0]], p[tri[:, 2]] - p[tri[:, 0]]), axis=1).sum()
         volume = bb.mound_volumes(self.s.breast)[0]
-        notch = self.s.notch
         return {
             "ellipseLengthMm": round(skin_length(self.centre - e["a"] * self.axis, self.centre + e["a"] * self.axis)),
             "ellipseHeightMm": round(skin_length(self.centre - e["b"] * nrm, self.centre + e["b"] * nrm)),
             "ellipseTiltDeg": e["tilt"], "skinAreaCm2": round(area / 100), "flapMm": FLAP_MM,
-            "breastMl": round(volume), "scarMm": round(2 * (e["a"] + SCAR_EXTENSION) * 1.0),
+            "breastMl": round(volume),
         }
 
 
@@ -538,6 +537,28 @@ class Mastectomy:
 def rot2(angle: float) -> np.ndarray:
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[c, -s], [s, c]])
+
+
+def island_constraints(placed_centre: np.ndarray, mast, axes: tuple[float, float], ring: np.ndarray, place) -> tuple[np.ndarray, np.ndarray]:
+    """Points of the island after the placement and where the molding takes them: the island is the defect at its size
+    on the skin, so in the plane it is larger than the defect; the map ellipse to ellipse is affine (along and across
+    the axis of the defect). Ring and inner rings, so that the interior follows the same map and cannot fold."""
+    pts = [place(ring)]
+    for frac in (0.33, 0.66):
+        pts.append(placed_centre + (place(ring) - placed_centre) * frac)
+    pts.append(placed_centre[None])
+    pts = np.vstack(pts)
+    return pts, island_affine(pts, mast, axes)
+
+
+def island_affine(pts: np.ndarray, mast, axes: tuple[float, float]) -> np.ndarray:
+    """The affine map that takes the placed island (an ellipse of the size of the defect on the skin) onto the defect."""
+    ax = mast.axis
+    nrm = np.array([-ax[1], ax[0]])
+    a_s, b_s = axes
+    local = np.c_[(pts - mast.centre) @ ax, (pts - mast.centre) @ nrm]
+    scaled = local * np.array([ELLIPSE["a"] / a_s, ELLIPSE["b"] / b_s])
+    return mast.centre + scaled[:, :1] * ax + scaled[:, 1:] * nrm
 
 
 class Placement:
@@ -885,20 +906,18 @@ class Latissimus:
             f = np.ones(len(xy)) if frac is None else frac
             top = envelope - (0.0 if frac is None else 0.4)
             return np.c_[mxy, muscle_top + 0.3 + f * np.maximum(top - muscle_top - 0.3, 0.0)]
-        return np.c_[mxy, lift + np.maximum(rel, 0.3) * LD["muscleThin"]]
+        # under the skin flaps of the mastectomy wherever the envelope leaves little room (the edges of the pocket)
+        u = tr.u_of(mxy[:, 0], mxy[:, 1])
+        room = tr.sample(tr.skin, u, mxy[:, 1]) - tr.sample(tr.wall, u, mxy[:, 1]) - FLAP_MM - 0.5
+        hh = lift + np.maximum(rel, 0.3) * LD["muscleThin"]
+        return np.c_[mxy, np.where(hh > room, np.maximum(room, 0.3) * np.clip(hh / np.maximum(lift + 16.0, 1.0), 0.0, 1.0), hh)]
 
     def prepare_mold(self) -> None:
         """Thin plate offsets that shape the placed flap: the island onto the defect (it is larger in the plane, being
         the size of the defect on the curved skin), the outline of the flap into the pocket."""
         mast = self.mast
         ring = np.array(self.island.exterior.coords)[:-1]
-        placed = self.place(ring)
-        ax = mast.axis
-        nrm = np.array([-ax[1], ax[0]])
-        local = np.c_[(placed - mast.centre) @ ax, (placed - mast.centre) @ nrm]
-        a_s, b_s = self.island_axes
-        scaled = local * np.array([ELLIPSE["a"] / a_s, ELLIPSE["b"] / b_s])
-        target_island = mast.centre + scaled[:, :1] * ax + scaled[:, 1:] * nrm
+        placed, target_island = island_constraints(self.place(self.Ic)[0], mast, self.island_axes, ring, self.place)
         flap_xy = self.place(self.flat[self.flap_used][:, :2])
         outline = occupancy(flap_xy, 3.0)
         border = np.array(shapely.segmentize(outline.exterior, 8.0).coords)[:-1]
@@ -914,7 +933,13 @@ class Latissimus:
         self.mold_fixed, self.mold_offsets = fixed, offsets
 
     def mold(self, xy: np.ndarray) -> np.ndarray:
-        return xy + fg.harmonic_offsets(np.atleast_2d(xy), self.mold_fixed, self.mold_offsets, smoothing=2.0)
+        """Shaping of the placed flap: the island onto the defect (affine, exact), the rest by thin plate offsets."""
+        xy = np.atleast_2d(xy)
+        out = xy + fg.harmonic_offsets(xy, self.mold_fixed, self.mold_offsets, smoothing=0.5)
+        placed_island = Polygon(self.place(np.array(self.island.exterior.coords))).buffer(-0.3)
+        inside = shapely.contains_xy(placed_island, xy[:, 0], xy[:, 1])
+        out[inside] = island_affine(xy[inside], self.mast, self.island_axes)
+        return out
 
     # ---- back skin poses --------------------------------------------------------------------------------
     def back_frames(self) -> dict:
@@ -1167,7 +1192,6 @@ class Latissimus:
     def anchors(self, muscle, island, back, breast, vf, implant, back_scar, defect, tunnel) -> dict:
         k = self.k_of
         tr = self.trunk
-        flap = self.flat[self.flap_used]
 
         def nearest(points, target):
             return points[int(np.argmin(np.linalg.norm(points - target, axis=1)))]
@@ -1202,7 +1226,6 @@ class Latissimus:
     def measures(self, muscle, implant) -> dict:
         import trimesh
 
-        k = self.k_of
         tr = self.trunk
         area = trimesh.Trimesh(self.flap_pos, self.flap_idx, process=False).area / 2 / 100
         imp = self.implant
@@ -1213,7 +1236,7 @@ class Latissimus:
             "pedicleMm": round(self.pedicle_mm), "maxStretch": round(float(max(self.stretch)), 3),
             "muscleAreaCm2": round(area), "muscleMl": round(area * self.muscle_mm / 10), "muscleMm": round(self.muscle_mm, 1),
             "implantMl": round(vol), "islandFatMm": round(self.island_mm), "backScarMm": round(2 * (a_s + SCAR_EXTENSION)),
-            "takenPct": round(100 * float(self.flap_face.mean())),
+            "takenPct": round(100 * float(self.flap_face.mean())), "pulledInMm": round(self.pulled_in, 1),
         }
 
 
@@ -1396,7 +1419,7 @@ class Tram:
         gather = 1 - (1 - TRAM["gather"]) * np.sin(np.pi * kk)
         return self.place.at(xy, kk, gather), -np.pi * kk
 
-    def pose_flap(self, flat: np.ndarray, frame: str, base: np.ndarray | None = None, thick: np.ndarray | None = None) -> np.ndarray:
+    def pose_flap(self, flat: np.ndarray, frame: str, base: np.ndarray | None = None, thick: np.ndarray | None = None, skin: bool = False) -> np.ndarray:
         """Flap points (fat, skin, the rectus under the island, the vessels in it): lifted off the wall as they are
         raised, turned through the tunnel, shaped into the breast."""
         tr = self.trunk
@@ -1419,7 +1442,8 @@ class Tram:
         mxy = self.mold(xk)
         u = tr.u_of(mxy[:, 0], mxy[:, 1])
         envelope = tr.sample(tr.skin, u, mxy[:, 1]) + LIFT - tr.sample(tr.wall, u, mxy[:, 1])
-        in_defect = shapely.contains_xy(self.mast.ellipse.buffer(1.0), mxy[:, 0], mxy[:, 1])
+        # the skin of the island is the skin of the breast in the defect; elsewhere the flap lies under the skin flaps
+        in_defect = np.ones(len(mxy), bool) if skin else shapely.contains_xy(self.mast.ellipse.buffer(1.0), mxy[:, 0], mxy[:, 1])
         top = envelope - np.where(in_defect, 0.0, FLAP_MM)
         total = self.thickness_at(xy) if thick is None else thick
         f = np.clip(rel / np.maximum(total, 1.0), 0.0, 1.0)
@@ -1434,13 +1458,7 @@ class Tram:
     def prepare_mold(self) -> None:
         mast = self.mast
         ring = np.array(self.island.exterior.coords)[:-1]
-        placed = self.place(ring)
-        ax = mast.axis
-        nrm = np.array([-ax[1], ax[0]])
-        local = np.c_[(placed - mast.centre) @ ax, (placed - mast.centre) @ nrm]
-        a_s, b_s = self.island_axes
-        scaled = local * np.array([ELLIPSE["a"] / a_s, ELLIPSE["b"] / b_s])
-        target_island = mast.centre + scaled[:, :1] * ax + scaled[:, 1:] * nrm
+        placed, target_island = island_constraints(self.place(self.Ic)[0], mast, self.island_axes, ring, self.place)
         kept = largest(self.kept)
         border = np.array(shapely.segmentize(LineString(self.place(np.array(kept.exterior.coords))), 8.0).coords)[:-1]
         pocket = largest(mast.limits.buffer(-6.0).intersection(self.s.trunk.skin_region(0.0)))
@@ -1453,52 +1471,92 @@ class Tram:
         self.mold_offsets = np.r_[target_island - placed, target_border - border]
 
     def mold(self, xy: np.ndarray) -> np.ndarray:
-        return xy + fg.harmonic_offsets(np.atleast_2d(xy), self.mold_fixed, self.mold_offsets, smoothing=2.0)
+        """Shaping of the placed flap: the island onto the defect (affine, exact), the rest by thin plate offsets."""
+        xy = np.atleast_2d(xy)
+        out = xy + fg.harmonic_offsets(xy, self.mold_fixed, self.mold_offsets, smoothing=0.5)
+        placed_island = Polygon(self.place(np.array(self.island.exterior.coords))).buffer(-0.3)
+        inside = shapely.contains_xy(placed_island, xy[:, 0], xy[:, 1])
+        out[inside] = island_affine(xy[inside], self.mast, self.island_axes)
+        return out
 
     def pose_rectus(self, flat: np.ndarray, frame: str) -> np.ndarray:
         """The rectus of the pedicle and the vessels on it: fixed above the pivot (the costal margin), a band of its own
         length from the pivot to the flap (the carrier, which folds on itself when the flap turns), with the flap below."""
-        tr, T = self.trunk, TRAM
-        xy, h = flat[:, :2], flat[:, 2]
+        xy = flat[:, :2]
         k = self.k_of[frame]
         out = flat.copy()
         if k <= self.k_of["bainha"]:
             return out
         p0, top = self.pivot, self.top - 2.0
         carrier = (xy[:, 1] <= p0[1]) & (xy[:, 1] > top)
-        below = (xy[:, 1] <= top) & (xy[:, 1] > self.tau_cut)
+        # the meshes that move hold only the faces above the cut: their vertices below the island all go with it
+        below = xy[:, 1] <= top
         deep = self.rect_deep(xy)
-        rel = h - deep
         if below.any():
             fb = flat[below]
             out[below] = self.pose_flap(fb, frame, base=deep[below], thick=self.thickness_at(fb[:, :2]))
         if carrier.any():
-            # the carrier: its centre line from the pivot (heading down) to where it enters the flap
-            entry_rest = np.array([[self.rect_mid, top]])
-            if frame == "musculo":
-                end, heading = entry_rest[0], np.array([0.0, -1.0])
-            else:
-                end, turn = self.flap_xy(entry_rest, frame)
-                end = end[0]
-                heading = rot2(turn) @ np.array([0.0, -1.0])
-            start = np.array([self.rect_mid, p0[1]])
-            curve = hermite2(start, [0.0, -1.0], end, heading, self.carrier_len, 80)
-            seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(curve, axis=0), axis=1))]
-            t = (p0[1] - xy[carrier, 1]) / (p0[1] - top)
-            sarc = t * seg[-1]
+            out[carrier] = self.pose_carrier(flat[carrier], frame, deep[carrier])
+        return out
+
+    def pose_carrier(self, flat: np.ndarray, frame: str, deep: np.ndarray) -> np.ndarray:
+        """The rectus between the costal margin and the flap. It is longer than the way from the margin to the pocket, so
+        it does not turn in the plane (a band 10 cm wide cannot): its upper part stays in its bed, it folds on itself
+        and its lower part comes back up over the upper part with a half twist about its own axis, which turns its
+        width and keeps its outer face out, as the flap is turned 180 degrees. Near the flap it follows the flap."""
+        xy, h = flat[:, :2], flat[:, 2]
+        p0, top = self.pivot[1], self.top - 2.0
+        L = self.carrier_len
+        t = np.clip((p0 - xy[:, 1]) / (p0 - top), 0.0, 1.0)
+        s_ = t * L
+        across = xy[:, 0] - self.rect_mid
+        rel = h - deep
+        if frame == "musculo":
+            return np.c_[xy, h + 14.0 * smooth01(t / 0.3)]
+        entry_rest = np.array([[self.rect_mid, top]])
+        end, turn = self.flap_xy(entry_rest, frame)
+        end = end[0]
+        heading = rot2(turn) @ np.array([0.0, -1.0])
+        progress = min(abs(turn) / np.pi, 1.0)  # how far the flap has turned: the fold forms as it turns
+        # where it folds: the upper leg down from the margin, the lower leg back up to the entry of the flap
+        rise = max(p0 - end[1], -40.0)  # how far the entry is below the margin
+        l1 = float(np.clip((L + rise) / 2.0, 25.0, L - 25.0))
+        fold = np.array([self.rect_mid, p0 - l1])
+        leg2 = L - l1
+        curve = hermite2(fold, [0.0, 1.0], end, heading, leg2, 80)
+        seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(curve, axis=0), axis=1))]
+        thick = float(np.quantile(np.maximum(rel, 0.0), 0.9)) + 3.0
+        out = np.empty((len(flat), 3))
+        upper = s_ <= l1
+        # upper leg: in its bed, raised off the posterior sheath by a few mm
+        out[upper] = np.c_[xy[upper], h[upper] + 3.0 * smooth01(t[upper] / 0.1)]
+        lo = ~upper
+        if lo.any():
+            u = (s_[lo] - l1) / max(leg2, 1e-6)
+            sarc = u * seg[-1]
             cpt = np.stack([np.interp(sarc, seg, curve[:, c]) for c in range(2)], 1)
             tang = np.stack([np.interp(sarc, seg, np.gradient(curve[:, c])) for c in range(2)], 1)
             tang /= np.maximum(np.linalg.norm(tang, axis=1, keepdims=True), 1e-9)
-            normal = np.c_[-tang[:, 1], tang[:, 0]]
-            across = xy[carrier, 0] - self.rect_mid
-            pos = cpt + across[:, None] * normal
-            lifted = smooth01(t / 0.15)
-            hh = (1 - lifted) * h[carrier] + lifted * (rel[carrier] + 3.0)
-            if frame == "musculo":
-                pos = xy[carrier]
-                hh = h[carrier] + 10.0 * smooth01(t / 0.3) - deep[carrier] * smooth01(t / 0.3)
-            out[carrier] = np.c_[pos, hh]
-        return out
+            left = np.c_[-tang[:, 1], tang[:, 0]]
+            psi = np.pi * smooth01(u) * progress
+            # a twisted muscle rolls into a narrower bundle: its width shrinks to a third half way through the twist
+            narrow = 1.0 - 0.65 * np.sin(psi)
+            a_ = across[lo] * narrow
+            width = float(np.abs(across).max()) * narrow
+            base = deep[lo] + thick + 3.0 + width * np.abs(np.sin(psi))
+            # after the fold the width lies along -left and the outer face looks in; the twist turns both over
+            pos = cpt + (a_ * np.cos(psi) + rel[lo] * np.sin(psi))[:, None] * (-left)
+            hh = base + a_ * np.sin(psi) - rel[lo] * np.cos(psi)
+            out[lo] = np.c_[pos, hh]
+            # a short round fold where the legs meet
+            near = u < 0.08
+            if near.any():
+                w = smooth01(u[near] / 0.08)
+                out[np.nonzero(lo)[0][near], 2] = (1 - w) * (h[lo][near] + 3.0 + (thick + 3.0) * smooth01(u[near] / 0.04)) + w * out[np.nonzero(lo)[0][near], 2]
+        # the last part goes over into the flap: there it follows the map of the flap itself
+        as_flap = self.pose_flap(flat, frame, base=deep, thick=self.thickness_at(xy))
+        b = smooth01((t - 0.7) / 0.3)[:, None]
+        return (1 - b) * out + b * as_flap
 
     # ---- skin of the abdomen: raised upper flap and the closure ---------------------------------------------------
     def abdomen_frames(self) -> dict:
@@ -1555,7 +1613,7 @@ class Tram:
         a = self.abd
         discard = lambda flat: np.c_[flat[:, :2] + T["discard"], flat[:, 2] + 70.0]  # noqa: E731
 
-        def flap_frames(flat, discard_at=None):
+        def flap_frames(flat, discard_at=None, skin=False):
             base = self.rect_deep(flat[:, :2])
             thick = self.thickness_at(flat[:, :2])
             out = []
@@ -1563,19 +1621,34 @@ class Tram:
                 if discard_at is not None and k >= k_of[discard_at]:
                     out.append(tr.model(discard(flat)))
                 else:
-                    out.append(tr.model(self.pose_flap(flat, f, base=base, thick=thick)))
+                    out.append(tr.model(self.pose_flap(flat, f, base=base, thick=thick, skin=skin)))
             return out
 
-        # skin of the abdomen round the island (the upper flap moves); the part of it that comes over the umbilicus
+        # the rectus of the pedicle (its frames are needed by the skins: folded at the costal margin, it lifts them)
+        rc = self.r_flat[self.r_idx].mean(1)[:, 1]
+        moving = rc > self.tau_cut
+        mp, mi, mused = fg.compact(self.r_pos, self.r_idx, moving)
+        mflat = self.r_flat[mused]
+        rectus_frames = [tr.model(self.pose_rectus(mflat, f)) for f in frames]
+        # skin of the abdomen round the island (the upper flap moves); the part of it that comes over the umbilicus. Once
+        # closed it goes over the folded muscle: the bulge of the epigastrium of the pedicled TRAM
         ab = self.abdomen_frames()
         keep = np.isin(a["labels"], ["skin", "upper", "navel"])
         ab_model = {p: tr.model(ab[p]) for p in ("rest", "raised", "closed")}
         pose_ab = ["rest", "raised", "raised", "raised", "raised", "raised", "raised", "raised", "raised", "closed", "closed"]
+        ab_frames = []
+        for k, pose in enumerate(pose_ab):
+            # from the elevation of the muscle on, the skin goes over it where it comes up under it
+            if k >= k_of["musculo"]:
+                ab_frames.append(drape(tr, ab_model[pose], raster_top(tr, rectus_frames[k]), 4.0, ab["region"] != "navel"))
+            else:
+                ab_frames.append(ab_model[pose])
+        ab_model["closed"] = ab_frames[k_of["doadora"]]
         cx = ab["closed"][:, :2]
         centre = cx[a["tri"]].mean(1)
         window = keep & (a["labels"] == "upper") & shapely.contains_xy(self.navel_disc.buffer(1.0), centre[:, 0], centre[:, 1])
-        writer.add("recon_tram_abdomen_skin", sid("abdomen-skin"), "Pele do abdome", COLORS["skin"], 1.0, "skin", a["tri"][keep & ~window], [ab_model[p] for p in pose_ab])
-        writer.add("recon_tram_abdomen_window", sid("abdomen-window"), "Pele do abdome (sobre o umbigo)", COLORS["skin"], 1.0, "skin", a["tri"][window], [ab_model[p] for p in pose_ab])
+        writer.add("recon_tram_abdomen_skin", sid("abdomen-skin"), "Pele do abdome", COLORS["skin"], 1.0, "skin", a["tri"][keep & ~window], ab_frames)
+        writer.add("recon_tram_abdomen_window", sid("abdomen-window"), "Pele do abdome (sobre o umbigo)", COLORS["skin"], 1.0, "skin", a["tri"][window], ab_frames)
         # skin of the island of the abdomen: the inset island, the rest of the kept zones (de-epithelialised), the trimmed
         flat_rest = np.c_[a["pts"], a["h"]]
         for name, labels, discard_at, label in (
@@ -1588,7 +1661,7 @@ class Tram:
             if not faces.any():
                 continue
             fp, ft, used = fg.compact(np.arange(len(a["pts"]))[:, None].astype(float), a["tri"], faces)
-            writer.add(f"recon_tram_{name.replace('-', '_')}", sid(name), label, COLORS["skin"], 1.0, "skin", ft, flap_frames(flat_rest[used], discard_at))
+            writer.add(f"recon_tram_{name.replace('-', '_')}", sid(name), label, COLORS["skin"], 1.0, "skin", ft, flap_frames(flat_rest[used], discard_at, skin=name == "island"))
         # fat of the flap by zones
         for z, slab_ in self.slabs.items():
             discard_at = "ilha" if z == "zone-4" else "insercao" if z == "zone-3-tip" else None
@@ -1596,24 +1669,32 @@ class Tram:
                      "zone-3-tip": "Ponta da zona III (descartada)", "zone-4": "Zona IV (descartada)"}[z]
             writer.add(f"recon_tram_{z.replace('-', '_')}", sid(z), label, ZONE_COLORS[z], 1.0, "fat", slab_["tri"], flap_frames(np.c_[slab_["pts"], slab_["h"]], discard_at))
         # the rectus of the pedicle (and what stays of it below the cut), the vessels on it
-        rc = self.r_flat[self.r_idx].mean(1)[:, 1]
-        moving = rc > self.tau_cut
-        mp, mi, mused = fg.compact(self.r_pos, self.r_idx, moving)
-        mflat = self.r_flat[mused]
-        writer.add("recon_tram_rectus", sid("rectus"), "Reto do abdome (pedículo)", COLORS["muscle"], 1.0, "muscle", mi, [tr.model(self.pose_rectus(mflat, f)) for f in frames])
+        writer.add("recon_tram_rectus", sid("rectus"), "Reto do abdome (pedículo)", COLORS["muscle"], 1.0, "muscle", mi, rectus_frames)
         sp, si, _ = fg.compact(self.r_pos, self.r_idx, ~moving)
         writer.add("recon_tram_rectus_stays", sid("rectus-stays"), "Reto do abdome (abaixo da secção)", COLORS["muscle-cut"], 1.0, "muscle", si, [sp] * n)
-        for name, label, color, tissue in (("bp43_FJ1971", "Artéria epigástrica superior", COLORS["artery"], "artery"), ("bp43_FJ3530", "Veia epigástrica superior", COLORS["vein"], "vein")):
+        # the epigastric vessels as tubes along their axes (taken from the BodyParts3D meshes): the axis goes through
+        # the map of the rectus and the tube is made again at every frame, so the fold of the muscle bends them
+        # without tearing their walls
+        for name, label, color, tissue, radius in (("bp43_FJ1971", "Artéria epigástrica superior", COLORS["artery"], "artery", 1.3),
+                                                   ("bp43_FJ3530", "Veia epigástrica superior", COLORS["vein"], "vein", 1.6)):
             vp, vi = fg.flap_mesh(name)
-            writer.add(f"recon_tram_{name}", sid("superior-epigastric"), label, color, 1.0, tissue, vi, [tr.model(self.pose_rectus(tr.flat(vp), f)) for f in frames])
-        for name, label, color, tissue in (("bp43_FJ3511", "Artéria epigástrica inferior profunda", COLORS["artery"], "artery"), ("bp43_FJ3512", "Veia epigástrica inferior profunda", COLORS["vein"], "vein")):
+            axis, _ = fg.centerline(vp, vi, 2.0, start=vp[np.argmax(vp[:, 1])])
+            axis = fg.smooth_polyline(axis, 2.0)
+            tf, faces = tube_frames([[tr.model(self.pose_rectus(tr.flat(axis), f))] for f in frames], radius)
+            writer.add(f"recon_tram_{name}", sid("superior-epigastric"), label, color, 1.0, tissue, faces, tf)
+        for name, label, color, tissue, radius in (("bp43_FJ3511", "Artéria epigástrica inferior profunda", COLORS["artery"], "artery", 1.4),
+                                                   ("bp43_FJ3512", "Veia epigástrica inferior profunda", COLORS["vein"], "vein", 1.7)):
             vp, vi = fg.flap_mesh(name)
-            vf = tr.flat(vp)
-            up = vf[vi].mean(1)[:, 1] > self.tau_cut
-            up_p, up_i, up_used = fg.compact(vp, vi, up)
-            writer.add(f"recon_tram_{name}_flap", sid("inferior-epigastric"), label + " (no retalho)", color, 1.0, tissue, up_i, [tr.model(self.pose_rectus(vf[up_used], f)) for f in frames])
-            lo_p, lo_i, _ = fg.compact(vp, vi, ~up)
-            writer.add(f"recon_tram_{name}_stays", sid("inferior-epigastric-stays"), label + " (ligada)", COLORS["artery-cut"] if tissue == "artery" else color, 1.0, tissue, lo_i, [lo_p] * n)
+            axis, _ = fg.centerline(vp, vi, 2.0, start=vp[np.argmin(vp[:, 1])])
+            axis = fg.smooth_polyline(axis, 2.0)
+            af = tr.flat(axis)
+            cut = int(np.argmax(af[:, 1] > self.tau_cut + 4.0))
+            up, low = af[cut:], af[: max(cut - 1, 2)]
+            tf, faces = tube_frames([[tr.model(self.pose_rectus(up, f))] for f in frames], radius)
+            writer.add(f"recon_tram_{name}_flap", sid("inferior-epigastric"), label + " (no retalho)", color, 1.0, tissue, faces, tf)
+            tf, faces = tube_frames([[tr.model(low)]] * n, radius)
+            writer.add(f"recon_tram_{name}_stays", sid("inferior-epigastric-stays"), label + " (ligada)", COLORS["artery-cut"] if tissue == "artery" else color, 1.0, tissue, faces, tf)
+        # the ligatures: a ring round each end of the cut (on the stump and on the flap)
         # perforators of the periumbilical rows (schematic): from the deep surface of the rectus to under the skin
         perf_lines = []
         for sx in (self.rect_mid - 30.0, self.rect_mid + 12.0):
@@ -1649,6 +1730,12 @@ class Tram:
             ("bp43_FJ3615", "contra-epigastric", "Epigástricas do outro lado", "vein"),
         ):
             vp, vi = fg.flap_mesh(name)
+            if name == "bp43_FJ1452M":
+                # the mesh of the external oblique (BodyParts3D) goes on over the rectus as its aponeurosis, which is the
+                # anterior sheath: drawn by the sheath, cut here at the semilunar line, so it is not taken for muscle in
+                # the bed of the rectus once the sheath is opened
+                qc = tr.chart(vp[vi].mean(1))
+                vp, vi, _ = fg.compact(vp, vi, tr.sigma_of(qc[:, 0], qc[:, 1]) > TRAM["zoneBorder"] + 2.0)
             if tissue in ("muscle", "bone") and len(vi) > 5000:
                 vp, vi = fg.decimate(vp, vi, 5000)
             color = {"muscle": COLORS["muscle"], "fascia": "#e5e7eb", "bone": "#e8e2d0", "ligament": "#f1e6c8", "artery": COLORS["artery"], "vein": COLORS["vein"]}[tissue]
@@ -1664,10 +1751,11 @@ class Tram:
             if k < k_of["tunel"]:
                 breast.append(bed)
             elif k == k_of["tunel"]:
-                top = raster_top(tr, np.vstack([m["full"][k] for m in fat_meshes]))
+                top = raster_top(tr, np.vstack([m["full"][k] for m in fat_meshes] + [rectus_frames[k]]))
                 breast.append(drape(tr, bed, top, FLAP_MM, movable))
             else:
-                breast.append(envelope)
+                # the envelope, over the muscle where it comes in at the lower border
+                breast.append(drape(tr, envelope, raster_top(tr, rectus_frames[k]), 4.0, movable))
         writer.add("recon_tram_breast_skin", sid("skin"), "Pele da mama (retalhos da mastectomia)", COLORS["skin"], 1.0, "skin", mast.tri[mkeep], breast)
         self.add_markings(writer, n, sid, ab_model)
         points = self.anchors(writer, ab_model)
@@ -1688,8 +1776,22 @@ class Tram:
         cut = LineString([(self.rect_mid - 2.0, self.pivot[1] - 4.0), (self.rect_mid - 2.0, self.top - 6.0)])
         pts, tri = fg.chart_mesh(sheet, [strip.exterior, cut], 4.0)
         labels = fg.label_faces(pts, tri, [("strip", strip), ("sheet", None)])
+        # height over the wall: just over the aponeurosis of the external oblique, which the mesh of the muscle
+        # (BodyParts3D) carries over the rectus and which makes the anterior sheath there
+        from scipy.ndimage import gaussian_filter, maximum_filter
+
+        eo_top = raster_top(tr, fg.flap_mesh("bp43_FJ1452M")[0], dilate=1)
+        need = np.maximum(np.where(np.isfinite(eo_top), eo_top - tr.wall + 0.7, 0.8), 0.8)
+        need = np.maximum(gaussian_filter(maximum_filter(need, size=5), 1.0), need)
+
+        def lift(q: np.ndarray) -> np.ndarray:
+            q = q.copy()
+            uv = tr.uv(q[:, 0], q[:, 1])
+            q[:, 2] = tr.sample(need, uv[:, 0], uv[:, 1])
+            return q
+
         h = 0.8
-        flat = np.c_[pts, np.full(len(pts), h)]
+        flat = lift(np.c_[pts, np.full(len(pts), h)])
         # the strip with the flap
         sp, st, used = fg.compact(np.arange(len(pts))[:, None].astype(float), tri, labels == "strip")
         base = np.zeros(len(used))
@@ -1701,17 +1803,38 @@ class Tram:
         r = flat[rused]
         medial = r[:, 0] < self.rect_mid - 2.0
         mid = (s0 + s1) / 2
+        # opened: above the strip each leaf is drawn aside off the bed of the muscle (to its medial and lateral borders),
+        # from 20 mm below the end of the incision at the costal margin
         opened = r.copy()
         above = r[:, 1] > self.top - 6.0
-        opened[:, 0] += np.where(above, np.where(medial, -14.0, 14.0) * smooth01((self.pivot[1] - 6.0 - r[:, 1]) / 20.0), 0.0)
+        slit = self.rect_mid - 2.0
+        bed = (self.rect_mid - 36.0, self.rect_mid + 32.0)
+        aside = np.where(medial, x0 + (r[:, 0] - x0) * (bed[0] - x0) / (slit - x0), x1 - (x1 - r[:, 0]) * (x1 - bed[1]) / (x1 - slit))
+        w = np.where(above, smooth01((self.pivot[1] - 6.0 - r[:, 1]) / 20.0), 0.0)
+        opened[:, 0] += w * (aside - r[:, 0])
         closed = r.copy()
         gap_side = (r[:, 1] <= self.top - 6.0) & (r[:, 1] >= self.bottom + 6.0)
         closed[:, 0] = np.where(gap_side & medial, x0 + (r[:, 0] - x0) * (mid - x0) / max(s0 - x0, 1.0), closed[:, 0])
         closed[:, 0] = np.where(gap_side & ~medial, x1 - (x1 - r[:, 0]) * (x1 - mid) / max(x1 - s1, 1.0), closed[:, 0])
+        opened, closed = lift(opened), lift(closed)
         poses = [r if k < k_of["bainha"] else opened if k < k_of["doadora"] else closed for k in range(n)]
         writer.add("recon_tram_sheath", sid("sheath"), "Bainha anterior do reto", COLORS["sheath"], 1.0, "fascia", rt, [tr.model(p) for p in poses])
+        # the bed of the muscle: the posterior sheath down to the arcuate line (a third of the way from the umbilicus to
+        # the pubis), below it only the transversalis fascia; just under the deep surface of the rectus
+        self.arcuate = self.navel[1] - (self.navel[1] - self.pubis[1]) / 3.0
+        floor = self.rect_region.buffer(4.0).intersection(box(-50.0, self.tau_cut - 4.0, 200.0, self.pivot[1]))
+        arcuate = LineString([(-60.0, self.arcuate), (220.0, self.arcuate)])
+        fp_, ft_ = fg.chart_mesh(floor, [arcuate], 4.0)
+        fl = fg.label_faces(fp_, ft_, [("posterior", box(-60.0, self.arcuate, 220.0, 100.0)), ("transversalis", None)])
+        fh = np.c_[fp_, self.rect_deep(fp_) - 0.8]
+        for part, label, color in (("posterior", "Bainha posterior do reto (leito do músculo)", COLORS["sheath"]),
+                                   ("transversalis", "Fáscia transversal (abaixo da linha arqueada)", "#e7d9bf")):
+            pp, pt, used = fg.compact(fh, ft_, fl == part)
+            writer.add(f"recon_tram_{part}_sheath" if part == "posterior" else "recon_tram_transversalis", sid("posterior-sheath" if part == "posterior" else "transversalis"),
+                       label, color, 1.0, "fascia", pt, [tr.model(pp)] * n)
         # the sheath sutured (or a mesh): a line where its edges meet
-        line = np.c_[np.full(40, mid), np.linspace(self.top - 6.0, self.bottom + 6.0, 40), np.full(40, h + 0.6)]
+        line = lift(np.c_[np.full(40, mid), np.linspace(self.top - 6.0, self.bottom + 6.0, 40), np.zeros(40)])
+        line[:, 2] += 0.6
         tf, faces = tube_frames([[tr.model(line)]] * n, 0.8)
         writer.add("recon_tram_sheath_suture", sid("sheath-suture"), "Sutura da bainha anterior", COLORS["suture"], 1.0, "marking", faces, tf)
 
@@ -1786,6 +1909,8 @@ class Tram:
             "perforators": centre_of("perforators", "bainha"),
             "diea-cut": centre_of("inferior-epigastric-stays", "bainha"),
             "sheath": centre_of("sheath", "bainha"),
+            "posterior-sheath": self.bare_bed(mesh["rectus"]["full"][k["musculo"]]),
+            "arcuate": tr.model(np.c_[[[self.rect_mid, self.arcuate - 12.0]], [self.rect_deep(np.array([[self.rect_mid, self.arcuate - 12.0]]))[0] - 0.5]])[0],
             "tunnel": self.tunnel_line[len(self.tunnel_line) // 2][0],
             "abdominal-scar": abd_scar[len(abd_scar) // 2],
             "navel-scar": navel_scar[0],
@@ -1793,6 +1918,19 @@ class Tram:
             "upper-flap": centre_of("abdomen-skin", "incisao"),
         }
         return {name: r3(np.asarray(v) * MM) for name, v in out.items()}
+
+    def bare_bed(self, rectus: np.ndarray) -> np.ndarray:
+        """The point of the bed of the rectus (above the strip of the sheath) farthest from the muscle as it is posed:
+        where the posterior sheath is bare."""
+        from scipy.spatial import cKDTree
+
+        tr = self.trunk
+        q = tr.chart(rectus)
+        foot = np.c_[tr.sigma_of(q[:, 0], q[:, 1]), q[:, 1]]
+        gx, gy = np.meshgrid(np.arange(self.rect_mid - 28.0, self.rect_mid + 25.0, 3.0), np.arange(self.top + 4.0, self.pivot[1] - 20.0, 3.0))
+        cand = np.c_[gx.ravel(), gy.ravel()]
+        best = cand[int(np.argmax(cKDTree(foot).query(cand)[0]))]
+        return tr.model(np.c_[[best], [self.rect_deep(best[None])[0] - 0.5]])[0]
 
     def measures(self, writer) -> dict:
         tr = self.trunk
@@ -1885,6 +2023,7 @@ TRAM_LABELS = {
     "superior-epigastric": "Vasos epigástricos superiores", "inferior-epigastric": "Vasos epigástricos inferiores (no retalho)",
     "inferior-epigastric-stays": "Vasos epigástricos inferiores (ligados)", "perforators": "Perfurantes periumbilicais",
     "sheath": "Bainha anterior do reto", "sheath-strip": "Faixa da bainha (com o retalho)", "sheath-suture": "Sutura da bainha",
+    "posterior-sheath": "Bainha posterior do reto", "transversalis": "Fáscia transversal (abaixo da linha arqueada)",
     "contra-rectus": "Reto do abdome do outro lado", "linea-alba": "Linha alba", "pyramidalis": "Piramidais", "external-oblique": "Oblíquos externos",
     "pelvis": "Osso do quadril do outro lado", "inguinal": "Ligamentos inguinais", "iliac": "Vasos ilíacos externos",
     "contra-epigastric": "Epigástricas do outro lado", "marking": "Marcação", "incision": "Incisões", "zones": "Zonas e ilha da inserção",

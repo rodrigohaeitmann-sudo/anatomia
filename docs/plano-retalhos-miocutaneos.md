@@ -11,7 +11,7 @@ O usuário deve ver, passo a passo, o que se marca, o que se corta, o que sai, o
 
 Os músculos e o subcutâneo são remodelados com a mesma maquinaria da mama (carta da mama, superfície de base e mapas). A forma final da mama reconstruída é o envelope cutâneo da própria mama, preenchido pelo retalho.
 
-**Situação:** este é o plano. Ele é aplicado em seguida, na mesma rodada. Os números depois da implementação ficam em "Resultado medido" no fim.
+**Situação:** implementado. Os números medidos estão em "Resultado medido" (seção 6) e o que mudou durante a implementação, em "O que mudou em relação ao plano" (seção 7).
 
 ## 1. A paciente simulada
 
@@ -112,7 +112,7 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
   - Vai do púbis (crista e sínfise) às 5ª a 7ª cartilagens costais e ao processo xifoide.
   - Tem três interseções tendíneas (uma na altura do umbigo).
 - **Bainha.**
-  - Acima da linha arqueada (cerca de metade do caminho do umbigo ao púbis), a aponeurose do oblíquo interno se divide em lâminas anterior e posterior.
+  - Acima da linha arqueada, a aponeurose do oblíquo interno se divide em lâminas anterior e posterior. A posição da linha varia: os textos a põem de um terço à metade do caminho entre o púbis e o umbigo; num estudo de cadáveres ela ficou, em média, a 70% da distância da sínfise ao umbigo (Loukas, 2008).
   - Abaixo dela, todas as aponeuroses passam à frente; atrás do músculo fica só a fáscia transversal.
 - **Irrigação.** Tipo III de Mathes–Nahai: dois pedículos dominantes.
   - **Epigástrica superior.** É a continuação da torácica interna e entra na bainha atrás da 7ª cartilagem.
@@ -145,7 +145,7 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 5. **Músculo.** O reto é levantado da bainha posterior até o rebordo costal, com os vasos epigástricos superiores na face profunda.
 6. **Túnel e rotação.**
    - O retalho passa pelo túnel.
-   - Com pedículo ipsilateral, faz uma transposição direta de 180° sobre o rebordo costal. A zona III, mais bem perfundida, fica em cima.
+   - Com pedículo ipsilateral, faz uma transposição direta de 180° no plano sobre o rebordo costal: a borda do umbigo fica embaixo, junto ao sulco, e a zona III, lateral no abdome, fica medial na mama.
    - O pedículo contralateral é a alternativa, com arco mais suave do músculo.
 7. **Inserção.**
    - Desepiteliza-se tudo, exceto a ilha que repõe a pele do defeito.
@@ -258,15 +258,15 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 
 ## 4. Conferências
 
-`scripts/hybrid/check_flaps.py`:
+`scripts/hybrid/check_flaps.py` (`npm run check:flaps`) lê o que o app carrega (o JSON e os binários) e falha quando um limite é passado:
 
-- **Pedículos.** A distância da origem ao hilo, em todos os quadros, é ≤ ao comprimento livre do pedículo (GD) ou do músculo (TRAM).
-- **Malhas de pele.** Nenhum triângulo invertido em nenhum quadro.
-- **Encaixe da ilha.** A ilha cobre o defeito no resultado: borda a ≤ 2 mm da borda da elipse.
-- **Penetração.** Nenhum vértice dos retalhos fica mais de 2 mm dentro da parede.
-  - Nos quadros finais, nada fica fora da pele.
-- **Volumes.** São relatados os de peça, monte reconstruído, implante, retalho, zonas e descarte.
-- **Buracos.** A pele do tronco fecha sem frestas em volta de cada malha de pele (sobreposição ≥ 1,5 mm).
+- **Pedículo do grande dorsal.** A distância da origem ao hilo, em todos os quadros, é ≤ 1,01 × o comprimento livre.
+- **Malhas de pele.** Triângulos invertidos em relação ao repouso, pela direção para fora do tronco, ≤ 1% de cada malha nos quadros em que a pele está deitada no corpo (os retalhos erguidos e as peças em movimento não entram).
+- **Encaixe da ilha.** No resultado, a borda da ilha fica a ≤ 2 mm da borda do defeito (p95).
+- **Tecido.** No resultado, nenhum vértice da gordura, do músculo ou do implante fica mais de 1,5 mm fora da pele da mama, e o implante não entra mais de 2 mm na parede.
+  - O reto do TRAM, dobrado sobre o rebordo, levanta a pele: ele é conferido contra a pele como posta sobre ele (inserção, fechamento e resultado), e contra a pele do tronco onde nenhuma pele da sequência o cobre.
+- **Volumes e comprimentos.** São gravados com os dados e mostrados nos textos.
+- **Buracos.** Cada malha de pele passa 1,5 mm da borda do buraco aberto na pele do tronco, para não deixar frestas.
 
 ## 5. Limitações (ditas no texto)
 
@@ -278,7 +278,62 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 - **Estruturas de outro corpo.** Reto do abdome, oblíquos e transverso vêm do Z-Anatomy, outro corpo, encaixado por similaridade. A conferência mede a folga deles para a pele HRA.
 - **Esquemas.** As perfurantes e os ramos intramusculares são esquemáticos (trajetos típicos da literatura).
 
-## 6. Referências
+## 6. Resultado medido
+
+Os números são do modelo, gravados em `src/data/reconstructionSteps.json`.
+
+**Mastectomia** (6 passos, 0,9 MB de dados)
+
+- Elipse de 17,5 × 6,1 cm, inclinada 14° para a axila; 77 cm² de pele saem com a peça.
+- Peça: a mama inteira, 427 mL, com a fáscia do peitoral maior.
+- Retalhos com 6 mm de subcutâneo.
+- Fechamento sem reconstrução: cicatriz de 15,3 cm (a elipse mais 12 mm em cada ponta, para não deixar orelhas).
+
+**Grande dorsal com implante** (10 passos, 1,1 MB)
+
+- Ilha do tamanho do defeito, 17,5 × 6,1 cm, oblíqua ao longo da borda anterior do músculo; giro de 77° até a loja.
+- Pedículo livre de 86 mm. A maior razão entre a distância origem–hilo e o comprimento livre, em todos os quadros, foi 1,0.
+- Músculo levado: 58% do grande dorsal, 479 cm², 303 mL, 6,3 mm de espessura média. O tendão fica no úmero.
+- Implante: 148 mL. Gordura sob a ilha: 26 mm.
+- Cicatriz do dorso: 19,9 cm.
+
+**TRAM pediculado** (10 passos, 2,6 MB)
+
+- Lente de 45,4 × 14,0 cm (de espinha a espinha, medida na superfície), com 4,5 cm de gordura abaixo do umbigo.
+- Retalho inteiro: 1.586 mL.
+  - Zona I: 672 mL; zona II: 599 mL; zona III: 72 mL, mais a ponta de 53 mL, aparada; zona IV: 190 mL, descartada.
+  - Restam 1.343 mL, cerca de 3 vezes a mama retirada.
+- Reto entre o rebordo costal e a ilha: 148 mm. Transposição de 180°.
+- Avanço do retalho abdominal superior: 14 cm.
+
+**Conferências** (`npm run check:flaps`, todas passam)
+
+| Conferência | Limite | Resultado |
+|---|---|---|
+| Pele invertida (pior quadro de cada malha) | ≤ 1% | mastectomia 0,16%; dorso 0,59%; ilha do GD 0,07%; abdome 0,21%; ilha do TRAM 0,11%; pele da mama 0,01% |
+| Pedículo do grande dorsal | ≤ 1,01 | 1,0 |
+| Borda da ilha à borda do defeito (p95) | ≤ 2 mm | GD 1,4 mm; TRAM 1,1 mm |
+| Retalho fora da pele da mama, no resultado | ≤ 1,5 mm | nenhum vértice fora (GD: músculo, gordura e implante; TRAM: zonas I a III) |
+| Reto do TRAM fora da pele sobre ele | ≤ 1,5 mm | 4,0 mm abaixo na inserção; 2,0 mm abaixo no fechamento e no resultado |
+| Implante dentro da parede | ≤ 2 mm | não entra |
+
+Os triângulos invertidos que sobram são lascas degeneradas nas pontas dos fechamentos.
+
+## 7. O que mudou em relação ao plano
+
+- **Limite lateral da mastectomia.** Ficou em u = 246 mm na carta do tronco, um pouco antes da borda anterior do grande dorsal. Além dele, a mama lateral pende sobre a parede e a pele não se deixa planificar na carta.
+- **Ilha do grande dorsal.** A ilha que cai exatamente no defeito, com o hilo ao alcance do pedículo, ficou oblíqua, quase vertical, ao longo da borda anterior do músculo (e não transversa, na linha do sutiã). O giro é de 77°.
+- **Músculo do grande dorsal.** É levado na medida da loja, 58% do músculo, dividido distalmente. O tendão fica preso ao úmero; a liberação parcial é citada no texto.
+- **Grande dorsal na região lombar.** Sob a pele do HRA, o grande dorsal do BodyParts3D atravessa a pele lombar em até 20,7 mm. Nos passos ele é recolhido para dentro dela.
+- **Parede abdominal.** Os retos, os oblíquos e os vasos epigástricos vêm de corpos masculinos e ficavam cerca de 10 cm atrás da pele feminina. Um campo radial suave os traz para a frente, deixando 31 a 40 mm de subcutâneo (`CONFORM` em `build_flap_sources.py`).
+- **Reto do TRAM.** O trecho entre o rebordo e a ilha (148 mm) é mais longo que o caminho até a loja. No modelo, ele fica no leito, dobra-se e volta por cima com meia torção, estreitando-se como um feixe. A pele do epigástrio e a da mama são postas sobre a dobra: é o abaulamento epigástrico do TRAM pediculado. O plano previa só a rotação no plano, que esticava as faces do músculo.
+- **Vasos epigástricos.** São tubos refeitos em cada quadro ao longo da linha central das malhas do BodyParts3D. As malhas inteiras rasgavam na dobra do músculo.
+- **Leito do reto.** Foram acrescentadas a bainha posterior, acima da linha arqueada, e a fáscia transversal, abaixo dela. O oblíquo externo do BodyParts3D segue sobre o reto como aponeurose; nos passos do TRAM ele é cortado na linha semilunar, e a aponeurose é a bainha anterior desenhada. Sem isso, o leito aparecia vermelho, como se ainda tivesse músculo.
+- **Fechamento do abdome.** É feito coluna a coluna: o retalho superior estica até a incisão suprapúbica. O mapa harmônico de valor médio do plano invertia 763 triângulos; restam 12 lascas.
+- **Volume do TRAM.** Com 4,5 cm de gordura, as zonas I a III somam mais de 3 vezes a mama. O texto diz isso. No modelo, elas são comprimidas no envelope em vez de aparadas.
+- **Pele invertida.** O plano pedia nenhum triângulo invertido. Sobram até 0,6% por malha, em lascas nas pontas dos fechamentos, e a conferência só olha os quadros em que a pele está deitada no corpo.
+
+## 8. Referências
 
 - Hartrampf CR, Scheflan M, Black PW. Breast reconstruction with a transverse abdominal island flap. *Plast Reconstr Surg* 1982;69:216–225.
 - Scheflan M, Dinner MI. The transverse abdominal island flap: indications, contraindications, results, and complications. *Ann Plast Surg* 1983;10:24–35.
@@ -290,6 +345,7 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 - Bostwick J, Vasconez LO, Jurkiewicz MJ. Breast reconstruction after a radical mastectomy. *Plast Reconstr Surg* 1978;61:682–693.
 - Tobin GR et al. The intramuscular neurovascular anatomy of the latissimus dorsi muscle. *Plast Reconstr Surg* 1981;67:637–641.
 - Mathes SJ, Nahai F. Classification of the vascular anatomy of muscles. *Plast Reconstr Surg* 1981;67:177–187.
+- Loukas M et al. Arcuate line of the rectus sheath: clinical approach. *Anat Sci Int* 2008: https://link.springer.com/article/10.1111/j.1447-073X.2007.00221.x
 - Daltrey I et al. Randomized clinical trial of the effect of quilting latissimus dorsi flap donor site on seroma formation. *Br J Surg* 2006;93:825–830.
 - Espessura dos retalhos da mastectomia: as revisões mostram grande variação entre pacientes e estudos e não recomendam uma espessura universal: https://pmc.ncbi.nlm.nih.gov/articles/PMC6382218/
 - Fáscia superficial inconstante como plano: https://gs.amegroups.org/article/view/7156/html

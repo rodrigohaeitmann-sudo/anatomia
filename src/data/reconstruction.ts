@@ -4,6 +4,7 @@
  * Cada vista é um quadro da sequência; entre duas vistas o tecido é animado de um quadro ao outro. Os números vêm do
  * pipeline (medidos nas malhas).
  */
+import type { AnatomyDetail } from "@/data/anatomyDetails";
 import type { Pack, PackGroup, PackLabel, PackView } from "@/data/packs";
 import { reconstructionMeasures, stepFramesOf, stepPoints } from "@/lib/mammaplastySteps";
 
@@ -440,13 +441,18 @@ const tramViews: PackView[] = [
     id: "tram-musculo",
     title: "5. Elevação do reto",
     description: "O reto é levantado da bainha posterior, de baixo para cima, até o rebordo costal, levando na face profunda os vasos epigástricos superiores, que entram no músculo atrás da 7ª cartilagem. Os nervos segmentares (T7 a T12), que entram pela borda lateral, são seccionados.",
-    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("sheath-strip"), ...tramVessels, ...abdominalWall, "costal-cartilages", "chest-wall"],
+    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("sheath-strip"), tid("posterior-sheath"), tid("transversalis"), ...tramVessels, ...abdominalWall, "costal-cartilages", "chest-wall"],
     translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip")],
     focus: [tid("rectus"), tid("superior-epigastric")],
-    labels: withPoints([label(T, tid("rectus"), "rectus", "Reto do abdome: o pedículo"), label(T, tid("superior-epigastric"), "pivot", "Epigástricos superiores entram no rebordo costal")]),
+    labels: withPoints([
+      label(T, tid("rectus"), "rectus", "Reto do abdome: o pedículo"),
+      label(T, tid("superior-epigastric"), "pivot", "Epigástricos superiores entram no rebordo costal"),
+      label(T, tid("posterior-sheath"), "posterior-sheath", "Bainha posterior: o leito do músculo"),
+    ]),
     surgery: surgery(T, "musculo"),
     relations: [
       "Irrigação tipo III de Mathes–Nahai: dois pedículos dominantes, a epigástrica superior (da torácica interna) e a inferior profunda (da ilíaca externa)",
+      "Abaixo da linha arqueada não há bainha posterior: o leito é só a fáscia transversal, e é ali que o abdome fica mais fraco. A posição da linha varia muito; no modelo ela fica a um terço do caminho do umbigo ao púbis, perto da média medida em cadáveres",
       "A torácica interna do mesmo lado precisa estar íntegra (atenção a cateter ou a ponte de mamária)",
       `O músculo leva o retalho por ${cm(tm.carrierMm ?? 0)} cm, do rebordo costal à borda da ilha`,
     ],
@@ -459,7 +465,7 @@ const tramViews: PackView[] = [
     id: "tram-tunel",
     title: "6. Túnel e rotação de 180°",
     description: "O retalho sobe pelo túnel epigástrico e gira 180° sobre o rebordo costal até a loja da mastectomia. A borda que era a do umbigo fica embaixo, junto ao sulco; a zona III fica medial. O músculo, mais longo que a distância do rebordo à loja, dobra-se sobre si mesmo no rebordo.",
-    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("superior-epigastric"), tid("inferior-epigastric"), tid("perforators"), tid("tunnel"), ...abdominalWall, "pectoralis-major", "costal-cartilages", "chest-wall"],
+    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("posterior-sheath"), tid("transversalis"), tid("superior-epigastric"), tid("inferior-epigastric"), tid("perforators"), tid("tunnel"), ...abdominalWall, "pectoralis-major", "costal-cartilages", "chest-wall"],
     translucent: ["skin", tid("skin"), tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin")],
     focus: [tid("rectus"), tid("zone-1")],
     labels: withPoints([label(T, tid("rectus"), "carrier", "Reto dobrado no rebordo costal"), label(T, tid("zone-1"), "flap-front", "Retalho na loja")]),
@@ -474,7 +480,7 @@ const tramViews: PackView[] = [
     ...breastCommon,
     id: "tram-insercao",
     title: "7. Inserção e modelagem",
-    description: `Tudo é desepitelizado, exceto a ilha que repõe a pele do defeito (${tramIsland}). A gordura enche o envelope de pele da mama: ficam ${ml(tm.keptMl ?? 0)} das zonas I a III, e a ponta da zona III é aparada. O retalho é fixado ao sulco e à parede, e a pele da mastectomia volta ao envelope.`,
+    description: `Tudo é desepitelizado, exceto a ilha que repõe a pele do defeito (${tramIsland}). Das zonas I a III, sem a ponta da zona III, restam ${ml(tm.keptMl ?? 0)}: cerca de ${Math.round((tm.keptMl ?? 0) / (mm.breastMl || 1))} vezes os ${ml(mm.breastMl ?? 0)} da mama retirada. O excesso é aparado, das bordas mais distantes do pedículo para dentro, até o volume que a simetria pede. O retalho é fixado ao sulco e à parede, e a pele da mastectomia volta ao envelope.`,
     structures: ["skin", "contralateral-breast", tid("skin"), tid("island"), tid("flap-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("rectus"), tid("superior-epigastric"), tid("island-scar"), "pectoralis-major", "costal-cartilages", "chest-wall"],
     translucent: ["skin", tid("skin"), tid("flap-skin")],
     tint: { [tid("flap-skin")]: "#d97a82" },
@@ -484,7 +490,7 @@ const tramViews: PackView[] = [
     relations: [
       "A pele desepitelizada (rosada) fica sob os retalhos da mastectomia",
       "O volume do retalho passa do necessário: o excesso é aparado, a começar pelas zonas mais distantes do pedículo",
-      "No modelo, a gordura ocupa o envelope da mama em repouso por frações da espessura; na prática o retalho é dobrado e suturado para formar o cone e o sulco",
+      "No modelo, as zonas I a III inteiras são comprimidas no envelope da mama em repouso, por frações da espessura, em vez de aparadas; na prática o retalho é aparado, dobrado e suturado para formar o cone e o sulco",
     ],
   },
   {
@@ -540,4 +546,70 @@ export const reconstructionGroup: PackGroup = {
   title: "Reconstrução mamária",
   description: "Mastectomia total e reconstrução imediata com retalhos miocutâneos pediculados: grande dorsal (com implante) e TRAM, passo a passo.",
   packs: [mastectomyPack, latissimusPack, tramPack],
+};
+
+// ---- cards of the pieces (tap on the model) ------------------------------------------------------------------
+export const reconstructionDetails: Record<string, AnatomyDetail> = {
+  [mid("skin")]: {
+    summary: `Pele da mama que fica na mastectomia: os retalhos superior e inferior, com ${mm.flapMm ?? 6} mm de subcutâneo no modelo. Na reconstrução imediata é reaproveitada: o retalho enche o envelope que ela forma.`,
+    surgical: ["Espessura uniforme: degraus comprometem o plexo subdérmico", "Retalhos finos demais necrosam sem ganho oncológico"],
+  },
+  [mid("flap-fat")]: { summary: "Subcutâneo que fica nos retalhos da mastectomia, acima do plano de dissecção (fáscia superficial, quando existe)." },
+  [mid("specimen")]: {
+    summary: `Peça da mastectomia total: ${specimenText}.`,
+    surgical: ["Exérese de medial para lateral junto ao músculo, com a cauda axilar", "Ligadura das perfurantes da torácica interna (2º a 4º espaços) e dos ramos da torácica lateral"],
+  },
+  [mid("specimen-skin")]: { summary: `Pele da elipse (${cm(mm.ellipseLengthMm ?? 0)} × ${cm(mm.ellipseHeightMm ?? 0)} cm) com o complexo areolopapilar: sai em bloco com a mama.` },
+  [mid("scar")]: { summary: `Cicatriz transversa da mastectomia sem reconstrução: ${cm(mm.scarMm ?? 0)} cm, um pouco além das pontas da elipse para não deixar orelhas.` },
+  [lid("muscle")]: {
+    summary: `Retalho do grande dorsal: ${lm.takenPct ?? 0}% do músculo (${lm.muscleAreaCm2 ?? 0} cm², ≈ ${ml(lm.muscleMl ?? 0)}), preso só pelo tendão e pelo pedículo toracodorsal. Na frente, cobre o implante e é suturado ao sulco, à borda esternal e ao peitoral maior.`,
+    vascularization: "Artéria e veias toracodorsais (tipo V de Mathes–Nahai)",
+    surgical: [`Gira ${lm.rotationDeg ?? 0}° em volta da axila ao passar pelo túnel`, "A parte lombar, aponeurótica, fica no dorso"],
+  },
+  [lid("remnant")]: { summary: "Parte do grande dorsal que fica no dorso: a lombar, presa à fáscia toracolombar e à crista ilíaca." },
+  [lid("island")]: {
+    summary: `Ilha cutânea do dorso: ${island}, o tamanho do defeito da mastectomia sobre a pele. Desenhada no dorso já orientada para cair no defeito depois da rotação.`,
+    surgical: ["Nutrida por perfurantes musculocutâneas do grande dorsal", `Leva ${cm(lm.islandFatMm ?? 0)} cm de gordura do dorso nesta paciente`],
+  },
+  [lid("island-fat")]: { summary: "Gordura sob a ilha cutânea, entre a pele e o músculo: na mama, faz parte do volume." },
+  [lid("implant")]: { summary: `Implante: ${ml(lm.implantMl ?? 0)} no modelo, o volume que o retalho não enche no envelope da mama. Fica sobre o peitoral maior, sob o grande dorsal.` },
+  [lid("artery")]: {
+    summary: `Artéria toracodorsal: ramo terminal da subescapular, depois da circunflexa da escápula. Do hilo para baixo, ramos descendente e transverso (traçado esquemático). Pedículo livre de ${cm(lm.pedicleMm ?? 0)} cm.`,
+    surgical: ["Hilo ~8–10 cm abaixo da axilar, 2–3 cm dentro da borda anterior", `No modelo, a distância da origem ao hilo nunca passa do comprimento livre (razão máxima ${(lm.maxStretch ?? 1).toLocaleString("pt-BR")})`],
+  },
+  [lid("vein")]: { summary: "Veias toracodorsais (em geral duas comitantes), que drenam para a subescapular e a axilar." },
+  [lid("nerve")]: { summary: "Nervo toracodorsal (C6–C8, fascículo posterior), com os vasos." },
+  [lid("nerve-cut")]: { summary: "Nervo toracodorsal seccionado: reduz a contração do retalho sobre o implante. Preservá-lo mantém o volume do músculo; não há consenso." },
+  [lid("serratus-cut")]: { summary: "Ramo do serrátil ligado. Ele permite fluxo retrógrado se a toracodorsal for ligada acima dele." },
+  [lid("back-skin")]: { summary: "Pele do dorso: descolada acima da fáscia do grande dorsal e fechada sobre drenos, com pontos de adesão contra o seroma." },
+  [lid("scar")]: { summary: `Cicatriz do dorso: ${cm(lm.backScarMm ?? 0)} cm, oblíqua, ao longo do eixo da ilha.` },
+  [tid("zone-1")]: { summary: `Zona I de Hartrampf: sobre o reto do pedículo, a mais bem irrigada (${zoneMl("zone-1")} no modelo).` },
+  [tid("zone-2")]: { summary: `Zona II: sobre o reto oposto, além da linha média (${zoneMl("zone-2")}). Scheflan e Dinner a trocam com a III.` },
+  [tid("zone-3")]: { summary: "Zona III: lateral ao reto do pedículo. Aqui fica a parte que se aproveita; a ponta é aparada." },
+  [tid("zone-3-tip")]: { summary: "Ponta da zona III: aparada na inserção." },
+  [tid("zone-4")]: { summary: `Zona IV: lateral ao reto oposto, a pior irrigada; descartada (${zoneMl("zone-4")}).` },
+  [tid("island")]: { summary: `Ilha cutânea do abdome: ${tramIsland}, a pele que repõe a do defeito. O resto do retalho é desepitelizado e fica sob a pele da mastectomia.` },
+  [tid("flap-skin")]: { summary: "Pele do retalho fora da ilha: desepitelizada na inserção, fica como derme sob os retalhos da mastectomia." },
+  [tid("rectus")]: {
+    summary: `Reto do abdome do pedículo: leva o retalho por ${cm(tm.carrierMm ?? 0)} cm, do rebordo costal à borda da ilha. Ao girar o retalho 180°, dobra-se sobre si mesmo no rebordo, com meia torção.`,
+    origin: "Crista e sínfise púbicas",
+    insertion: "5ª a 7ª cartilagens costais e processo xifoide",
+    vascularization: "Epigástricas superior e inferior profunda (tipo III de Mathes–Nahai)",
+    innervation: "Nervos segmentares T7 a T12, seccionados na elevação",
+  },
+  [tid("superior-epigastric")]: { summary: "Vasos epigástricos superiores: continuação da torácica interna, entram no reto atrás da 7ª cartilagem. São o pedículo do TRAM pediculado." },
+  [tid("inferior-epigastric")]: { summary: "Vasos epigástricos inferiores profundos no retalho: ligados abaixo da ilha. Dominantes para a pele do abdome inferior (base do TRAM livre e do DIEP)." },
+  [tid("inferior-epigastric-stays")]: { summary: "Vasos epigástricos inferiores profundos ligados: o trecho que fica, da ilíaca externa à ligadura." },
+  [tid("perforators")]: { summary: "Perfurantes periumbilicais (esquemáticas): fileiras medial e lateral que atravessam o reto e a bainha até a pele." },
+  [tid("sheath")]: { summary: "Bainha anterior do reto: aberta para tirar o músculo e fechada no fim (ou reforçada com tela). Abaixo da linha arqueada o reparo é obrigatório." },
+  [tid("sheath-strip")]: { summary: "Faixa da bainha anterior em volta das perfurantes: vai com o músculo e o retalho." },
+  [tid("posterior-sheath")]: {
+    summary: "Bainha posterior do reto, formada pela lâmina posterior da aponeurose do oblíquo interno e pela do transverso: é o leito que fica quando o músculo é levantado, acima da linha arqueada.",
+  },
+  [tid("transversalis")]: {
+    summary: "Abaixo da linha arqueada as aponeuroses passam todas para a frente do reto: atrás dele fica só a fáscia transversal. Sem o músculo, é o ponto fraco da parede, onde aparecem o abaulamento e a hérnia.",
+    surgical: ["Fechamento da bainha anterior sem tensão; tela quando a bainha não fecha ou o tecido é fraco"],
+  },
+  [tid("abdomen-skin")]: { summary: `Pele do abdome: o retalho superior é descolado até o rebordo costal e avança ${cm(tm.advancementMm ?? 0)} cm até a incisão suprapúbica, como numa abdominoplastia.` },
+  [tid("scar")]: { summary: "Cicatrizes do abdome: suprapúbica, de uma espinha ilíaca à outra, e em volta do umbigo." },
 };
