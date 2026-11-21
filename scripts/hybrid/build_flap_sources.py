@@ -22,8 +22,8 @@ The skin is that of the Visible Human Female, registered on the chest. Below the
 breast in build_hybrid_model.py, the deep structures of the anterior abdominal wall are moved forwards, radially in the
 chart of the trunk, by a smooth field. The field leaves the subcutaneous layer of a woman with abundant lower abdominal
 tissue (CONFORM.target: 25 mm in the epigastrium to 38 mm in the lower abdomen) and fades to zero at the insertions of
-the rectus (costal cartilages above, pubis below), towards the flanks and with depth (the pelvis, the external iliac
-vessels and the bones do not move). The superior epigastric vessels and the external oblique of the operated side,
+the rectus (costal cartilages above, pubis below) and towards the flanks. All the layers of the wall move together; the
+pelvis, the external iliac vessels and the bones do not move. The superior epigastric vessels and the external oblique of the operated side,
 which are in the torso model, get conformed copies here; the TRAM views show those instead (reconstructionSteps.json
 `replaces`).
 
@@ -68,7 +68,7 @@ MODEL_CONFORMED = {"bp43_FJ1452M": ("external-oblique", "muscle"), "bp43_FJ1971"
 # fades (to zero at the insertions of the rectus, towards the flanks) and the depth over which it fades below the wall
 CONFORM = {
     "target": [(-90.0, 25.0), (-150.0, 30.0), (-204.0, 35.0), (-280.0, 38.0), (-330.0, 34.0), (-370.0, 30.0)],
-    "top": (-45.0, 85.0), "bottom": (-362.0, 70.0), "lateral": (300.0, 130.0), "depth": (45.0, 30.0), "sigmaMm": 15.0,
+    "top": (-45.0, 85.0), "bottom": (-362.0, 70.0), "lateral": (300.0, 130.0), "sigmaMm": 15.0,
 }
 WALL_PARTS = {"rectus", "contra-rectus", "linea-alba", "internal-oblique", "contra-external-oblique", "investing-fascia", "contra-investing-fascia"}
 NOT_CONFORMED = {"iliac", "contra-iliac", "contra-hip", "lower-skin"}
@@ -200,8 +200,8 @@ def conformation(index: dict, units: float) -> dict:
             continue
         pos, idx = mesh_of(name)
         q = ch.to_chart(pos)
-        depth = bb.smootherstep((q[:, 2] - (sample(wall, q[:, 0], q[:, 1]) - c["depth"][0])) / c["depth"][1])
-        q[:, 2] += sample(shift, q[:, 0], q[:, 1]) * depth
+        # every layer of the wall moves together (a fade with depth would thicken the muscles)
+        q[:, 2] += sample(shift, q[:, 0], q[:, 1])
         out = ch.to_model(q)
         (OUT / f"{name}.pos.bin").write_bytes((out * units).astype(np.float32).tobytes())
         moved[name] = round(float(np.linalg.norm(out - pos, axis=1).max()), 1)
