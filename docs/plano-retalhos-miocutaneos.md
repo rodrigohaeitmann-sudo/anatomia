@@ -71,10 +71,11 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
   - A artéria tem 1,5 a 3 mm, a veia 3 a 4 mm. O pedículo mede 8 a 10 cm, mais se dissecado até a subescapular.
   - O ramo do serrátil permite fluxo retrógrado se a toracodorsal for ligada acima dele.
 - **Nervo toracodorsal** (C6–C8, fascículo posterior). Acompanha os vasos.
-- **Ilha cutânea.**
-  - Fica sobre o músculo e é nutrida por perfurantes musculocutâneas, mais densas na porção proximal, ao longo do ramo descendente.
-  - Pode ser transversa (linha do sutiã) ou oblíqua.
-  - A largura vai até 8 a 10 cm para fechamento primário (teste do pinçamento).
+- **Ilha cutânea.** É um retalho miocutâneo: a pele, a derme e a gordura da ilha valem tanto quanto o músculo, porque repõem a pele que a mastectomia tirou.
+  - Fica toda sobre o músculo e é nutrida por perfurantes musculocutâneas, que entram pela sua parte central.
+  - O desenho mais usado é o fuso transverso na linha do sutiã, logo abaixo da ponta da escápula: a cicatriz do dorso fica horizontal, escondida. Há também a oblíqua e a vertical; a escolha depende do defeito e de onde a paciente prefere a cicatriz.
+  - A largura vai até 8 a 10 cm para fechamento primário (teste do pinçamento); o comprimento é cerca de 3 vezes a largura, com pontas afiladas.
+  - A ilha tem dois arcos de rotação: o do retalho, em volta da axila, e o dela sobre o músculo, em volta das perfurantes. Ao passar para a frente, o fuso transverso chega à mama inclinado; descolar até um terço de cada ponta deixa deitá-lo na horizontal.
 
 **Técnica**
 
@@ -99,7 +100,7 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 7. **Decúbito dorsal: implante.** O implante vai na loja, coberto pelo grande dorsal. No modelo, o implante fica sobre o peitoral maior, sob o próprio grande dorsal. A variante subpeitoral, com o grande dorsal completando o polo inferior, é citada no texto.
 8. **Inserção.**
    - O músculo é suturado ao sulco inframamário, à borda esternal e ao peitoral maior acima.
-   - A ilha cutânea é suturada no defeito da elipse.
+   - As pontas do fuso (um terço de cada) são descoladas do músculo e a ilha é girada sobre ele, presa pelo centro, até deitar no defeito transverso; então é suturada.
    - O excesso distal do músculo é acomodado no contorno (na prática, pregueado ou aparado).
 9. **Resultado.** Mama com ilha cutânea do dorso e cicatriz no dorso.
    - Complicações: seroma (a mais comum), necrose parcial, contratura capsular, animação e perda de força pequena.
@@ -193,10 +194,10 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 
 - **Músculo.** Uma cópia simplificada da malha real do grande dorsal do BodyParts3D 3.0, com cerca de 6 mil triângulos.
 - **Coordenadas de cada vértice:** (σ, τ, h), com h a altura sobre a parede.
-- **Ilha cutânea.** Desenhada no dorso como a pré-imagem do defeito da elipse pela transposição. A ilha é planejada já sabendo onde vai cair, como o cirurgião faz com o molde do defeito.
-  - A transposição é uma rotação no plano em volta do pivô (origem do pedículo, na axila) mais uma translação.
-  - O ângulo é escolhido para o hilo ficar ao alcance do pedículo.
-  - A ilha resulta oblíqua ou transversa no dorso, sobre o músculo e dentro da largura que fecha.
+- **Ilha cutânea.** Fuso transverso na linha do sutiã: o centro 3,5 cm abaixo da ponta da escápula, a ponta lateral 1 cm por dentro da borda anterior do músculo, com o tamanho do defeito sobre a pele.
+  - A transposição é uma rotação no plano em volta de um ponto fixo, mais uma translação: leva o centro da ilha ao centro do defeito, e o ângulo é escolhido para o hilo cair na direção do pivô (origem do pedículo, na axila), ao alcance do pedículo.
+  - Com o giro do retalho, o fuso chega à mama inclinado. Na inserção ele gira sobre o músculo, em volta do centro, até o eixo do defeito; as pontas (um terço de cada) são descoladas e erguidas no quadro intermediário. Depois do giro, um mapa afim o leva ao defeito.
+  - Perfurantes musculocutâneas esquemáticas ligam o músculo à derme no terço central da ilha.
 - **Pele do dorso.** Outra malha em carta, com a ilha e a zona descolada entre as arestas, e um fechamento harmônico da área doadora.
 - **Quadros do músculo:**
   - repouso;
@@ -211,7 +212,7 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
   - na ilha: grande dorsal + ilha.
   - A forma é suavizada e o volume medido.
 - **Moldagem final**, pela carta da mama.
-  - O contorno do músculo transposto é levado ao contorno da loja, e a ilha à elipse, por um mapa harmônico no plano.
+  - O contorno do músculo transposto é levado ao contorno da loja por um mapa de placa fina no plano; a ilha segue o próprio giro, independente do músculo.
   - Cada ponto fica na fração da espessura que tinha: o músculo vai sobre o implante, a ilha fica na pele e os retalhos da mastectomia voltam ao envelope de repouso da mama.
 - **Vasos e nervo.**
   - A linha central dos vasos e do nervo toracodorsais é extraída das malhas reais.
@@ -234,7 +235,9 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
 - **Vasos.**
   - Os epigástricos superiores seguem o músculo, que gira sobre o pivô no rebordo costal.
   - Os inferiores profundos são ligados na borda inferior. O trecho acima segue o músculo; o de baixo fica.
-- **Rotação de 180°** no plano em volta do pivô, com recolhimento no túnel.
+- **Transferência.** O retalho sobe pelo túnel do lado da mama e gira 180° no caminho, em 4 quadros intermediários. O centro segue um caminho curvo para a linha média, que cruza o rebordo no túnel, no fim medial do sulco. No meio do caminho o retalho é estreitado à metade, para passar.
+  - O reto acompanha: a parte presa ao retalho gira com ele e o resto dobra-se sobre si mesmo junto ao rebordo, com meia torção, aos poucos.
+  - As peles do abdome e da mama passam por cima do retalho e do músculo em cada quadro.
 - **Moldagem** igual à do grande dorsal, sem implante.
   - O contorno das zonas I a III vai ao contorno da mama, a ilha à elipse e a gordura enche o monte por fração de espessura.
   - O volume que sobra (zona IV e excesso) é medido e mostrado como descartado.
@@ -277,6 +280,7 @@ As variantes (poupadora de pele, poupadora do complexo areolopapilar, reconstru�
   - A forma final segue o envelope da mama em repouso, o objetivo da reconstrução imediata; o resultado real varia.
 - **Estruturas de outro corpo.** Reto do abdome, oblíquos e transverso vêm do Z-Anatomy, outro corpo, encaixado por similaridade. A conferência mede a folga deles para a pele HRA.
 - **Esquemas.** As perfurantes e os ramos intramusculares são esquemáticos (trajetos típicos da literatura).
+- **Tom da pele.** A pele das sequências tem cor própria, sem as manchas pintadas da pele do tronco. Na mama a emenda é leve; no dorso, onde o retalho de pele é maior, a diferença de tom aparece mais.
 
 ## 6. Resultado medido
 
@@ -293,13 +297,14 @@ Os números são do modelo, gravados em `src/data/reconstructionSteps.json`.
 
 **Grande dorsal com implante** (10 passos, 1,1 MB)
 
-- Ilha do tamanho do defeito, 17,5 × 6,1 cm, oblíqua ao longo da borda anterior do músculo; giro de 77° até a loja.
+- Fuso transverso do tamanho do defeito, 17,5 × 6,1 cm, na linha do sutiã: o centro 3,5 cm abaixo da ponta da escápula.
+- O retalho gira 109° até a loja; o fuso chega inclinado 71° e gira 57° sobre o músculo para deitar no defeito.
 - Pedículo livre de 86 mm. A maior razão entre a distância origem–hilo e o comprimento livre, em todos os quadros, foi 1,0.
-- Músculo levado: 58% do grande dorsal, 479 cm², 303 mL, 6,3 mm de espessura média. O tendão fica no úmero.
-- Implante: 148 mL. Gordura sob a ilha: 26 mm.
-- Cicatriz do dorso: 19,9 cm.
+- Músculo levado: 69% do grande dorsal, 535 cm², 326 mL, 6,1 mm de espessura média. O tendão fica no úmero.
+- Implante: 129 mL. Gordura sob a ilha: 31 mm.
+- Cicatriz do dorso: 19,9 cm, horizontal.
 
-**TRAM pediculado** (10 passos, 2,6 MB)
+**TRAM pediculado** (10 passos, 3,1 MB)
 
 - Lente de 45,4 × 14,0 cm (de espinha a espinha, medida na superfície), com 4,5 cm de gordura abaixo do umbigo.
 - Retalho inteiro: 1.586 mL.
@@ -312,20 +317,19 @@ Os números são do modelo, gravados em `src/data/reconstructionSteps.json`.
 
 | Conferência | Limite | Resultado |
 |---|---|---|
-| Pele invertida (pior quadro de cada malha) | ≤ 1% | mastectomia 0,16%; dorso 0,59%; ilha do GD 0,07%; abdome 0,21%; ilha do TRAM 0,11%; pele da mama 0,01% |
+| Pele invertida (pior quadro de cada malha) | ≤ 1% | mastectomia 0,16%; dorso 0,85%; ilha do GD 0,00%; abdome 0,22%; ilha do TRAM 0,11%; pele da mama 0,03% |
 | Pedículo do grande dorsal | ≤ 1,01 | 1,0 |
-| Borda da ilha à borda do defeito (p95) | ≤ 2 mm | GD 1,4 mm; TRAM 1,1 mm |
+| Borda da ilha à borda do defeito (p95) | ≤ 2 mm | GD 1,5 mm; TRAM 1,1 mm |
 | Retalho fora da pele da mama, no resultado | ≤ 1,5 mm | nenhum vértice fora (GD: músculo, gordura e implante; TRAM: zonas I a III) |
 | Reto do TRAM fora da pele sobre ele | ≤ 1,5 mm | 4,0 mm abaixo na inserção; 2,0 mm abaixo no fechamento e no resultado |
 | Implante dentro da parede | ≤ 2 mm | não entra |
 
-Os triângulos invertidos que sobram são lascas degeneradas nas pontas dos fechamentos.
+Os triângulos invertidos que sobram ficam nas pontas dos fechamentos e, no dorso, também na prega axilar, onde a pele fica quase paralela à direção radial que a conferência usa.
 
 ## 7. O que mudou em relação ao plano
 
 - **Limite lateral da mastectomia.** Ficou em u = 246 mm na carta do tronco, um pouco antes da borda anterior do grande dorsal. Além dele, a mama lateral pende sobre a parede e a pele não se deixa planificar na carta.
-- **Ilha do grande dorsal.** A ilha que cai exatamente no defeito, com o hilo ao alcance do pedículo, ficou oblíqua, quase vertical, ao longo da borda anterior do músculo (e não transversa, na linha do sutiã). O giro é de 77°.
-- **Músculo do grande dorsal.** É levado na medida da loja, 58% do músculo, dividido distalmente. O tendão fica preso ao úmero; a liberação parcial é citada no texto.
+- **Músculo do grande dorsal.** É levado na medida da loja, 69% do músculo, dividido distalmente. O tendão fica preso ao úmero; a liberação parcial é citada no texto.
 - **Grande dorsal na região lombar.** Sob a pele do HRA, o grande dorsal do BodyParts3D atravessa a pele lombar em até 20,7 mm. Nos passos ele é recolhido para dentro dela.
 - **Parede abdominal.** Os retos, os oblíquos e os vasos epigástricos vêm de corpos masculinos e ficavam cerca de 10 cm atrás da pele feminina. Um campo radial suave os traz para a frente, deixando 31 a 40 mm de subcutâneo (`CONFORM` em `build_flap_sources.py`).
 - **Reto do TRAM.** O trecho entre o rebordo e a ilha (148 mm) é mais longo que o caminho até a loja. No modelo, ele fica no leito, dobra-se e volta por cima com meia torção, estreitando-se como um feixe. A pele do epigástrio e a da mama são postas sobre a dobra: é o abaulamento epigástrico do TRAM pediculado. O plano previa só a rotação no plano, que esticava as faces do músculo.
@@ -333,7 +337,17 @@ Os triângulos invertidos que sobram são lascas degeneradas nas pontas dos fech
 - **Leito do reto.** Foram acrescentadas a bainha posterior, acima da linha arqueada, e a fáscia transversal, abaixo dela. O oblíquo externo do BodyParts3D segue sobre o reto como aponeurose; nos passos do TRAM ele é cortado na linha semilunar, e a aponeurose é a bainha anterior desenhada. Sem isso, o leito aparecia vermelho, como se ainda tivesse músculo.
 - **Fechamento do abdome.** É feito coluna a coluna: o retalho superior estica até a incisão suprapúbica. O mapa harmônico de valor médio do plano invertia 763 triângulos; restam 12 lascas.
 - **Volume do TRAM.** Com 4,5 cm de gordura, as zonas I a III somam mais de 3 vezes a mama. O texto diz isso. No modelo, elas são comprimidas no envelope em vez de aparadas.
-- **Pele invertida.** O plano pedia nenhum triângulo invertido. Sobram até 0,6% por malha, em lascas nas pontas dos fechamentos, e a conferência só olha os quadros em que a pele está deitada no corpo.
+- **Pele invertida.** O plano pedia nenhum triângulo invertido. Sobram até 0,85% por malha, nas pontas dos fechamentos, e a conferência só olha os quadros em que a pele está deitada no corpo.
+
+### 7.1 Ajustes depois do primeiro teste no app
+
+- **Grande dorsal: fuso transverso na linha do sutiã.** A primeira versão desenhava a ilha como a imagem do defeito levada de volta pelo giro do retalho; ela ficava quase vertical no dorso. A marcação usual é o fuso transverso na linha do sutiã, com cicatriz horizontal.
+  - Agora o fuso fica 3,5 cm abaixo da ponta da escápula, sobre o músculo, e chega à mama inclinado 71°.
+  - Na inserção ele gira 57° sobre o músculo: é o segundo arco de rotação da ilha, em volta das perfurantes, com as pontas descoladas.
+  - A ilha é tratada como parte do retalho, não como acessório: tem perfurantes esquemáticas, ficha própria e rótulos.
+- **TRAM: caminho do retalho.** O giro de 180° era feito em volta de um ponto entre o abdome e a mama: no meio da animação, o retalho passava por cima do lado oposto. Agora ele sobe pelo túnel do lado da mama, girando no caminho, em 4 quadros intermediários em vez de 2.
+- **TRAM: o reto gira junto.** Antes, o reto ficava no leito nos quadros intermediários e aparecia dobrado só no último. Agora a parte presa ao retalho gira com ele e a dobra com meia torção se forma aos poucos; as peles passam por cima.
+- **TRAM: cada passo isola o que mostra.** Bainha e elevação do músculo mostram só a zona I, o reto, a bainha e os vasos, sem as outras zonas nem a pelve. No túnel, o retalho fica translúcido para o reto e os vasos aparecerem dentro dele.
 
 ## 8. Referências
 

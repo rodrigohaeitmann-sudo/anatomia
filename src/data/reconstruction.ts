@@ -165,7 +165,7 @@ const lm = reconstructionMeasures(L);
 const backCommon = { orientation: "posterolateral" as const, anchor: `step:${L}:centre`, distance: 0.82, follow: false };
 const frontCommon = { orientation: "anterolateral" as const, anchor: `step:${L}:front-centre`, distance: 0.72, follow: false };
 const ldVessels = [lid("artery"), lid("vein")];
-const ldBack = ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat")];
+const ldBack = ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("perforators")];
 const ldContext = ["serratus-anterior", "teres-major", "trapezius", "subscapular-vessels", "axillary-vessels", ...chestWall];
 const island = `${cm(lm.islandLengthMm ?? 0)} × ${cm(lm.islandWidthMm ?? 0)} cm`;
 
@@ -174,11 +174,11 @@ const latissimusViews: PackView[] = [
     ...backCommon,
     id: "grande-dorsal-marcacao",
     title: "1. Marcação no dorso",
-    description: `A ilha cutânea é desenhada sobre o grande dorsal com o tamanho do defeito da mastectomia (${island}) e já orientada para cair nele: no transporte o retalho gira cerca de ${lm.rotationDeg ?? 0}° em volta da axila, por isso a ilha fica quase vertical, ao longo da borda anterior, sobre o ramo descendente da toracodorsal.`,
+    description: `A ilha é um fuso transverso na linha do sutiã, ${cm(lm.paddleBelowScapulaMm ?? 0)} cm abaixo da ponta da escápula, sobre o grande dorsal, da borda anterior para dentro, com o tamanho do defeito da mastectomia (${island}). É um retalho miocutâneo: pele, derme e gordura presas ao músculo pelas perfurantes, e a ilha conta tanto quanto o músculo. A cicatriz do dorso fica horizontal, escondida pelo sutiã.`,
     structures: [...ldBack, lid("marking"), lid("limits"), lid("tunnel"), lid("muscle"), lid("remnant")],
     solid: ["skin", lid("skin"), lid("back-skin"), lid("island")],
     labels: withPoints([
-      label(L, lid("marking"), "island-back", `Ilha cutânea: ${island}`),
+      label(L, lid("marking"), "island-back", `Fuso na linha do sutiã: ${island}`),
       label(L, lid("limits"), "border", "Borda anterior do grande dorsal"),
       label(L, lid("tunnel"), "tunnel", "Túnel axilar (subcutâneo)"),
     ]),
@@ -186,8 +186,9 @@ const latissimusViews: PackView[] = [
     relations: [
       "Decúbito lateral com o braço fletido a 90° sobre o apoio (no modelo, posição anatômica)",
       `Largura de ${cm(lm.islandWidthMm ?? 0)} cm: o dorso fecha sem tensão (teste do pinçamento; até 8–10 cm)`,
-      "A ilha fica sobre o músculo: é nutrida pelas perfurantes musculocutâneas, mais densas na parte proximal, ao longo do ramo descendente",
-      "Variante frequente: ilha transversa na linha do sutiã, com cicatriz mais escondida; exige girar mais o retalho no pedículo",
+      "A ilha fica toda sobre o músculo: é nutrida pelas perfurantes musculocutâneas, que entram pela sua parte central",
+      "Fuso com cerca de 3 vezes o comprimento pela largura, pontas afiladas para fechar sem orelhas",
+      "Variantes: ilha oblíqua, paralela às costelas, ou vertical, ao longo da borda anterior; a escolha depende do defeito e de onde a paciente prefere a cicatriz",
       "Na frente, a loja da mastectomia espera aberta (passos da mastectomia)",
     ],
   },
@@ -195,11 +196,11 @@ const latissimusViews: PackView[] = [
     ...backCommon,
     id: "grande-dorsal-incisao",
     title: "2. Incisão e descolamento",
-    description: "Incisão em volta da ilha até a fáscia do músculo. A pele do dorso é descolada acima da fáscia, até as bordas do músculo: a ponta da escápula e o trapézio em cima, a borda anterior, a linha das espinhosas e, embaixo, até onde o músculo será seccionado.",
+    description: "Incisão em volta do fuso até a fáscia do músculo, sem descolar a ilha dele: a pele, a derme e a gordura da ilha ficam presas ao músculo pelas perfurantes. A pele do dorso é descolada acima da fáscia, até as bordas do músculo: a ponta da escápula e o trapézio em cima, a borda anterior, a linha das espinhosas e, embaixo, até onde o músculo será seccionado.",
     structures: [...ldBack, lid("incision"), lid("limits"), lid("muscle"), lid("remnant"), "trapezius", "teres-major"],
     translucent: ["skin", lid("back-skin")],
     solid: [lid("island")],
-    labels: withPoints([label(L, lid("incision"), "island-back", "Incisão em volta da ilha"), label(L, lid("muscle"), "border", "Grande dorsal exposto")]),
+    labels: withPoints([label(L, lid("incision"), "island-back", "Incisão em volta do fuso"), label(L, lid("muscle"), "border", "Grande dorsal exposto"), label(L, lid("perforators"), "perforators", "Perfurantes: prendem a ilha ao músculo")]),
     surgery: surgery(L, "incisao", { replayFrom: null }),
     relations: [
       "O plano é acima da fáscia do grande dorsal; no grande dorsal estendido, a gordura profunda do dorso vai com o músculo",
@@ -254,8 +255,8 @@ const latissimusViews: PackView[] = [
     anchor: `step:${L}:tunnel`,
     id: "grande-dorsal-tunel",
     title: "5. Túnel axilar",
-    description: `O retalho passa por um túnel subcutâneo alto na axila, do dorso para a loja da mastectomia, girando ${lm.rotationDeg ?? 0}° em volta do pivô do pedículo. O pedículo acompanha sem tração: a maior razão entre a distância origem–hilo e o comprimento livre foi ${(lm.maxStretch ?? 1).toLocaleString("pt-BR")}.`,
-    structures: ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("muscle"), lid("remnant"), lid("tunnel"), ...ldVessels, lid("nerve-cut"), "pectoralis-major", "serratus-anterior", ...chestWall],
+    description: `O retalho passa por um túnel subcutâneo alto na axila, do dorso para a loja da mastectomia, girando ${lm.rotationDeg ?? 0}° em volta do pivô do pedículo. Por isso o fuso, transverso no dorso, chega à mama inclinado ${lm.islandTiltDeg ?? 0}°. O pedículo acompanha sem tração: a maior razão entre a distância origem–hilo e o comprimento livre foi ${(lm.maxStretch ?? 1).toLocaleString("pt-BR")}.`,
+    structures: ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("perforators"), lid("muscle"), lid("remnant"), lid("tunnel"), ...ldVessels, lid("nerve-cut"), "pectoralis-major", "serratus-anterior", ...chestWall],
     translucent: ["skin", lid("skin"), lid("back-skin")],
     focus: [lid("muscle"), lid("island")],
     labels: withPoints([label(L, lid("tunnel"), "tunnel", "Túnel axilar"), label(L, lid("muscle"), "flap-front", "Retalho na loja da mastectomia")]),
@@ -271,7 +272,7 @@ const latissimusViews: PackView[] = [
     ...backCommon,
     id: "grande-dorsal-doadora",
     title: "6. Fechamento do dorso",
-    description: `Ainda em decúbito lateral, o dorso é fechado sobre drenos aspirativos, com pontos de adesão (quilting) do retalho de pele à parede. A cicatriz fica oblíqua, com ${cm(lm.backScarMm ?? 0)} cm.`,
+    description: `Ainda em decúbito lateral, o dorso é fechado sobre drenos aspirativos, com pontos de adesão (quilting) do retalho de pele à parede. A cicatriz fica horizontal, na linha do sutiã, com ${cm(lm.backScarMm ?? 0)} cm.`,
     structures: ["skin", "contralateral-breast", lid("back-skin"), lid("remnant"), lid("scar"), "trapezius"],
     solid: ["skin", lid("back-skin")],
     labels: withPoints([label(L, lid("scar"), "back-scar", `Cicatriz do dorso: ${cm(lm.backScarMm ?? 0)} cm`)]),
@@ -287,7 +288,7 @@ const latissimusViews: PackView[] = [
     id: "grande-dorsal-implante",
     title: "7. Implante",
     description: `Com a paciente em decúbito dorsal, o implante (${ml(lm.implantMl ?? 0)} no modelo) entra na loja, sobre o peitoral maior e sob o grande dorsal. O volume é o que falta para encher o envelope de pele da mama, descontados o músculo e a ilha com a gordura do dorso.`,
-    structures: ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("muscle"), lid("implant"), ...ldVessels, "pectoralis-major", "serratus-anterior", ...chestWall],
+    structures: ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("perforators"), lid("muscle"), lid("implant"), ...ldVessels, "pectoralis-major", "serratus-anterior", ...chestWall],
     translucent: ["skin", lid("skin"), lid("back-skin")],
     focus: [lid("implant")],
     labels: withPoints([label(L, lid("implant"), "implant", `Implante: ${ml(lm.implantMl ?? 0)}`), label(L, lid("muscle"), "flap-front", "Grande dorsal")]),
@@ -302,13 +303,14 @@ const latissimusViews: PackView[] = [
     ...frontCommon,
     id: "grande-dorsal-insercao",
     title: "8. Inserção e modelagem",
-    description: "O músculo é suturado ao sulco inframamário, à borda esternal e ao peitoral maior, cobrindo o implante. A ilha cutânea é suturada no defeito da elipse. A pele que ficou da mastectomia volta ao envelope da mama.",
-    structures: ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("muscle"), lid("implant"), lid("island-scar"), ...ldVessels, "pectoralis-major", ...chestWall],
+    description: `O músculo é suturado ao sulco inframamário, à borda esternal e ao peitoral maior, cobrindo o implante. O fuso chega inclinado; para deitá-lo no defeito transverso, um terço de cada ponta é descolado do músculo e a ilha gira ${lm.islandTurnDeg ?? 0}° sobre ele, presa pelo centro, onde entram as perfurantes. A ilha é suturada no defeito e a pele que ficou da mastectomia volta ao envelope da mama.`,
+    structures: ["skin", "contralateral-breast", lid("skin"), lid("back-skin"), lid("island"), lid("island-fat"), lid("perforators"), lid("muscle"), lid("implant"), lid("island-scar"), ...ldVessels, "pectoralis-major", ...chestWall],
     translucent: ["skin", lid("skin"), lid("back-skin")],
-    focus: [lid("muscle"), lid("island")],
-    labels: withPoints([label(L, lid("island"), "island-front", "Ilha cutânea no defeito"), label(L, lid("muscle"), "flap-inset", "Grande dorsal sobre o implante"), label(L, lid("artery"), "pedicle-front", "Pedículo, da axila ao músculo")]),
+    focus: [lid("island"), lid("perforators"), lid("muscle")],
+    labels: withPoints([label(L, lid("island"), "island-front", "Ilha girada no defeito"), label(L, lid("muscle"), "flap-inset", "Grande dorsal sobre o implante"), label(L, lid("artery"), "pedicle-front", "Pedículo, da axila ao músculo")]),
     surgery: surgery(L, "insercao"),
     relations: [
+      "A ilha tem um segundo arco de rotação, sobre o músculo, além do arco do retalho em volta da axila: descolar até um terço de cada ponta deixa deitar na horizontal um fuso que chegaria vertical",
       "A forma final é o envelope da mama em repouso: o objetivo da reconstrução imediata, que reaproveita a pele",
       "A parte do músculo que sobra é acomodada no contorno (na prática, pregueada ou aparada)",
       "Drenos na loja; o pedículo passa pela axila sem dobra",
@@ -333,7 +335,7 @@ const latissimusViews: PackView[] = [
     ...backCommon,
     id: "grande-dorsal-resultado-dorso",
     title: "10. Resultado: dorso",
-    description: `No dorso fica a cicatriz oblíqua de ${cm(lm.backScarMm ?? 0)} cm e, embaixo, a parte lombar do músculo, que não foi usada.`,
+    description: `No dorso fica a cicatriz horizontal de ${cm(lm.backScarMm ?? 0)} cm, na linha do sutiã, e, embaixo, a parte lombar do músculo, que não foi usada.`,
     structures: ["skin", "contralateral-breast", lid("back-skin"), lid("scar")],
     solid: ["skin", lid("back-skin")],
     labels: withPoints([label(L, lid("scar"), "back-scar", "Cicatriz do dorso")]),
@@ -345,7 +347,7 @@ const latissimusViews: PackView[] = [
 const latissimusPack: Pack = {
   id: "grande-dorsal-passo-a-passo",
   title: "Retalho do grande dorsal",
-  summary: "Ilha cutânea do dorso, liberação do músculo, pedículo toracodorsal, túnel axilar, implante e inserção no defeito da mastectomia.",
+  summary: "Fuso transverso na linha do sutiã, liberação do músculo, pedículo toracodorsal, túnel axilar, implante e inserção da ilha girada no defeito da mastectomia.",
   views: latissimusViews,
 };
 
@@ -359,6 +361,9 @@ const zones = [tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), t
 const tramSkin = ["skin", "contralateral-breast", tid("skin"), tid("abdomen-skin"), tid("abdomen-window")];
 const flapSkin = [tid("island"), tid("flap-skin"), tid("discard-skin"), tid("tip-skin")];
 const abdominalWall = [tid("contra-rectus"), tid("linea-alba"), tid("pyramidalis"), tid("external-oblique"), tid("pelvis"), "iliac-crest", tid("inguinal"), tid("iliac")];
+/** the wall round the pedicle (each step shows only what it is about: the landmarks of the lower abdomen only below) */
+const wallFrame = [tid("contra-rectus"), tid("linea-alba"), tid("external-oblique")];
+const pelvisFrame = [tid("pelvis"), "iliac-crest", tid("inguinal"), tid("pyramidalis")];
 const tramVessels = [tid("superior-epigastric"), tid("inferior-epigastric"), tid("inferior-epigastric-stays"), tid("perforators"), tid("contra-epigastric")];
 const tramIsland = `${cm(tm.islandLengthMm ?? 0)} × ${cm(tm.islandWidthMm ?? 0)} cm`;
 const zoneMl = (zone: string) => ml(tm[`${zone}Ml`] ?? 0);
@@ -393,7 +398,7 @@ const tramViews: PackView[] = [
     id: "tram-incisao",
     title: "2. Incisões e descolamento",
     description: "Incisão em volta da elipse e do umbigo, que fica preso ao seu pedículo. O retalho abdominal superior é descolado acima da aponeurose, até o rebordo costal e o apêndice xifoide, como numa abdominoplastia. Pelo descolamento, um túnel subcutâneo leva à loja da mastectomia pelo sulco inframamário medial.",
-    structures: [...tramSkin, ...flapSkin, ...zones, tid("incision"), tid("tunnel"), tid("sheath"), ...abdominalWall],
+    structures: [...tramSkin, ...flapSkin, ...zones, tid("incision"), tid("tunnel"), tid("sheath"), ...wallFrame, ...pelvisFrame],
     translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), ...flapSkin],
     labels: withPoints([label(T, tid("abdomen-skin"), "upper-flap", "Retalho abdominal superior descolado"), label(T, tid("incision"), "navel", "Umbigo circunscrito"), label(T, tid("tunnel"), "tunnel", "Túnel epigástrico")]),
     surgery: surgery(T, "incisao", { replayFrom: null }),
@@ -407,7 +412,7 @@ const tramViews: PackView[] = [
     id: "tram-ilha",
     title: "3. Elevação da ilha",
     description: `A ilha é levantada de lateral para medial, acima da aponeurose do oblíquo externo: do lado do pedículo, até a fileira lateral de perfurantes; do lado oposto, até a linha média. A zona IV, a pior perfundida, é descartada (${zoneMl("zone-4")}).`,
-    structures: [...tramSkin, ...flapSkin.filter((id) => id !== tid("discard-skin")), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("zone-4"), tid("perforators"), tid("sheath"), ...abdominalWall],
+    structures: [...tramSkin, ...flapSkin.filter((id) => id !== tid("discard-skin")), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("zone-4"), tid("perforators"), tid("sheath"), ...wallFrame, ...pelvisFrame],
     translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), ...flapSkin],
     focus: [tid("zone-4"), tid("perforators")],
     labels: withPoints([label(T, tid("zone-4"), "discard", `Zona IV descartada: ${zoneMl("zone-4")}`), label(T, tid("perforators"), "perforators", "Perfurantes periumbilicais (esquema)")]),
@@ -424,13 +429,13 @@ const tramViews: PackView[] = [
     id: "tram-bainha",
     title: "4. Bainha e vasos inferiores",
     description: "A bainha anterior do reto é incisada em volta das perfurantes: uma faixa dela fica com o músculo. Abaixo da ilha, o reto é seccionado e os vasos epigástricos inferiores profundos são ligados. A ilha agora só recebe sangue de cima.",
-    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("sheath-strip"), ...tramVessels, ...abdominalWall],
-    translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip")],
-    focus: [tid("inferior-epigastric-stays"), tid("sheath-strip")],
+    structures: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("zone-1"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("sheath-strip"), tid("perforators"), tid("superior-epigastric"), tid("inferior-epigastric"), tid("inferior-epigastric-stays"), tid("iliac"), ...wallFrame],
+    translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("zone-1")],
+    focus: [tid("inferior-epigastric-stays"), tid("sheath-strip"), tid("rectus")],
     labels: withPoints([label(T, tid("inferior-epigastric-stays"), "diea-cut", "Epigástricos inferiores profundos ligados"), label(T, tid("sheath"), "sheath", "Bainha anterior aberta"), label(T, tid("perforators"), "perforators", "Perfurantes")]),
     surgery: surgery(T, "bainha"),
     relations: [
-      "Acima da linha arqueada (cerca de metade do caminho do umbigo ao púbis) há bainha posterior; abaixo dela, só a fáscia transversal fica atrás do músculo",
+      "Acima da linha arqueada há bainha posterior; abaixo dela, só a fáscia transversal fica atrás do músculo",
       "\"Delay\": ligar os epigástricos inferiores 1–2 semanas antes abre os vasos de choke e melhora a perfusão do retalho pediculado",
     ],
   },
@@ -441,9 +446,9 @@ const tramViews: PackView[] = [
     id: "tram-musculo",
     title: "5. Elevação do reto",
     description: "O reto é levantado da bainha posterior, de baixo para cima, até o rebordo costal, levando na face profunda os vasos epigástricos superiores, que entram no músculo atrás da 7ª cartilagem. Os nervos segmentares (T7 a T12), que entram pela borda lateral, são seccionados.",
-    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("sheath-strip"), tid("posterior-sheath"), tid("transversalis"), ...tramVessels, ...abdominalWall, "costal-cartilages", "chest-wall"],
-    translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip")],
-    focus: [tid("rectus"), tid("superior-epigastric")],
+    structures: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("zone-1"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("sheath-strip"), tid("posterior-sheath"), tid("transversalis"), tid("superior-epigastric"), tid("inferior-epigastric"), tid("inferior-epigastric-stays"), tid("perforators"), ...wallFrame, "costal-cartilages", "chest-wall"],
+    translucent: ["skin", tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("zone-1")],
+    focus: [tid("rectus"), tid("superior-epigastric"), tid("posterior-sheath")],
     labels: withPoints([
       label(T, tid("rectus"), "rectus", "Reto do abdome: o pedículo"),
       label(T, tid("superior-epigastric"), "pivot", "Epigástricos superiores entram no rebordo costal"),
@@ -464,10 +469,10 @@ const tramViews: PackView[] = [
     anchor: `step:${T}:carrier`,
     id: "tram-tunel",
     title: "6. Túnel e rotação de 180°",
-    description: "O retalho sobe pelo túnel epigástrico e gira 180° sobre o rebordo costal até a loja da mastectomia. A borda que era a do umbigo fica embaixo, junto ao sulco; a zona III fica medial. O músculo, mais longo que a distância do rebordo à loja, dobra-se sobre si mesmo no rebordo.",
-    structures: [...tramSkin, tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("posterior-sheath"), tid("transversalis"), tid("superior-epigastric"), tid("inferior-epigastric"), tid("perforators"), tid("tunnel"), ...abdominalWall, "pectoralis-major", "costal-cartilages", "chest-wall"],
-    translucent: ["skin", tid("skin"), tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin")],
-    focus: [tid("rectus"), tid("zone-1")],
+    description: "O retalho sobe pelo túnel epigástrico, do lado da mama, e gira 180° no caminho; estreitado, passa pelo túnel e se abre na loja da mastectomia. O reto gira junto: a parte presa ao retalho vira para cima e o resto, mais longo que a distância do rebordo à loja, dobra-se sobre si mesmo junto ao rebordo, com meia torção. A borda que era a do umbigo fica embaixo, junto ao sulco; a zona III fica medial.",
+    structures: ["skin", "contralateral-breast", tid("skin"), tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip"), tid("rectus"), tid("rectus-stays"), tid("sheath"), tid("posterior-sheath"), tid("transversalis"), tid("superior-epigastric"), tid("inferior-epigastric"), tid("tunnel"), tid("contra-rectus"), tid("linea-alba"), "pectoralis-major", "costal-cartilages", "chest-wall"],
+    translucent: ["skin", tid("skin"), tid("abdomen-skin"), tid("abdomen-window"), tid("island"), tid("flap-skin"), tid("tip-skin"), tid("zone-1"), tid("zone-2"), tid("zone-3"), tid("zone-3-tip")],
+    focus: [tid("rectus"), tid("superior-epigastric")],
     labels: withPoints([label(T, tid("rectus"), "carrier", "Reto dobrado no rebordo costal"), label(T, tid("zone-1"), "flap-front", "Retalho na loja")]),
     surgery: surgery(T, "tunel"),
     relations: [
@@ -568,10 +573,18 @@ export const reconstructionDetails: Record<string, AnatomyDetail> = {
   },
   [lid("remnant")]: { summary: "Parte do grande dorsal que fica no dorso: a lombar, presa à fáscia toracolombar e à crista ilíaca." },
   [lid("island")]: {
-    summary: `Ilha cutânea do dorso: ${island}, o tamanho do defeito da mastectomia sobre a pele. Desenhada no dorso já orientada para cair no defeito depois da rotação.`,
-    surgical: ["Nutrida por perfurantes musculocutâneas do grande dorsal", `Leva ${cm(lm.islandFatMm ?? 0)} cm de gordura do dorso nesta paciente`],
+    summary: `Ilha do dorso: fuso transverso de ${island} na linha do sutiã, o tamanho do defeito da mastectomia sobre a pele. Pele, derme e gordura presas ao músculo: no retalho miocutâneo a ilha vale tanto quanto o músculo, porque repõe a pele que a mastectomia tirou.`,
+    surgical: [
+      "Nutrida pelas perfurantes musculocutâneas que entram pela sua parte central: não se descola a ilha do músculo, só as pontas, para girá-la",
+      `Leva ${cm(lm.islandFatMm ?? 0)} cm de gordura do dorso nesta paciente`,
+      `Chega à mama inclinada ${lm.islandTiltDeg ?? 0}° e gira ${lm.islandTurnDeg ?? 0}° sobre o músculo para deitar no defeito`,
+    ],
   },
-  [lid("island-fat")]: { summary: "Gordura sob a ilha cutânea, entre a pele e o músculo: na mama, faz parte do volume." },
+  [lid("island-fat")]: { summary: "Gordura sob a ilha cutânea, entre a derme e o músculo: na mama, faz parte do volume." },
+  [lid("perforators")]: {
+    summary: "Perfurantes musculocutâneas (esquema): ramos da toracodorsal que atravessam o músculo até o plexo da derme da ilha. São o que faz do retalho um retalho miocutâneo.",
+    surgical: ["Ficam na parte central da ilha: por isso o centro não é descolado do músculo", "Tração, torção ou compressão no túnel comprometem a ilha mesmo com o músculo vivo"],
+  },
   [lid("implant")]: { summary: `Implante: ${ml(lm.implantMl ?? 0)} no modelo, o volume que o retalho não enche no envelope da mama. Fica sobre o peitoral maior, sob o grande dorsal.` },
   [lid("artery")]: {
     summary: `Artéria toracodorsal: ramo terminal da subescapular, depois da circunflexa da escápula. Do hilo para baixo, ramos descendente e transverso (traçado esquemático). Pedículo livre de ${cm(lm.pedicleMm ?? 0)} cm.`,
