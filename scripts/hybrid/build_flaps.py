@@ -604,6 +604,11 @@ def largest(shape) -> Polygon:
     return max(getattr(shape, "geoms", [shape]), key=lambda g: g.area)
 
 
+def griddata_nearest(pts: np.ndarray, values: np.ndarray, xy: np.ndarray) -> np.ndarray:
+    """Value of the nearest of scattered plane points."""
+    return values[cKDTree(pts).query(np.atleast_2d(xy))[1]]
+
+
 def raster_top(trunk: fg.Trunk, points: np.ndarray, dilate: int = 2) -> np.ndarray:
     """Outermost radius of model points in every cell of the trunk grid (-inf where none), widened by `dilate` cells."""
     from scipy.ndimage import maximum_filter
@@ -651,9 +656,10 @@ def slab_volume(points: np.ndarray, faces: np.ndarray) -> float:
 # --------------------------------------------------------------------------------------------------
 LD = {
     "triangles": 7000,
-    # the island: its centre this far from the hilum along this direction of the plane (down the anterior border, over
-    # the descending branch); the island is the defect at its true size on the skin, turned back by the placement
-    "paddleFromHilum": 97.0, "paddleDirection": (0.45, -0.89),
+    # the island: a spindle across the back in the bra line, this far below the tip of the scapula, its lateral end
+    # this far past the anterior border of the muscle; it is the defect at its true size on the skin
+    "paddleBelowScapula": 35.0, "paddlePastBorder": -10.0, "paddleAngle": 0.0,
+    "tipUndermined": 1 / 3,  # the share of each end of the island lifted off the muscle so that it can be turned
     "flapMargin": 18.0, "pivotKeep": 95.0,  # the muscle taken: what the placement brings into the pocket, or near the pivot
     "curl": {"alpha": 150.0, "rho": 22.0, "beyondHilum": 28.0},
     "gather": 0.5, "transitLift": 6.0, "liftFree": 5.0,
@@ -669,7 +675,8 @@ class Latissimus:
     FRAMES = [
         ("marcacao", "Marcação"), ("incisao", "Incisão e descolamento"), ("liberacao", "Liberação do músculo"), ("pediculo", "Pedículo toracodorsal"),
         ("tunel:1", "Passagem pelo túnel axilar"), ("tunel:2", "Passagem pelo túnel axilar"), ("tunel", "Passagem pelo túnel axilar"),
-        ("doadora", "Fechamento do dorso"), ("implante", "Implante"), ("insercao", "Inserção e modelagem"), ("resultado", "Resultado"),
+        ("doadora", "Fechamento do dorso"), ("implante", "Implante"), ("insercao:1", "Inserção e modelagem"), ("insercao", "Inserção e modelagem"),
+        ("resultado", "Resultado"),
     ]
 
     def __init__(self, s: Setup, mast: Mastectomy) -> None:
@@ -707,25 +714,32 @@ class Latissimus:
         # insertion: the end of the tendon at the intertubercular groove of the humerus
         groove = bb.layer_landmark("umero.sulco-intertubercular")
         self.insertion = self.flat[int(np.argmin(np.linalg.norm(pos - groove, axis=1))), :2]
+        # the island: a spindle across the back in the bra line (the scar hides under the strap), just below the tip of
+        # the scapula, over the muscle from its anterior border inwards: the defect at its size on the skin
+        self.footprint = occupancy(self.flat[:, :2], 3.0)
+        E, ax = mast.centre, mast.axis
+        tip = tr.flat(bb.layer_landmark("escapula.angulo-inferior")[None])[0]
+        tau_c = float(tip[1] - LD["paddleBelowScapula"])
+        border = float(self.mast_border_at([tau_c])[0])
+        a_s, b_s = mast.skin_axes()
+        self.island_axes = (a_s, b_s)
+        self.Ic = np.array([border + a_s - LD["paddlePastBorder"], tau_c])
+        self.island_angle = float(np.radians(LD["paddleAngle"]))
+        self.island = Polygon(ellipse_points(self.Ic, a_s, b_s, np.degrees(self.island_angle)))
         # placement: the island centre goes to the centre of the defect, turned so that the hilum lands as near the pivot
         # as it can (towards it, on the line from the defect)
-        E, ax = mast.centre, mast.axis
-        d = np.array(LD["paddleDirection"], float)
-        d /= np.linalg.norm(d)
-        self.Ic = self.H + LD["paddleFromHilum"] * d
         psi = np.arctan2(*(self.P - E)[::-1]) - np.arctan2(*(self.H - self.Ic)[::-1])
         self.psi = float((psi + np.pi) % (2 * np.pi) - np.pi)
         self.place = Placement(self.psi, self.Ic, E)
-        a_s, b_s = mast.skin_axes()
-        self.island_axes = (a_s, b_s)
-        self.island_angle = np.arctan2(ax[1], ax[0]) - self.psi
-        self.island = Polygon(ellipse_points(self.Ic, a_s, b_s, np.degrees(self.island_angle)))
+        # the island comes to the breast turned with the muscle; it is turned again on the muscle into the defect, about
+        # its centre, where the perforators hold it, its ends undermined (the second arc of rotation of the skin paddle)
+        turn = np.arctan2(ax[1], ax[0]) - (self.island_angle + self.psi)
+        self.island_turn = float((turn + np.pi / 2) % np.pi - np.pi / 2)
         # the muscle taken: the faces the placement brings into the pocket (or that stay by the pivot)
         target = mast.limits.buffer(LD["flapMargin"]).union(Point(self.place(self.P)[0]).buffer(LD["pivotKeep"]))
         centres = self.flat[idx].mean(1)[:, :2]
         mapped = self.place(centres)
         self.flap_face = shapely.contains_xy(target, mapped[:, 0], mapped[:, 1])
-        self.footprint = occupancy(self.flat[:, :2], 3.0)
         back_target = Polygon(self.place.inverse(np.array(target.exterior.coords)))
         self.cut_line = back_target.exterior.intersection(self.footprint.buffer(-1.0))
         # the muscle taken: plane points and their heights over its deep surface
@@ -760,7 +774,8 @@ class Latissimus:
     def mesh_back(self) -> None:
         tr = self.trunk
         skin_region = tr.skin_region(SKIRT + 4.0)
-        undermined = largest(self.footprint.buffer(6.0).union(self.island.buffer(4.0)).intersection(skin_region))
+        # the skin is undermined over the muscle and 25 mm round the island, so that its edges come together without tension
+        undermined = largest(self.footprint.buffer(6.0).union(self.island.buffer(25.0)).intersection(skin_region))
         self.undermined = undermined.buffer(-4).buffer(4).simplify(0.3)
         self.back_domain = largest(self.undermined.buffer(SKIRT).intersection(tr.skin_region(2.0))).simplify(0.3)
         pts, tri = fg.chart_mesh(self.back_domain, [self.island.exterior, self.undermined.exterior], LD["spacing"])
@@ -857,8 +872,12 @@ class Latissimus:
         base = self.deep_at(xy)
         rel = np.clip(h - base, 0.0, None if kind == "island" else 16.0)
         if kind == "island":
-            near = cKDTree(xy).query_ball_point(xy, 14.0)
-            rel = np.array([rel[n].mean() for n in near])
+            # smoothed among points of the same layer (the fat: its top and its bottom apart)
+            layer = np.zeros(len(xy)) if frac is None else np.round(np.asarray(frac, float), 2)
+            for value in np.unique(layer):
+                sel = np.nonzero(layer == value)[0]
+                near = cKDTree(xy[sel]).query_ball_point(xy[sel], 14.0)
+                rel[sel] = np.array([rel[sel][n].mean() for n in near])
         k = self.k_of[frame]
         dist_p = np.linalg.norm(xy - self.P, axis=1)
         free = smooth01((dist_p - 40.0) / 80.0)
@@ -895,29 +914,51 @@ class Latissimus:
             return np.c_[front, np.maximum(rel, 0.3)]
         if frame == "implante":
             return np.c_[front, self.implant_height(front) + np.maximum(rel, 0.3)]
-        # inset and result: the flap shaped into the pocket over the implant (molding), the island in the defect
-        mxy = self.mold(front)
-        lift = self.implant_height(mxy)
-        muscle_top = lift + self.muscle_mm * LD["muscleThin"]
+        if frame == "insercao:1":
+            if kind == "island":
+                # the island half turned on the muscle about its centre, its undermined ends lifted off it
+                ixy = self.island_inset(front, 0.5)
+                ends = self.island_ends(front)
+                return np.c_[ixy, self.implant_height(ixy) + np.maximum(rel, 0.3) + 5.0 * ends]
+            # the muscle half way to its inset (its frames meet there)
+            return 0.5 * (self._pose(flat, "implante", kind, frac) + self._pose(flat, "insercao", kind, frac))
+        # inset and result: the flap shaped into the pocket over the implant (molding), the island turned into the defect
         if kind == "island":
             # the island: its skin on the envelope of the breast, its fat between that and the muscle
+            mxy = self.island_inset(front)
+            muscle_top = self.implant_height(mxy) + self.muscle_mm * LD["muscleThin"]
             u = tr.u_of(mxy[:, 0], mxy[:, 1])
             envelope = tr.sample(tr.skin, u, mxy[:, 1]) + LIFT - tr.sample(tr.wall, u, mxy[:, 1])
             f = np.ones(len(xy)) if frac is None else frac
             top = envelope - (0.0 if frac is None else 0.4)
             return np.c_[mxy, muscle_top + 0.3 + f * np.maximum(top - muscle_top - 0.3, 0.0)]
+        mxy = self.mold(front)
+        lift = self.implant_height(mxy)
         # under the skin flaps of the mastectomy wherever the envelope leaves little room (the edges of the pocket)
         u = tr.u_of(mxy[:, 0], mxy[:, 1])
         room = tr.sample(tr.skin, u, mxy[:, 1]) - tr.sample(tr.wall, u, mxy[:, 1]) - FLAP_MM - 0.5
         hh = lift + np.maximum(rel, 0.3) * LD["muscleThin"]
         return np.c_[mxy, np.where(hh > room, np.maximum(room, 0.3) * np.clip(hh / np.maximum(lift + 16.0, 1.0), 0.0, 1.0), hh)]
 
+    def island_inset(self, front: np.ndarray, share: float = 1.0) -> np.ndarray:
+        """The placed island turned on the muscle about the centre of the defect by a share of its turn; whole, it is
+        then taken onto the defect (affine: it is the defect at its size on the skin, so larger in the plane)."""
+        E = self.mast.centre
+        turned = E + (np.atleast_2d(front) - E) @ rot2(self.island_turn * share).T
+        return turned if share < 1.0 else island_affine(turned, self.mast, self.island_axes)
+
+    def island_ends(self, front: np.ndarray) -> np.ndarray:
+        """0 on the middle third of the placed island (held by the perforators), up to 1 at its tips (undermined)."""
+        E = self.mast.centre
+        axis = rot2(self.island_angle + self.psi) @ np.array([1.0, 0.0])
+        x = np.abs((np.atleast_2d(front) - E) @ axis) / self.island_axes[0]
+        start = 1.0 - 2.0 * LD["tipUndermined"]  # each end, this share of the length of the island, is undermined
+        return smooth01((x - start) / max(1.0 - start, 1e-6))
+
     def prepare_mold(self) -> None:
-        """Thin plate offsets that shape the placed flap: the island onto the defect (it is larger in the plane, being
-        the size of the defect on the curved skin), the outline of the flap into the pocket."""
+        """Thin plate offsets that shape the placed muscle into the pocket (its outline onto the edge of the pocket).
+        The island is not part of it: it is turned on the muscle into the defect (island_inset)."""
         mast = self.mast
-        ring = np.array(self.island.exterior.coords)[:-1]
-        placed, target_island = island_constraints(self.place(self.Ic)[0], mast, self.island_axes, ring, self.place)
         flap_xy = self.place(self.flat[self.flap_used][:, :2])
         outline = occupancy(flap_xy, 3.0)
         border = np.array(shapely.segmentize(outline.exterior, 8.0).coords)[:-1]
@@ -928,18 +969,12 @@ class Latissimus:
         for i in np.nonzero(~inside & ~keep_p)[0]:
             q = pocket.exterior.interpolate(pocket.exterior.project(Point(border[i])))
             target_border[i] = [q.x, q.y]
-        fixed = np.r_[placed, border]
-        offsets = np.r_[target_island - placed, target_border - border]
-        self.mold_fixed, self.mold_offsets = fixed, offsets
+        self.mold_fixed, self.mold_offsets = border, target_border - border
 
     def mold(self, xy: np.ndarray) -> np.ndarray:
-        """Shaping of the placed flap: the island onto the defect (affine, exact), the rest by thin plate offsets."""
+        """Shaping of the placed muscle into the pocket (thin plate offsets)."""
         xy = np.atleast_2d(xy)
-        out = xy + fg.harmonic_offsets(xy, self.mold_fixed, self.mold_offsets, smoothing=0.5)
-        placed_island = Polygon(self.place(np.array(self.island.exterior.coords))).buffer(-0.3)
-        inside = shapely.contains_xy(placed_island, xy[:, 0], xy[:, 1])
-        out[inside] = island_affine(xy[inside], self.mast, self.island_axes)
-        return out
+        return xy + fg.harmonic_offsets(xy, self.mold_fixed, self.mold_offsets, smoothing=0.5)
 
     # ---- back skin poses --------------------------------------------------------------------------------
     def back_frames(self) -> dict:
@@ -1101,11 +1136,27 @@ class Latissimus:
         fflat = np.c_[ifat["pts"], ifat["h"]]
         island_fat = [tr.model(fflat if k <= k_of["incisao"] else self.pose(fflat, f, "island", ifat["frac"])) for k, f in enumerate(frames)]
         writer.add("recon_ld_island_fat", sid("island-fat"), "Gordura sob a ilha", COLORS["fat"], 1.0, "fat", ifat["tri"], island_fat)
+        # musculocutaneous perforators (schematic): from the muscle up through the fat into the dermis of the island, in
+        # its middle third, which stays on the muscle when the ends are undermined
+        ax_i = np.array([np.cos(self.island_angle), np.sin(self.island_angle)])
+        no_i = np.array([-ax_i[1], ax_i[0]])
+        a_s, b_s = self.island_axes
+        perf_lines = []
+        for along, across in ((-0.24, -0.25), (-0.08, 0.3), (0.06, -0.3), (0.2, 0.2), (0.0, 0.0)):
+            xy = self.Ic + along * a_s * ax_i + across * b_s * no_i
+            skin_h = float(griddata_nearest(isk["pts"], isk["h"], xy)[0])
+            bottom = min(float(self.muscle_top_at(xy[None])[0]) + 0.3, skin_h - 3.0)
+            frac = np.linspace(0.0, 0.93, 12)
+            line = np.c_[np.repeat(xy[None], 12, 0), bottom + frac * (skin_h - bottom)]
+            perf_lines.append((line, frac))
+        perf = [[tr.model(line if k <= k_of["incisao"] else self.pose(line, f, "island", frac)) for line, frac in perf_lines] for k, f in enumerate(frames)]
+        tf, faces = tube_frames(perf, 0.8)
+        writer.add("recon_ld_perforators", sid("perforators"), "Perfurantes musculocutâneas (esquema)", COLORS["artery"], 1.0, "artery", faces, tf)
         # skin of the back
         bk = self.back_frames()
         b = self.back
         keep = b["labels"] != "island"
-        back_pose = ["rest", "raised", "raised", "raised", "raised", "raised", "raised", "closed", "closed", "closed", "closed"]
+        back_pose = ["rest" if k == 0 else "raised" if k < k_of["doadora"] else "closed" for k in range(n)]
         back_model = {name: tr.model(bk[name]) for name in ("rest", "raised", "closed")}
         writer.add("recon_ld_back_skin", sid("back-skin"), "Pele do dorso", COLORS["skin"], 1.0, "skin", b["tri"][keep], [back_model[p] for p in back_pose])
         # implant: held in front of the chest until it goes in
@@ -1125,7 +1176,7 @@ class Latissimus:
         for k, f in enumerate(frames):
             if k <= k_of["pediculo"]:
                 breast.append(bed)
-            elif k <= k_of["implante"]:
+            elif k < k_of["insercao"]:
                 tissue = [muscle[k], island_fat[k]] + ([imp_frames[k]] if k >= k_of["implante"] else [])
                 top = raster_top(tr, np.vstack(tissue))
                 breast.append(drape(tr, bed, top, FLAP_MM, movable))
@@ -1162,7 +1213,8 @@ class Latissimus:
         tf, faces = tube_frames([dashed] * n, 0.6)
         writer.add("recon_ld_limits", sid("limits"), "Borda anterior e linha de secção do músculo", COLORS["limit"], 1.0, "marking", faces, tf)
         # the tunnel: from the top of the back wound, high through the axilla, to the lateral end of the defect
-        top_island = self.Ic + self.island_axes[0] * np.array([np.cos(self.island_angle), np.sin(self.island_angle)])
+        ends = [self.Ic + sign * self.island_axes[0] * np.array([np.cos(self.island_angle), np.sin(self.island_angle)]) for sign in (-1.0, 1.0)]
+        top_island = min(ends, key=lambda q: np.linalg.norm(q - self.P))  # the end of the island nearer the axilla
         lateral_end = mast.ends[1]
         via = self.P + np.array([-6.0, -38.0])
         tunnel_xy = np.array([top_island, via, lateral_end])
@@ -1182,14 +1234,14 @@ class Latissimus:
         defect = surface_line(tr, np.array(mast.ellipse.exterior.coords), closed_r, step=1.5, lift=0.5)
         tf, faces = tube_frames([[defect]] * n, 0.8)
         writer.add("recon_ld_island_scar", sid("island-scar"), "Cicatriz em volta da ilha", COLORS["scar"], 1.0, "marking", faces, tf)
-        points = self.anchors(muscle, island, back_model, breast, vf, imp_frames, back_scar, defect, tunnel)
+        points = self.anchors(muscle, island, back_model, breast, vf, imp_frames, back_scar, defect, tunnel, perf)
         values = self.measures(muscle, imp_frames)
         start, end = np.array(points["island-back"]) / MM, np.array(points["island-front"]) / MM
         arrows = [{"frame": k_of["tunel:1"], "from": r3(start * MM), "to": r3(end * MM), "color": "#7c3aed"}]
         info = {"frames": [{"id": f, "label": label} for f, label in self.FRAMES], "points": points, "measures": values, "arrows": arrows}
         return writer, info
 
-    def anchors(self, muscle, island, back, breast, vf, implant, back_scar, defect, tunnel) -> dict:
+    def anchors(self, muscle, island, back, breast, vf, implant, back_scar, defect, tunnel, perf) -> dict:
         k = self.k_of
         tr = self.trunk
 
@@ -1202,6 +1254,7 @@ class Latissimus:
             "centre": island[0][int(np.argmin(np.linalg.norm(island[0] - island_c, axis=1)))],
             "front-centre": defect.mean(0),
             "island-back": nearest(island[0], island_c),
+            "perforators": perf[k["incisao"]][1][len(perf[k["incisao"]][1]) // 2],
             "island-front": nearest(island[k["insercao"]], island[k["insercao"]].mean(0)),
             "hilum": nearest(muscle[0], bb.layer_landmark("hilo.grande-dorsal")),
             "hilum-pediculo": vf["artery"][k["pediculo"]][0][45],
@@ -1233,6 +1286,8 @@ class Latissimus:
         a_s, b_s = self.island_axes
         return {
             "islandLengthMm": round(2 * a_s), "islandWidthMm": round(2 * b_s), "rotationDeg": round(abs(np.degrees(self.psi))),
+            "islandTurnDeg": round(abs(np.degrees(self.island_turn))), "paddleBelowScapulaMm": round(LD["paddleBelowScapula"]),
+            "islandTiltDeg": round(abs(np.degrees(((self.island_angle + self.psi) + np.pi / 2) % np.pi - np.pi / 2))),
             "pedicleMm": round(self.pedicle_mm), "maxStretch": round(float(max(self.stretch)), 3),
             "muscleAreaCm2": round(area), "muscleMl": round(area * self.muscle_mm / 10), "muscleMm": round(self.muscle_mm, 1),
             "implantMl": round(vol), "islandFatMm": round(self.island_mm), "backScarMm": round(2 * (a_s + SCAR_EXTENSION)),
@@ -1254,6 +1309,7 @@ TRAM = {
     "zoneBorder": 112.0,  # the lateral borders of the recti (semilunar lines) in the plane (sigma, both sides)
     "keep": 35.0,  # zone III kept this far past the border of zone I: its tip is trimmed with zone IV
     "gather": 0.5, "upperRaise": 24.0, "upperTop": -95.0, "spacing": 5.0, "transitLift": 12.0,
+    "tunnelBow": 50.0,  # mm: the way of the flap bows this far towards the midline, to the tunnel at the medial end of the fold
     "discard": np.array([-170.0, -60.0]),  # where trimmed tissue is laid (plane offset) and how high (mm)
 }
 ZONE_COLORS = {"zone-1": COLORS["zone-1"], "zone-2": COLORS["zone-2"], "zone-3": COLORS["zone-3"], "zone-4": COLORS["zone-4"], "zone-3-tip": "#b45309"}
@@ -1285,7 +1341,8 @@ class Tram:
     KEY = "tram"
     FRAMES = [
         ("marcacao", "Marcação"), ("incisao", "Incisões e descolamento"), ("ilha", "Elevação da ilha"), ("bainha", "Bainha e vasos inferiores"),
-        ("musculo", "Elevação do reto"), ("tunel:1", "Túnel epigástrico"), ("tunel:2", "Túnel epigástrico"), ("tunel", "Rotação de 180°"),
+        ("musculo", "Elevação do reto"), ("tunel:1", "Túnel epigástrico"), ("tunel:2", "Túnel epigástrico"), ("tunel:3", "Túnel epigástrico"),
+        ("tunel:4", "Túnel epigástrico"), ("tunel", "Rotação de 180°"),
         ("insercao", "Inserção e modelagem"), ("doadora", "Fechamento do abdome"), ("resultado", "Resultado"),
     ]
 
@@ -1410,14 +1467,28 @@ class Tram:
             self.slabs[z] = {"pts": spts, "tri": sfaces, "h": h}
 
     # ---- poses ------------------------------------------------------------------------------------------------
+    TRANSIT = {"tunel:1": 0.2, "tunel:2": 0.4, "tunel:3": 0.6, "tunel:4": 0.8}
+
     def flap_xy(self, xy: np.ndarray, frame: str) -> tuple[np.ndarray, float]:
         """Plane position of flap points at a frame and the turn of the flap (radians)."""
         k = self.k_of[frame]
         if k < self.k_of["tunel:1"]:
             return xy.copy(), 0.0
-        kk = {"tunel:1": 1 / 3, "tunel:2": 2 / 3}.get(frame, 1.0)
+        return self.transit(xy, self.TRANSIT.get(frame, 1.0))
+
+    def transit(self, xy: np.ndarray, kk: float) -> tuple[np.ndarray, float]:
+        """The way of the flap a share kk of the transfer: it goes up through the tunnel turning 180 degrees as it goes
+        (not swinging out round a point between the abdomen and the breast, which would take it over the other side),
+        its centre on a path bowed towards the midline so that it crosses the costal margin at the tunnel, gathered as
+        it passes the tunnel. At kk = 1 it is the placement."""
+        S, D = self.Ic, self.mast.centre
+        way = D - S
+        medial = np.array([-way[1], way[0]]) / np.linalg.norm(way)
+        medial = medial if medial[0] < 0 else -medial
+        centre = S + way * kk + TRAM["tunnelBow"] * np.sin(np.pi * kk ** 1.94) * medial
+        angle = self.place.angle * kk
         gather = 1 - (1 - TRAM["gather"]) * np.sin(np.pi * kk)
-        return self.place.at(xy, kk, gather), -np.pi * kk
+        return centre + gather * (np.atleast_2d(xy) - S) @ rot2(angle).T, angle
 
     def pose_flap(self, flat: np.ndarray, frame: str, base: np.ndarray | None = None, thick: np.ndarray | None = None, skin: bool = False) -> np.ndarray:
         """Flap points (fat, skin, the rectus under the island, the vessels in it): lifted off the wall as they are
@@ -1433,8 +1504,8 @@ class Tram:
         if k <= self.k_of["musculo"]:
             return np.c_[xy, h + lift]
         xk, turn = self.flap_xy(xy, frame)
-        if frame in ("tunel:1", "tunel:2"):
-            kk = 1 / 3 if frame == "tunel:1" else 2 / 3
+        if frame in self.TRANSIT:
+            kk = self.TRANSIT[frame]
             return np.c_[xk, rel + TRAM["transitLift"] * np.sin(np.pi * kk)]
         if frame == "tunel":
             return np.c_[xk, rel + 1.0]
@@ -1635,12 +1706,21 @@ class Tram:
         ab = self.abdomen_frames()
         keep = np.isin(a["labels"], ["skin", "upper", "navel"])
         ab_model = {p: tr.model(ab[p]) for p in ("rest", "raised", "closed")}
-        pose_ab = ["rest", "raised", "raised", "raised", "raised", "raised", "raised", "raised", "raised", "closed", "closed"]
+        pose_ab = ["rest" if k == 0 else "raised" if k < k_of["doadora"] else "closed" for k in range(n)]
         ab_frames = []
+        # the fat of the flap by zones (its frames are needed by the skins too: the flap goes under them in the tunnel)
+        zone_frames = {}
+        for z, slab_ in self.slabs.items():
+            discard_at = "ilha" if z == "zone-4" else "insercao" if z == "zone-3-tip" else None
+            zone_frames[z] = flap_frames(np.c_[slab_["pts"], slab_["h"]], discard_at)
+        in_transit = lambda k: k_of["tunel:1"] <= k <= k_of["tunel"]  # noqa: E731
+        flap_tissue = lambda k: np.vstack([zone_frames[z][k] for z in ("zone-1", "zone-2", "zone-3")] + [rectus_frames[k]])  # noqa: E731
         for k, pose in enumerate(pose_ab):
-            # from the elevation of the muscle on, the skin goes over it where it comes up under it
+            # from the elevation of the muscle on, the skin goes over it where it comes up under it (and over the flap
+            # while it goes up the tunnel)
             if k >= k_of["musculo"]:
-                ab_frames.append(drape(tr, ab_model[pose], raster_top(tr, rectus_frames[k]), 4.0, ab["region"] != "navel"))
+                under = flap_tissue(k) if in_transit(k) else rectus_frames[k]
+                ab_frames.append(drape(tr, ab_model[pose], raster_top(tr, under), 4.0, ab["region"] != "navel"))
             else:
                 ab_frames.append(ab_model[pose])
         ab_model["closed"] = ab_frames[k_of["doadora"]]
@@ -1664,10 +1744,9 @@ class Tram:
             writer.add(f"recon_tram_{name.replace('-', '_')}", sid(name), label, COLORS["skin"], 1.0, "skin", ft, flap_frames(flat_rest[used], discard_at, skin=name == "island"))
         # fat of the flap by zones
         for z, slab_ in self.slabs.items():
-            discard_at = "ilha" if z == "zone-4" else "insercao" if z == "zone-3-tip" else None
             label = {"zone-1": "Zona I (sobre o reto do pedículo)", "zone-2": "Zona II (além da linha média)", "zone-3": "Zona III (lateral ao pedículo)",
                      "zone-3-tip": "Ponta da zona III (descartada)", "zone-4": "Zona IV (descartada)"}[z]
-            writer.add(f"recon_tram_{z.replace('-', '_')}", sid(z), label, ZONE_COLORS[z], 1.0, "fat", slab_["tri"], flap_frames(np.c_[slab_["pts"], slab_["h"]], discard_at))
+            writer.add(f"recon_tram_{z.replace('-', '_')}", sid(z), label, ZONE_COLORS[z], 1.0, "fat", slab_["tri"], zone_frames[z])
         # the rectus of the pedicle (and what stays of it below the cut), the vessels on it
         writer.add("recon_tram_rectus", sid("rectus"), "Reto do abdome (pedículo)", COLORS["muscle"], 1.0, "muscle", mi, rectus_frames)
         sp, si, _ = fg.compact(self.r_pos, self.r_idx, ~moving)
@@ -1748,9 +1827,9 @@ class Tram:
         fat_meshes = [m for m in writer.meshes if m["structure"] in (sid("zone-1"), sid("zone-2"), sid("zone-3"))]
         breast = []
         for k, f in enumerate(frames):
-            if k < k_of["tunel"]:
+            if k < k_of["tunel:1"]:
                 breast.append(bed)
-            elif k == k_of["tunel"]:
+            elif in_transit(k):
                 top = raster_top(tr, np.vstack([m["full"][k] for m in fat_meshes] + [rectus_frames[k]]))
                 breast.append(drape(tr, bed, top, FLAP_MM, movable))
             else:
@@ -2007,7 +2086,7 @@ PART_LABELS = {
 
 LD_LABELS = {
     "skin": "Pele da mama (retalhos da mastectomia)", "back-skin": "Pele do dorso", "island": "Ilha cutânea do grande dorsal",
-    "island-fat": "Gordura da ilha", "muscle": "Grande dorsal (retalho)", "remnant": "Grande dorsal (parte que fica)",
+    "island-fat": "Gordura da ilha", "perforators": "Perfurantes musculocutâneas", "muscle": "Grande dorsal (retalho)", "remnant": "Grande dorsal (parte que fica)",
     "implant": "Implante", "artery": "Artéria toracodorsal e ramos", "vein": "Veias toracodorsais", "nerve": "Nervo toracodorsal",
     "nerve-cut": "Nervo toracodorsal seccionado", "serratus": "Ramo do serrátil", "serratus-cut": "Ramo do serrátil ligado",
     "marking": "Ilha cutânea (marcação)", "incision": "Incisão da ilha", "limits": "Borda anterior e secção do músculo",
